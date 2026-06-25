@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Weekly Forum — Teacher Interface</title>
+<title>Weekly Forum — Teacher (Live)</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400..700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
@@ -225,7 +225,7 @@
       <button class="btn btn-primary btn-block" style="margin-top:14px;" onclick="login()">Enter</button>
       <div class="error-msg" id="loginError">Incorrect username or password.</div>
     </div>
-    <div class="version-tag">v0.3 — 2026-06-25</div>
+    <div class="version-tag">live-v0.1 — 2026-06-25</div>
   </div>
 
   <div class="class-select-screen hidden" id="classSelectScreen">
@@ -252,19 +252,22 @@
       <button class="nav-btn" data-tab="settings" onclick="switchTab('settings')">Settings</button>
     </div>
 
-    <div class="mock-banner">⚠️ Login and class list are real. Everything below (roster, schedule, grading, rubric) is still test/mock data — not wired to your real Sheets yet.</div>
     <div id="content"></div>
   </div>
 </div>
 
 <script>
-/* ====================== AUTH — now wired to the real backend ====================== */
+/* ====================================================================
+   LIVE TEACHER BACKEND WIRING
+   Replaces the mock CLASSES object with real calls to your Apps Script API.
+   ==================================================================== */
+
 const API_URL = "https://script.google.com/macros/s/AKfycbyMbuD6_z3PTOt8P_dS8TPTImZB-r1cnraENT82KGxD6eL2EGK0IxSC5spUu38SfFnX/exec";
 
 async function callApi(action, payload){
   const res = await fetch(API_URL, {
     method: "POST",
-    headers: { "Content-Type": "text/plain;charset=utf-8" }, // avoids a CORS preflight
+    headers: { "Content-Type": "text/plain;charset=utf-8" },
     body: JSON.stringify(Object.assign({ action }, payload || {})),
   });
   return res.json();
@@ -272,8 +275,29 @@ async function callApi(action, payload){
 
 let currentTeacher = null;
 let currentClass = null;
+let classData = null;     // result of getClassData — roster/settings/schedule/groups/rubricVersions
 let realClassNames = [];
+let toastTimer;
 
+function initials(name){ return (name||'?').split(' ').map(n=>n[0]).join(''); }
+function wordCount(text){ return (text||'').trim().split(/\s+/).filter(Boolean).length; }
+
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=> t.classList.remove('show'), 2400);
+}
+function showLoading(text){
+  document.getElementById('loadingText').textContent = text || 'Loading…';
+  document.getElementById('loadingOverlay').classList.add('show');
+}
+function hideLoading(){
+  document.getElementById('loadingOverlay').classList.remove('show');
+}
+
+/* ====================== AUTH ====================== */
 async function login(){
   const user = document.getElementById('userInput').value.trim();
   const pw = document.getElementById('pwInput').value;
@@ -305,194 +329,25 @@ async function showClassSelect(){
     `<div class="class-card" onclick="enterClass('${name}')">${name}</div>`).join('');
 }
 
-function enterClass(name){
+async function enterClass(name){
   currentClass = name;
+  showLoading('Loading class data…');
+  classData = await callApi('getClassData', { classId: name });
+  hideLoading();
+  if(!classData.success){
+    showToast(classData.error || "Couldn't load that class.");
+    return;
+  }
   document.getElementById('classSelectScreen').classList.add('hidden');
   document.getElementById('mainApp').classList.remove('hidden');
   document.getElementById('whoName').textContent = currentTeacher.displayName;
   document.getElementById('classPill').textContent = name;
-  // NOTE: login + class list above are real. Everything past this point (roster, schedule,
-  // grading, rubric) still runs on the local mock CLASSES object below — not your real Sheets yet.
-  if(!CLASSES[name]){
-    // A real class with no matching mock data (e.g. one you added for real, not in the original demo)
-    CLASSES[name] = makeClass({});
-  }
+  gradingWeek = null;
+  gradingIdx = 0;
   switchTab('grading');
 }
 
-function cls(){ return CLASSES[currentClass]; }
-
-let toastTimer;
-function showToast(msg){
-  const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.classList.add('show');
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(()=> t.classList.remove('show'), 2400);
-}
-function showLoading(text){
-  document.getElementById('loadingText').textContent = text || 'Loading…';
-  document.getElementById('loadingOverlay').classList.add('show');
-}
-function hideLoading(){
-  document.getElementById('loadingOverlay').classList.remove('show');
-}
-function initials(name){ return name.split(' ').map(n=>n[0]).join(''); }
-
-/* ====================== MOCK DATA — one bundle per class ====================== */
-function makeRubricV2(){
-  return [
-    {id:"wordcount", num:"①", name:"Word Count", maxPoints:10, autoType:"WordCount", tiers:[
-      {label:"No submission", desc:"", points:0},
-      {label:"1–39 words", desc:"", points:2},
-      {label:"40–79 words", desc:"", points:6},
-      {label:"80+ words", desc:"", points:10},
-    ]},
-    {id:"content", num:"②", name:"Content", maxPoints:30, autoType:"Manual", tiers:[
-      {label:"No submission", desc:"", points:0},
-      {label:"Needs improvement", desc:"Does not clearly address the topic, or provides so little detail that the reader cannot engage with it.", points:6},
-      {label:"Average", desc:"Addresses the topic but lacks detail, or provides detail without any personal connection or opinion.", points:18},
-      {label:"Good", desc:"Addresses the topic with some detail. May be missing personal experience or opinion but not both.", points:24},
-      {label:"Excellent", desc:"Clearly addresses the topic with sufficient detail for the reader to understand and engage. Includes both personal experience and opinion.", points:30},
-    ]},
-    {id:"paragraph", num:"③", name:"Paragraph Structure", maxPoints:15, autoType:"Manual", tiers:[
-      {label:"No submission", desc:"", points:0},
-      {label:"Needs Improvement", desc:"Paragraphs lack focus or ideas are presented as an unorganized list.", points:3},
-      {label:"Average", desc:"Most paragraphs have a clear focus but some drift off topic or mix unrelated ideas.", points:9},
-      {label:"Good", desc:"Each paragraph has a clear focus. Ideas within each paragraph are related and stay on topic.", points:15},
-    ]},
-    {id:"format", num:"④", name:"Format", maxPoints:10, autoType:"Manual", tiers:[
-      {label:"No submission", desc:"", points:0},
-      {label:"Needs Improvement", desc:"Significant formatting issues that affect readability.", points:0},
-      {label:"Average", desc:"Mostly appropriate indentation / spacing between words and paragraphs / capitalization and punctuation.", points:5},
-      {label:"Good", desc:"Properly indented, appropriate spacing between words and paragraphs, reasonable capitalization and punctuation.", points:10},
-    ]},
-    {id:"engagement", num:"⑤", name:"Engagement", maxPoints:10, autoType:"Manual", tiers:[
-      {label:"No submission", desc:"", points:0},
-      {label:"Needs Improvement", desc:"No question or call to action, or it feels disconnected from the content.", points:0},
-      {label:"Good", desc:"Ends with a question or call to action that connects naturally to the content.", points:10},
-    ]},
-    {id:"picture", num:"⑥", name:"Picture", maxPoints:5, autoType:"PictureTimeliness", tiers:[
-      {label:"Late / missing / irrelevant", desc:"No photo, wrong photo, or past deadline.", points:0},
-      {label:"On time", desc:"Relevant photo uploaded by deadline.", points:5},
-    ]},
-    {id:"comments", num:"⑦", name:"Comments", maxPoints:10, autoType:"CommentCompletion", tiers:[
-      {label:"Needs improvement", desc:"Missing comments, under 30 words, or past deadline.", points:0},
-      {label:"Good", desc:"Commented on all members' blogs with 30+ words by deadline.", points:10},
-    ]},
-    {id:"replies", num:"⑧", name:"Replies", maxPoints:10, autoType:"ReplyCompletion", tiers:[
-      {label:"Needs improvement", desc:"Missing replies, under 30 words, or past deadline.", points:0},
-      {label:"Good", desc:"Replied to all comments on own blog with 30+ words by deadline.", points:10},
-    ]},
-  ];
-}
-function makeRubricV1(){
-  /* Earlier, simpler rubric used in weeks 1–5, before Engagement/Picture/Replies were added */
-  return [
-    {id:"wordcount", num:"①", name:"Word Count", maxPoints:10, autoType:"WordCount", tiers:[
-      {label:"No submission", desc:"", points:0},
-      {label:"1–39 words", desc:"", points:2},
-      {label:"40–79 words", desc:"", points:6},
-      {label:"80+ words", desc:"", points:10},
-    ]},
-    {id:"content", num:"②", name:"Content", maxPoints:30, autoType:"Manual", tiers:[
-      {label:"No submission", desc:"", points:0},
-      {label:"Needs improvement", desc:"Does not clearly address the topic.", points:6},
-      {label:"Average", desc:"Addresses the topic but lacks detail.", points:18},
-      {label:"Good", desc:"Addresses the topic with some detail.", points:24},
-      {label:"Excellent", desc:"Clearly addresses the topic with sufficient detail.", points:30},
-    ]},
-    {id:"paragraph", num:"③", name:"Paragraph Structure", maxPoints:15, autoType:"Manual", tiers:[
-      {label:"No submission", desc:"", points:0},
-      {label:"Needs Improvement", desc:"Paragraphs lack focus.", points:3},
-      {label:"Average", desc:"Most paragraphs have a clear focus.", points:9},
-      {label:"Good", desc:"Each paragraph has a clear focus.", points:15},
-    ]},
-    {id:"format", num:"④", name:"Format", maxPoints:10, autoType:"Manual", tiers:[
-      {label:"No submission", desc:"", points:0},
-      {label:"Needs Improvement", desc:"Significant formatting issues.", points:0},
-      {label:"Average", desc:"Mostly appropriate formatting.", points:5},
-      {label:"Good", desc:"Properly formatted throughout.", points:10},
-    ]},
-    {id:"comments", num:"⑤", name:"Comments", maxPoints:10, autoType:"CommentCompletion", tiers:[
-      {label:"Needs improvement", desc:"Missing comments or past deadline.", points:0},
-      {label:"Good", desc:"Commented on all members' blogs by deadline.", points:10},
-    ]},
-  ];
-}
-
-function makeClass(rosterSeed){
-  return {
-    roster: rosterSeed,
-    settings: {groupSize:3, groupsEnabled:true, commentsEnabled:true, repliesEnabled:true, pictureEnabled:true},
-    schedule: {
-      7: {label:"Monday, June 22 – Friday, June 26", prompt:"What is your favorite place on campus?",
-          postOpen:"2026-06-22T13:00", postClose:"2026-06-22T14:30",
-          pictureDeadline:"2026-06-23T23:59", commentDeadline:"2026-06-24T23:59", replyDeadline:"2026-06-26T23:59"},
-      6: {label:"Monday, June 15 – Friday, June 19", prompt:"Describe a meal you cooked recently.",
-          postOpen:"2026-06-15T13:00", postClose:"2026-06-15T14:30",
-          pictureDeadline:"2026-06-16T23:59", commentDeadline:"2026-06-17T23:59", replyDeadline:"2026-06-19T23:59"},
-    },
-    groups: { 7: {A:Object.keys(rosterSeed)}, 6: {A:Object.keys(rosterSeed)} },
-    rubricVersions: [
-      {startWeek:1, criteria: makeRubricV1()},
-      {startWeek:6, criteria: makeRubricV2()},
-    ],
-    submissions: {},
-    gradingSelections: {},
-    gradingFeedback: {},
-    gradingIdx: 0,
-    gradingWeek: 6,
-  };
-}
-
-const CLASSES = {
-  "EWS I": makeClass({
-    "2111001": {name:"Gakuto Ishiguri", avatarColor:"#3D5A73", active:true},
-    "2111002": {name:"Mei Tanaka", avatarColor:"#B23A2E", active:true},
-    "2111003": {name:"Haruto Suzuki", avatarColor:"#C9A227", active:true},
-  }),
-  "EWS II": makeClass({
-    "2111101": {name:"Riko Yamada", avatarColor:"#7A8C6B", active:true},
-    "2111102": {name:"Sora Kimura", avatarColor:"#A4633D", active:true},
-  }),
-  "EWS III": makeClass({
-    "2111201": {name:"Yui Nakata", avatarColor:"#6B5B95", active:true},
-  }),
-};
-
-/* Submissions only mocked for EWS I, Week 6, to keep the demo focused */
-CLASSES["EWS I"].submissions[6] = {
-  "2111001": {
-    title:"My homemade curry",
-    text:"Last weekend I cooked Japanese curry for the first time by myself. I used potato, carrot and chicken. It took about one hour but it was worth it. My family said it was delicious, so I was very happy.",
-    image:null,
-    commentsReceived:[{from:"2111002", text:"That sounds delicious! What kind of curry roux did you use?", reply:null}],
-    commentsMade:[],
-  },
-  "2111002": {
-    title:"Grandma's dumplings",
-    text:"On Sunday I helped my grandmother make dumplings. We made over 100! It was tiring but fun, and we talked a lot while we worked. I learned how to fold them properly this time.",
-    image:"https://images.unsplash.com/photo-1496116218417-1a781b1c416c?w=500&q=60",
-    commentsReceived:[],
-    commentsMade:[{toPost:"My homemade curry", text:"That sounds delicious! What kind of curry roux did you use?"}],
-  },
-  "2111003": {
-    title:"asdf",
-    text:"asdfasdf asdfasdf asdfasdf asdfasdf asdf",
-    image:null,
-    commentsReceived:[],
-    commentsMade:[],
-  },
-};
-
-/* ====================== RUBRIC VERSIONING ====================== */
-function getRubricVersionForWeek(week){
-  const versions = cls().rubricVersions;
-  let best = versions[0];
-  versions.forEach(v=>{ if(v.startWeek<=week && v.startWeek>=best.startWeek) best = v; });
-  return best;
-}
+function cls(){ return classData; }
 
 /* ====================== NAV ====================== */
 function switchTab(tab){
@@ -504,10 +359,28 @@ function switchTab(tab){
   if(tab==='settings') renderSettings();
 }
 
-/* ====================== AUTO-GRADING LOGIC ====================== */
-function wordCount(text){ return text.trim().split(/\s+/).filter(Boolean).length; }
+/* ====================== RUBRIC VERSION LOOKUP ====================== */
+function getRubricVersionForWeek(week){
+  const versions = classData.rubricVersions;
+  if(!versions.length) return { versionId:null, startWeek:0, criteria:[] };
+  let best = versions[0];
+  versions.forEach(v=>{ if(v.startWeek<=Number(week) && v.startWeek>=best.startWeek) best=v; });
+  return best;
+}
 
-function autoSelectTier(crit, sub){
+function getGroupmateCount(studentNumber, week){
+  const rows = classData.groups.filter(g=>String(g.Week)===String(week));
+  const mine = rows.find(g=>String(g.StudentNumber)===String(studentNumber));
+  if(!mine) return 0;
+  return rows.filter(g=>g.GroupID===mine.GroupID).length - 1;
+}
+
+function commentsQualify(commentsArr, deadline){
+  if(!deadline) return commentsArr.every(c=>wordCount(c.text)>=30);
+  return commentsArr.every(c=> wordCount(c.text)>=30 && new Date(c.createdAt) <= new Date(deadline));
+}
+
+function autoSelectTier(crit, sub, sn, week, schedule){
   if(crit.autoType==='WordCount'){
     const wc = wordCount(sub.text);
     if(wc===0) return 0;
@@ -517,83 +390,112 @@ function autoSelectTier(crit, sub){
   }
   if(crit.autoType==='PictureTimeliness') return sub.image ? 1 : 0;
   if(crit.autoType==='CommentCompletion'){
-    const requiredCount = 2;
-    return sub.commentsMade.length >= requiredCount ? 1 : 0;
+    const required = getGroupmateCount(sn, week);
+    if(required<=0) return null;
+    const ok = sub.commentsMade.length>=required && commentsQualify(sub.commentsMade, schedule && schedule.CommentDeadline);
+    return ok ? 1 : 0;
   }
   if(crit.autoType==='ReplyCompletion'){
-    const received = sub.commentsReceived.length;
-    if(received===0) return null;
-    return sub.commentsReceived.every(c=>c.reply) ? 1 : 0;
+    const received = sub.commentsReceived;
+    if(received.length===0) return null;
+    const allReplied = received.every(c=>c.reply);
+    if(!allReplied) return 0;
+    const ok = received.every(c=> wordCount(c.reply.text)>=30 && (!schedule || !schedule.ReplyDeadline || new Date(c.reply.createdAt) <= new Date(schedule.ReplyDeadline)));
+    return ok ? 1 : 0;
   }
   return null;
 }
 
-function getSelections(sn, rubric){
-  const c = cls();
-  if(!c.gradingSelections[sn]){
-    const sub = c.submissions[c.gradingWeek] && c.submissions[c.gradingWeek][sn];
-    const sel = {};
-    if(sub){
-      rubric.forEach(crit=>{
-        const auto = autoSelectTier(crit, sub);
-        if(auto!==null) sel[crit.id] = auto;
-      });
-    }
-    c.gradingSelections[sn] = sel;
-  }
-  return c.gradingSelections[sn];
+/* ====================== GRADING ====================== */
+let gradingWeek = null;
+let gradingIdx = 0;
+let gradingSubmissionsCache = {}; // week -> {roster, submissions}
+let gradingSelections = {};       // studentNumber -> {criterionId: tierIndex}
+let gradingAutoSelections = {};   // studentNumber -> {criterionId: tierIndex} (for WasOverridden tracking)
+let gradingFeedbackDraft = {};    // studentNumber -> text (local draft before save)
+let gradingSavedSet = {};         // studentNumber -> true once saved this session
+
+async function loadSubmissionsForWeek(week){
+  if(gradingSubmissionsCache[week]) return gradingSubmissionsCache[week];
+  const result = await callApi('getSubmissionsForGrading', { classId: currentClass, week });
+  if(result.success) gradingSubmissionsCache[week] = result;
+  return result;
 }
 
-/* ====================== GRADING SCREEN ====================== */
-function renderGrading(){
-  const c = cls();
-  const studentNumbers = Object.keys(c.roster).filter(sn=>c.roster[sn].active);
+function getSelections(sn, rubric, sub, week, schedule){
+  if(!gradingSelections[sn]){
+    const sel = {};
+    rubric.forEach(crit=>{
+      const auto = autoSelectTier(crit, sub, sn, week, schedule);
+      if(auto!==null) sel[crit.id] = auto;
+    });
+    gradingSelections[sn] = sel;
+    gradingAutoSelections[sn] = Object.assign({}, sel);
+  }
+  return gradingSelections[sn];
+}
+
+async function renderGrading(){
+  const weekOptions = classData.schedule.sort((a,b)=>b.Week-a.Week)
+    .map(s=>`<option value="${s.Week}">Week ${String(s.Week).padStart(2,'0')}</option>`).join('');
+  if(gradingWeek===null && classData.schedule.length) gradingWeek = classData.schedule[0].Week;
+  if(!classData.schedule.length){
+    document.getElementById('content').innerHTML = `<div class="card empty-note">No weeks set up in Schedule yet — add one in the Schedule tab first.</div>`;
+    return;
+  }
+
+  document.getElementById('content').innerHTML = `<div class="card empty-note">Loading submissions…</div>`;
+  const subResult = await loadSubmissionsForWeek(gradingWeek);
+  if(!subResult.success){
+    document.getElementById('content').innerHTML = `<div class="card empty-note">${subResult.error}</div>`;
+    return;
+  }
+
+  const studentNumbers = subResult.roster.map(r=>r.studentNumber);
   if(studentNumbers.length===0){
     document.getElementById('content').innerHTML = `<div class="card empty-note">No active students in this class yet.</div>`;
     return;
   }
-  c.gradingIdx = c.gradingIdx % studentNumbers.length;
-  const sn = studentNumbers[c.gradingIdx];
-  const sub = c.submissions[c.gradingWeek] && c.submissions[c.gradingWeek][sn];
-  const author = c.roster[sn];
-  const rubricVersion = getRubricVersionForWeek(c.gradingWeek);
+  gradingIdx = ((gradingIdx % studentNumbers.length) + studentNumbers.length) % studentNumbers.length;
+  const sn = studentNumbers[gradingIdx];
+  const author = subResult.roster.find(r=>r.studentNumber===sn);
+  const sub = subResult.submissions[sn];
+  const schedule = classData.schedule.find(s=>String(s.Week)===String(gradingWeek));
+  const rubricVersion = getRubricVersionForWeek(gradingWeek);
   const rubric = rubricVersion.criteria;
-  const sel = getSelections(sn, rubric);
-  const gradedCount = studentNumbers.filter(s=>c.gradingFeedback[s]!==undefined).length;
-
-  const weekOptions = Object.keys(c.schedule).sort((a,b)=>b-a).map(w=>
-    `<option value="${w}" ${+w===c.gradingWeek?'selected':''}>Week 0${w}</option>`).join('');
+  const sel = getSelections(sn, rubric, sub, gradingWeek, schedule);
+  const gradedCount = studentNumbers.filter(s=>gradingSavedSet[s]).length;
 
   let bodyHtml;
-  if(!sub){
+  if(!sub.title){
     bodyHtml = `<div class="card"><div class="empty-note">No submission from this student for this week.</div></div>`;
   } else {
     const wc = wordCount(sub.text);
     const mediaHtml = sub.image ? `<div class="sub-media"><img src="${sub.image}"></div>` : '';
     const receivedHtml = sub.commentsReceived.length
-      ? sub.commentsReceived.map(cm=>{
-          const cAuthor = c.roster[cm.from];
-          const cwc = wordCount(cm.text);
+      ? sub.commentsReceived.map(c=>{
+          const cAuthor = subResult.roster.find(r=>r.studentNumber===String(c.from));
+          const cwc = wordCount(c.text);
           return `
             <div class="sub-comment">
-              <div class="avatar" style="background:${cAuthor.avatarColor}">${initials(cAuthor.name)}</div>
+              <div class="avatar" style="background:var(--postal-blue)">${initials(cAuthor?cAuthor.name:c.from)}</div>
               <div class="sub-comment-body">
-                <div class="cn">${cAuthor.name}</div>
-                <div class="ct">${cm.text}</div>
-                <div class="cwc">${cwc} words ${cm.reply ? '· replied' : '· no reply yet'}</div>
+                <div class="cn">${cAuthor?cAuthor.name:c.from}</div>
+                <div class="ct">${c.text}</div>
+                <div class="cwc">${cwc} words ${c.reply ? '· replied' : '· no reply yet'}</div>
               </div>
             </div>`;
         }).join('')
       : `<div class="empty-note">No comments received.</div>`;
     const madeHtml = sub.commentsMade.length
-      ? sub.commentsMade.map(cm=>{
-          const cwc = wordCount(cm.text);
+      ? sub.commentsMade.map(c=>{
+          const cwc = wordCount(c.text);
           return `
             <div class="sub-comment">
               <div class="avatar" style="background:var(--border);color:var(--ink-soft);">→</div>
               <div class="sub-comment-body">
-                <div class="cn">On: "${cm.toPost}"</div>
-                <div class="ct">${cm.text}</div>
+                <div class="cn">On: "${c.toPost}"</div>
+                <div class="ct">${c.text}</div>
                 <div class="cwc">${cwc} words</div>
               </div>
             </div>`;
@@ -604,7 +506,7 @@ function renderGrading(){
       <div class="card submission-card">
         <div class="sub-title">${sub.title}</div>
         <div class="sub-meta">
-          <div class="avatar" style="background:${author.avatarColor}">${initials(author.name)}</div>
+          <div class="avatar" style="background:var(--postal-blue)">${initials(author.name)}</div>
           <div><div class="nm">${author.name}</div><div class="wc">${wc} words</div></div>
         </div>
         <div class="sub-body">${sub.text}</div>
@@ -634,7 +536,7 @@ function renderGrading(){
     return `
       <div class="criterion open" id="crit-${crit.id}">
         <div class="criterion-head" onclick="toggleCriterion('${crit.id}')">
-          <div><div class="cname">${crit.num} ${crit.name}</div></div>
+          <div><div class="cname">${crit.num||''} ${crit.name}</div></div>
           <div style="display:flex;align-items:center;gap:8px;">
             <span class="cpts">${crit.maxPoints} pts max</span>
             <span class="ctoggle">▾</span>
@@ -646,28 +548,28 @@ function renderGrading(){
 
   document.getElementById('content').innerHTML = `
     <div class="grading-toolbar">
-      <select onchange="cls().gradingWeek=parseInt(this.value); cls().gradingIdx=0; cls().gradingSelections={}; renderGrading();">${weekOptions}</select>
+      <select onchange="gradingWeek=parseInt(this.value); gradingIdx=0; gradingSelections={}; renderGrading();">${weekOptions}</select>
       <div class="progress-bar" style="flex:1;max-width:240px;">
         <span class="ptext">Graded</span>
         <span class="ptext ptotal">${gradedCount} / ${studentNumbers.length}</span>
       </div>
       <button class="search-btn" onclick="openStudentSearch()" title="Search students">🔍</button>
     </div>
-    <div class="total-pts-note" style="margin:-8px 0 14px;">Using rubric version starting Week 0${rubricVersion.startWeek} (visit the Rubric tab to manage versions)</div>
+    <div class="total-pts-note" style="margin:-8px 0 14px;">Using rubric version starting Week ${rubricVersion.startWeek} (Rubric tab to manage versions)</div>
     <div class="grading-layout">
       <div>${bodyHtml}</div>
       <div class="grade-sidebar card">
         <div class="student-nav">
           <button class="nav-arrow" onclick="navStudent(-1)">‹</button>
           <div class="id">
-            <div class="avatar" style="background:${author.avatarColor}">${initials(author.name)}</div>
+            <div class="avatar" style="background:var(--postal-blue)">${initials(author.name)}</div>
             <div class="nm">${author.name}</div>
           </div>
           <button class="nav-arrow" onclick="navStudent(1)">›</button>
         </div>
         <div class="feedback-box">
           <label class="field-label">Overall feedback (shown to student)</label>
-          <textarea id="feedbackInput" placeholder="Write some overall advice...">${c.gradingFeedback[sn] || ''}</textarea>
+          <textarea id="feedbackInput" placeholder="Write some overall advice...">${gradingFeedbackDraft[sn] || ''}</textarea>
         </div>
         ${criteriaHtml}
         <div class="grade-actions">
@@ -679,27 +581,51 @@ function renderGrading(){
   `;
 }
 
-function toggleCriterion(critId){
-  document.getElementById('crit-'+critId).classList.toggle('open');
-}
+function toggleCriterion(critId){ document.getElementById('crit-'+critId).classList.toggle('open'); }
 function selectTier(sn, critId, idx){
-  const c = cls();
-  if(!c.gradingSelections[sn]) c.gradingSelections[sn] = {};
-  c.gradingSelections[sn][critId] = idx;
+  if(!gradingSelections[sn]) gradingSelections[sn] = {};
+  gradingSelections[sn][critId] = idx;
 }
 function navStudent(dir){
-  const c = cls();
-  const studentNumbers = Object.keys(c.roster).filter(sn=>c.roster[sn].active);
-  c.gradingIdx = (c.gradingIdx + dir + studentNumbers.length) % studentNumbers.length;
+  gradingIdx += dir;
   renderGrading();
 }
-function saveGrade(andNext){
-  const c = cls();
-  const studentNumbers = Object.keys(c.roster).filter(sn=>c.roster[sn].active);
-  const sn = studentNumbers[c.gradingIdx];
-  c.gradingFeedback[sn] = document.getElementById('feedbackInput').value;
-  showToast(`Saved grade for ${c.roster[sn].name}.`);
-  if(andNext) navStudent(1); else renderGrading();
+
+async function saveGrade(andNext){
+  const subResult = gradingSubmissionsCache[gradingWeek];
+  const studentNumbers = subResult.roster.map(r=>r.studentNumber);
+  const sn = studentNumbers[((gradingIdx % studentNumbers.length)+studentNumbers.length)%studentNumbers.length];
+  gradingFeedbackDraft[sn] = document.getElementById('feedbackInput').value;
+
+  const rubricVersion = getRubricVersionForWeek(gradingWeek);
+  const sel = gradingSelections[sn] || {};
+  const auto = gradingAutoSelections[sn] || {};
+  const grades = rubricVersion.criteria
+    .filter(crit => sel[crit.id] !== undefined)
+    .map(crit => ({
+      criterionId: crit.id,
+      tierOrder: sel[crit.id],
+      wasOverridden: auto[crit.id] !== undefined && auto[crit.id] !== sel[crit.id],
+    }));
+
+  showLoading('Saving grade…');
+  const result = await callApi('saveGrade', {
+    classId: currentClass, studentNumber: sn, week: gradingWeek,
+    grades, overallFeedback: gradingFeedbackDraft[sn], gradedBy: currentTeacher.displayName,
+  });
+  hideLoading();
+
+  if(result.success){
+    gradingSavedSet[sn] = true;
+    showToast(`Saved grade for ${author_name_lookup(sn)}.`);
+    if(andNext) navStudent(1); else renderGrading();
+  } else {
+    showToast(result.error || "Couldn't save grade.");
+  }
+}
+function author_name_lookup(sn){
+  const r = gradingSubmissionsCache[gradingWeek].roster.find(r=>r.studentNumber===sn);
+  return r ? r.name : sn;
 }
 
 /* ====================== STUDENT SEARCH MODAL ====================== */
@@ -713,116 +639,209 @@ function openStudentSearch(){
 function closeStudentSearch(){ document.getElementById('studentSearchModal').classList.remove('show'); }
 function filterStudentSearch(){ renderStudentSearchList(document.getElementById('studentSearchInput').value.toLowerCase()); }
 function renderStudentSearchList(query){
-  const c = cls();
-  const studentNumbers = Object.keys(c.roster).filter(sn=>c.roster[sn].active);
-  const filtered = studentNumbers.filter(sn=>
-    c.roster[sn].name.toLowerCase().includes(query) || sn.includes(query));
-  document.getElementById('studentSearchList').innerHTML = filtered.map(sn=>{
-    const m = c.roster[sn];
-    const graded = c.gradingFeedback[sn] !== undefined;
+  const subResult = gradingSubmissionsCache[gradingWeek];
+  if(!subResult) return;
+  const filtered = subResult.roster.filter(r=>
+    r.name.toLowerCase().includes(query) || r.studentNumber.includes(query));
+  document.getElementById('studentSearchList').innerHTML = filtered.map(r=>{
+    const graded = !!gradingSavedSet[r.studentNumber];
     return `
-      <div class="search-result-row" onclick="jumpToStudent('${sn}')">
-        <div class="avatar" style="background:${m.avatarColor};">${initials(m.name)}</div>
+      <div class="search-result-row" onclick="jumpToStudent('${r.studentNumber}')">
+        <div class="avatar" style="background:var(--postal-blue);">${initials(r.name)}</div>
         <div>
-          <div class="nm">${m.name}</div>
+          <div class="nm">${r.name}</div>
           <div class="st">${graded ? '✓ Graded' : 'Not graded yet'}</div>
         </div>
       </div>`;
   }).join('') || '<div class="empty-note">No matching students.</div>';
 }
 function jumpToStudent(sn){
-  const c = cls();
-  const studentNumbers = Object.keys(c.roster).filter(s=>c.roster[s].active);
-  c.gradingIdx = studentNumbers.indexOf(sn);
+  const subResult = gradingSubmissionsCache[gradingWeek];
+  const studentNumbers = subResult.roster.map(r=>r.studentNumber);
+  gradingIdx = studentNumbers.indexOf(sn);
   closeStudentSearch();
   renderGrading();
 }
 
+/* ====================== CONFIRM MODAL ====================== */
+let _confirmCallback = null;
+function showConfirmModal(text, onConfirm){
+  document.getElementById('confirmModalText').textContent = text;
+  _confirmCallback = onConfirm;
+  document.getElementById('confirmModal').classList.add('show');
+}
+function closeConfirmModal(){
+  document.getElementById('confirmModal').classList.remove('show');
+  _confirmCallback = null;
+}
+document.getElementById('confirmModalOkBtn').onclick = function(){
+  const cb = _confirmCallback;
+  closeConfirmModal();
+  if(cb) cb();
+};
+
 /* ====================== SCHEDULE TAB ====================== */
 function renderSchedule(){
-  const c = cls();
-  const weeksHtml = Object.keys(c.schedule).sort((a,b)=>b-a).map(w=>{
-    const s = c.schedule[w];
+  const weeksHtml = classData.schedule.slice().sort((a,b)=>b.Week-a.Week).map(s=>{
+    const w = s.Week;
+    const toLocal = v => v ? new Date(v).toISOString().slice(0,16) : '';
     return `
       <div class="card">
-        <div class="sub-title" style="font-size:1.05rem;">Week 0${w}</div>
-        <label class="field-label">Prompt</label>
-        <input type="text" value="${s.prompt}" onchange="cls().schedule[${w}].prompt=this.value">
+        <div class="sub-title" style="font-size:1.05rem;">Week ${String(w).padStart(2,'0')}</div>
+        <label class="field-label">Date range label</label>
+        <input type="text" value="${s.DateRangeLabel||''}" onchange="saveScheduleField(${w},'dateRangeLabel',this.value)">
+        <label class="field-label" style="margin-top:10px;">Prompt</label>
+        <input type="text" value="${s.Prompt||''}" onchange="saveScheduleField(${w},'prompt',this.value)">
         <div class="week-edit-grid" style="margin-top:12px;">
-          <div><label class="field-label">Post opens</label><input type="datetime-local" value="${s.postOpen}" onchange="cls().schedule[${w}].postOpen=this.value"></div>
-          <div><label class="field-label">Post closes</label><input type="datetime-local" value="${s.postClose}" onchange="cls().schedule[${w}].postClose=this.value"></div>
-          <div><label class="field-label">Picture deadline</label><input type="datetime-local" value="${s.pictureDeadline}" onchange="cls().schedule[${w}].pictureDeadline=this.value"></div>
-          <div><label class="field-label">Comment deadline</label><input type="datetime-local" value="${s.commentDeadline}" onchange="cls().schedule[${w}].commentDeadline=this.value"></div>
-          <div><label class="field-label">Reply deadline</label><input type="datetime-local" value="${s.replyDeadline}" onchange="cls().schedule[${w}].replyDeadline=this.value"></div>
+          <div><label class="field-label">Post opens</label><input type="datetime-local" value="${toLocal(s.PostOpen)}" onchange="saveScheduleField(${w},'postOpen',this.value)"></div>
+          <div><label class="field-label">Post closes</label><input type="datetime-local" value="${toLocal(s.PostClose)}" onchange="saveScheduleField(${w},'postClose',this.value)"></div>
+          <div><label class="field-label">Picture deadline</label><input type="datetime-local" value="${toLocal(s.PictureDeadline)}" onchange="saveScheduleField(${w},'pictureDeadline',this.value)"></div>
+          <div><label class="field-label">Comment deadline</label><input type="datetime-local" value="${toLocal(s.CommentDeadline)}" onchange="saveScheduleField(${w},'commentDeadline',this.value)"></div>
+          <div><label class="field-label">Reply deadline</label><input type="datetime-local" value="${toLocal(s.ReplyDeadline)}" onchange="saveScheduleField(${w},'replyDeadline',this.value)"></div>
         </div>
       </div>`;
   }).join('');
   document.getElementById('content').innerHTML = `
     <div class="section-label">Weekly deadlines — ${currentClass}</div>
-    ${weeksHtml}
-    <button class="btn btn-ghost" onclick="showToast('In the real version, this adds a new week row.')">+ Add a new week</button>
+    ${weeksHtml || '<div class="card empty-note">No weeks yet.</div>'}
+    <div class="card">
+      <label class="field-label">Add a new week</label>
+      <input type="number" id="newWeekNum" placeholder="Week number" style="margin-bottom:8px;">
+      <button class="btn btn-ghost" onclick="addNewWeek()">+ Add week</button>
+    </div>
   `;
+}
+
+async function saveScheduleField(week, field, value){
+  const s = classData.schedule.find(s=>s.Week===week);
+  const payload = {
+    classId: currentClass, week,
+    dateRangeLabel: s.DateRangeLabel, prompt: s.Prompt,
+    postOpen: s.PostOpen, postClose: s.PostClose,
+    pictureDeadline: s.PictureDeadline, commentDeadline: s.CommentDeadline, replyDeadline: s.ReplyDeadline,
+  };
+  payload[field] = value;
+  // keep local copy roughly in sync (field names differ in case between client/sheet — map back)
+  const fieldMap = {dateRangeLabel:'DateRangeLabel', prompt:'Prompt', postOpen:'PostOpen', postClose:'PostClose',
+    pictureDeadline:'PictureDeadline', commentDeadline:'CommentDeadline', replyDeadline:'ReplyDeadline'};
+  s[fieldMap[field]] = value;
+
+  showLoading('Saving…');
+  const result = await callApi('saveSchedule', payload);
+  hideLoading();
+  if(result.success) showToast('Saved.');
+  else showToast(result.error || "Couldn't save.");
+}
+
+async function addNewWeek(){
+  const w = parseInt(document.getElementById('newWeekNum').value);
+  if(!w){ showToast('Enter a week number first.'); return; }
+  if(classData.schedule.find(s=>s.Week===w)){ showToast('That week already exists.'); return; }
+  showLoading('Adding week…');
+  const result = await callApi('saveSchedule', {
+    classId: currentClass, week: w, dateRangeLabel: '', prompt: '',
+    postOpen: '', postClose: '', pictureDeadline: '', commentDeadline: '', replyDeadline: '',
+  });
+  hideLoading();
+  if(result.success){
+    classData.schedule.push({Week:w, DateRangeLabel:'', Prompt:'', PostOpen:'', PostClose:'', PictureDeadline:'', CommentDeadline:'', ReplyDeadline:''});
+    renderSchedule();
+  } else showToast(result.error || "Couldn't add week.");
 }
 
 /* ====================== ROSTER & GROUPS TAB ====================== */
 function renderRoster(){
-  const c = cls();
-  const rosterRows = Object.entries(c.roster).map(([sn,m])=>`
+  const rosterRows = classData.roster.map(m=>`
     <tr>
-      <td>${sn}</td>
-      <td>${m.name}</td>
-      <td><label class="switch"><input type="checkbox" ${m.active?'checked':''} onchange="cls().roster['${sn}'].active=this.checked; renderRoster();"><span class="slider"></span></label></td>
+      <td>${m.StudentNumber}</td>
+      <td>${m.Name}</td>
+      <td><label class="switch"><input type="checkbox" ${m.Active?'checked':''} onchange="toggleRosterActive('${m.StudentNumber}', this.checked)"><span class="slider"></span></label></td>
     </tr>`).join('');
 
-  const groupWeekOptions = Object.keys(c.groups).sort((a,b)=>b-a).map(w=>`<option value="${w}">Week 0${w}</option>`).join('');
-  const latestWeek = Math.max(...Object.keys(c.groups).map(Number));
-  const currentGroups = c.groups[latestWeek];
-  const groupsHtml = Object.entries(currentGroups).map(([gid, members])=>`
-    <div style="margin-bottom:8px;">
-      <span class="group-pill">Group ${gid}</span>
-      ${members.map(sn=>`<span class="group-pill" style="background:#fff;border:1px solid var(--border);color:var(--ink);">${c.roster[sn].name}</span>`).join('')}
-    </div>`).join('');
+  const weekOptions = classData.schedule.map(s=>`<option value="${s.Week}">Week ${String(s.Week).padStart(2,'0')}</option>`).join('');
+  const latestWeek = classData.groups.length ? Math.max(...classData.groups.map(g=>Number(g.Week))) : null;
+  const currentGroupRows = latestWeek!==null ? classData.groups.filter(g=>Number(g.Week)===latestWeek) : [];
+  const groupIds = [...new Set(currentGroupRows.map(g=>g.GroupID))];
+  const groupsHtml = groupIds.map(gid=>{
+    const members = currentGroupRows.filter(g=>g.GroupID===gid).map(g=>{
+      const r = classData.roster.find(r=>String(r.StudentNumber)===String(g.StudentNumber));
+      return r ? r.Name : g.StudentNumber;
+    });
+    return `<div style="margin-bottom:8px;"><span class="group-pill">Group ${gid}</span>
+      ${members.map(n=>`<span class="group-pill" style="background:#fff;border:1px solid var(--border);color:var(--ink);">${n}</span>`).join('')}</div>`;
+  }).join('');
 
   document.getElementById('content').innerHTML = `
     <div class="section-label">Roster — ${currentClass}</div>
     <div class="card">
       <table class="roster-table">
         <thead><tr><th>Student #</th><th>Name</th><th>Active</th></tr></thead>
-        <tbody>${rosterRows || '<tr><td colspan="3" class="empty-note">No students yet.</td></tr>'}</tbody>
+        <tbody>${rosterRows || '<tr><td colspan="3" class="empty-note">No students yet — add rows to the Roster tab in the spreadsheet.</td></tr>'}</tbody>
       </table>
     </div>
 
     <div class="section-label">Groups</div>
     <div class="card">
       <div class="week-edit-grid" style="margin-bottom:14px;">
-        <div><label class="field-label">Group size</label><input type="number" value="${c.settings.groupSize}" min="2" max="6" onchange="cls().settings.groupSize=parseInt(this.value)"></div>
-        <div><label class="field-label">Generate for</label><select id="groupWeekSelect">${groupWeekOptions}</select></div>
+        <div><label class="field-label">Group size</label><input type="number" id="groupSizeInput" value="${classData.settings.GroupSize||3}" min="2" max="6"></div>
+        <div><label class="field-label">Generate for</label><select id="groupWeekSelect">${weekOptions}</select></div>
       </div>
-      <button class="btn btn-primary" onclick="showToast('Groups re-randomized for the selected week.')">🎲 Generate fresh groups</button>
-      <div class="sub-subhead" style="margin-top:18px;">Current groups (Week 0${latestWeek})</div>
+      <button class="btn btn-primary" onclick="doGenerateGroups()">🎲 Generate fresh groups</button>
+      <div class="sub-subhead" style="margin-top:18px;">Current groups ${latestWeek!==null?`(Week ${String(latestWeek).padStart(2,'0')})`:''}</div>
       ${groupsHtml || '<div class="empty-note">No groups yet.</div>'}
     </div>
   `;
 }
 
-/* ====================== RUBRIC TAB (versioned) ====================== */
+async function toggleRosterActive(sn, active){
+  showLoading('Saving…');
+  const result = await callApi('updateRosterActive', { classId: currentClass, studentNumber: sn, active });
+  hideLoading();
+  if(result.success){
+    const r = classData.roster.find(r=>String(r.StudentNumber)===String(sn));
+    if(r) r.Active = active;
+    showToast('Saved.');
+  } else {
+    showToast(result.error || "Couldn't save.");
+    renderRoster(); // revert the checkbox visually
+  }
+}
+
+async function doGenerateGroups(){
+  const week = parseInt(document.getElementById('groupWeekSelect').value);
+  const groupSize = parseInt(document.getElementById('groupSizeInput').value) || 3;
+  showLoading('Generating groups…');
+  const result = await callApi('generateGroups', { classId: currentClass, week, groupSize });
+  hideLoading();
+  if(result.success){
+    showToast(`Created ${result.groupCount} group(s) for ${result.studentCount} students.`);
+    classData = await callApi('getClassData', { classId: currentClass });
+    renderRoster();
+  } else {
+    showToast(result.error || "Couldn't generate groups.");
+  }
+}
+
+/* ====================== RUBRIC TAB ====================== */
 let rubricEditorVersionIdx = null;
 
 function renderRubricTab(){
-  const c = cls();
-  if(rubricEditorVersionIdx===null) rubricEditorVersionIdx = c.rubricVersions.length - 1;
-  const sorted = [...c.rubricVersions].sort((a,b)=>a.startWeek-b.startWeek);
+  if(rubricEditorVersionIdx===null) rubricEditorVersionIdx = classData.rubricVersions.length - 1;
+  const sorted = classData.rubricVersions;
 
   const pillsHtml = sorted.map((v,i)=>{
     const next = sorted[i+1];
     const range = next ? `Weeks ${v.startWeek}–${next.startWeek-1}` : `Week ${v.startWeek}+ (current)`;
-    const realIdx = c.rubricVersions.indexOf(v);
-    return `<button class="version-pill ${realIdx===rubricEditorVersionIdx?'active':''}" onclick="rubricEditorVersionIdx=${realIdx}; renderRubricTab();">
+    return `<button class="version-pill ${i===rubricEditorVersionIdx?'active':''}" onclick="rubricEditorVersionIdx=${i}; renderRubricTab();">
       Version ${i+1} <span class="vrange">· ${range}</span>
     </button>`;
   }).join('');
 
-  const version = c.rubricVersions[rubricEditorVersionIdx];
+  if(!sorted.length){
+    document.getElementById('content').innerHTML = `<div class="card empty-note">No rubric versions yet.</div>`;
+    return;
+  }
+  const version = sorted[rubricEditorVersionIdx];
   const totalPts = version.criteria.reduce((s,cr)=>s+cr.maxPoints,0);
 
   const criteriaHtml = version.criteria.map((crit, ci)=>{
@@ -841,7 +860,7 @@ function renderRubricTab(){
       <div class="editor-criterion">
         <div class="editor-criterion-head">
           <div><label class="field-label">Criterion name</label><input type="text" value="${crit.name}" onchange="updateCriterion(${ci},'name',this.value)"></div>
-          <div><label class="field-label">Max points</label><input type="number" value="${crit.maxPoints}" onchange="updateCriterion(${ci},'maxPoints',parseInt(this.value)||0)"></div>
+          <div><label class="field-label">Max points</label><input type="number" value="${crit.maxPoints}" disabled title="Computed from tier points"></div>
           <div><label class="field-label">Auto-grade by</label>
             <select onchange="updateCriterion(${ci},'autoType',this.value)">
               ${['Manual','WordCount','PictureTimeliness','CommentCompletion','ReplyCompletion'].map(t=>`<option value="${t}" ${crit.autoType===t?'selected':''}>${t}</option>`).join('')}
@@ -859,7 +878,7 @@ function renderRubricTab(){
     <div class="section-label">Rubric versions — ${currentClass}</div>
     <p style="font-size:0.86rem;color:var(--ink-soft);margin:0 0 14px;">
       Editing a version changes grading for every week mapped to it — including past weeks. To change the rubric
-      <strong>going forward only</strong>, use "Save as new version" below instead, so already-graded weeks keep their original rubric.
+      <strong>going forward only</strong>, use "Save as new version" below instead.
     </p>
     <div>${pillsHtml}</div>
     <div class="card" style="margin-top:14px;">
@@ -867,7 +886,7 @@ function renderRubricTab(){
       ${criteriaHtml}
       <button class="btn btn-ghost" onclick="addCriterion()">+ Add criterion</button>
       <div class="editor-actions">
-        <button class="btn btn-primary" onclick="showToast('Changes saved to this version.')">Save changes to this version</button>
+        <button class="btn btn-primary" onclick="saveCurrentRubricVersion()">Save changes to this version</button>
       </div>
       <div class="new-version-row">
         <div>
@@ -881,96 +900,101 @@ function renderRubricTab(){
 }
 
 function updateCriterion(ci, field, value){
-  cls().rubricVersions[rubricEditorVersionIdx].criteria[ci][field] = value;
-  if(field==='maxPoints' || field==='name') renderRubricTab();
+  const crit = classData.rubricVersions[rubricEditorVersionIdx].criteria[ci];
+  crit[field] = value;
+  if(field==='name') renderRubricTab();
 }
-/* ====================== CUSTOM CONFIRM MODAL (native confirm() is blocked in sandboxed iframes) ====================== */
-let _confirmCallback = null;
-function showConfirmModal(text, onConfirm){
-  document.getElementById('confirmModalText').textContent = text;
-  _confirmCallback = onConfirm;
-  document.getElementById('confirmModal').classList.add('show');
-}
-function closeConfirmModal(){
-  document.getElementById('confirmModal').classList.remove('show');
-  _confirmCallback = null;
-}
-document.getElementById('confirmModalOkBtn').onclick = function(){
-  const cb = _confirmCallback;
-  closeConfirmModal();
-  if(cb) cb();
-};
-
 function removeCriterion(ci){
-  const crit = cls().rubricVersions[rubricEditorVersionIdx].criteria[ci];
+  const crit = classData.rubricVersions[rubricEditorVersionIdx].criteria[ci];
   showConfirmModal(
     `Remove "${crit.name}" completely from this rubric version? This can't be undone, and it affects every week using this version.`,
     ()=>{
-      cls().rubricVersions[rubricEditorVersionIdx].criteria.splice(ci,1);
-      showToast(`"${crit.name}" removed.`);
+      classData.rubricVersions[rubricEditorVersionIdx].criteria.splice(ci,1);
+      showToast(`"${crit.name}" removed — click "Save changes to this version" to make it permanent.`);
       renderRubricTab();
     }
   );
 }
 function addCriterion(){
-  cls().rubricVersions[rubricEditorVersionIdx].criteria.push({
-    id:'crit'+Date.now(), num:'•', name:'New Criterion', maxPoints:10, autoType:'Manual',
+  classData.rubricVersions[rubricEditorVersionIdx].criteria.push({
+    id:'crit'+Date.now(), name:'New Criterion', order:99, autoType:'Manual', maxPoints:10,
     tiers:[{label:'No submission', desc:'', points:0}, {label:'Good', desc:'', points:10}]
   });
   renderRubricTab();
 }
 function updateTier(ci, ti, field, value){
-  cls().rubricVersions[rubricEditorVersionIdx].criteria[ci].tiers[ti][field] = value;
+  const crit = classData.rubricVersions[rubricEditorVersionIdx].criteria[ci];
+  crit.tiers[ti][field] = value;
+  if(field==='points') crit.maxPoints = Math.max(...crit.tiers.map(t=>t.points));
 }
 function removeTier(ci, ti){
-  cls().rubricVersions[rubricEditorVersionIdx].criteria[ci].tiers.splice(ti,1);
+  const crit = classData.rubricVersions[rubricEditorVersionIdx].criteria[ci];
+  crit.tiers.splice(ti,1);
+  crit.maxPoints = crit.tiers.length ? Math.max(...crit.tiers.map(t=>t.points)) : 0;
   renderRubricTab();
 }
 function moveTier(ci, ti, dir){
-  const tiers = cls().rubricVersions[rubricEditorVersionIdx].criteria[ci].tiers;
+  const tiers = classData.rubricVersions[rubricEditorVersionIdx].criteria[ci].tiers;
   const newIdx = ti + dir;
   if(newIdx < 0 || newIdx >= tiers.length) return;
   [tiers[ti], tiers[newIdx]] = [tiers[newIdx], tiers[ti]];
   renderRubricTab();
 }
 function addTier(ci){
-  cls().rubricVersions[rubricEditorVersionIdx].criteria[ci].tiers.push({label:'New tier', desc:'', points:0});
+  const crit = classData.rubricVersions[rubricEditorVersionIdx].criteria[ci];
+  crit.tiers.push({label:'New tier', desc:'', points:0});
   renderRubricTab();
 }
-function saveAsNewVersion(){
+
+async function saveCurrentRubricVersion(){
+  const version = classData.rubricVersions[rubricEditorVersionIdx];
+  showLoading('Saving rubric…');
+  const result = await callApi('saveRubricVersion', { classId: currentClass, versionId: version.versionId, criteria: version.criteria });
+  hideLoading();
+  if(result.success) showToast('Rubric saved.');
+  else showToast(result.error || "Couldn't save rubric.");
+}
+
+async function saveAsNewVersion(){
   const wk = parseInt(document.getElementById('newVersionWeek').value);
-  const c = cls();
   if(!wk || wk<1){ showToast('Enter a valid starting week first.'); return; }
-  const currentVersion = c.rubricVersions[rubricEditorVersionIdx];
+  const currentVersion = classData.rubricVersions[rubricEditorVersionIdx];
   const cloned = JSON.parse(JSON.stringify(currentVersion.criteria));
-  c.rubricVersions.push({startWeek: wk, criteria: cloned});
-  rubricEditorVersionIdx = c.rubricVersions.length - 1;
-  showToast(`New rubric version created, effective Week ${wk} onward. Earlier weeks keep their original rubric.`);
-  renderRubricTab();
+  showLoading('Creating new version…');
+  const result = await callApi('createRubricVersion', { classId: currentClass, startWeek: wk, criteria: cloned });
+  hideLoading();
+  if(result.success){
+    classData.rubricVersions.push({ versionId: result.versionId, startWeek: wk, criteria: cloned });
+    classData.rubricVersions.sort((a,b)=>a.startWeek-b.startWeek);
+    rubricEditorVersionIdx = classData.rubricVersions.findIndex(v=>v.versionId===result.versionId);
+    showToast(`New rubric version created, effective Week ${wk} onward.`);
+    renderRubricTab();
+  } else {
+    showToast(result.error || "Couldn't create new version.");
+  }
 }
 
 /* ====================== SETTINGS TAB ====================== */
 function renderSettings(){
-  const c = cls();
-  const s = c.settings;
+  const s = classData.settings;
   document.getElementById('content').innerHTML = `
     <div class="section-label">Feature toggles — ${currentClass}</div>
     <div class="card">
       <div class="toggle-row">
         <div><div class="tname">Groups</div><div class="tdesc">Randomize students into weekly groups for commenting. Turn off if students discuss on an external forum instead.</div></div>
-        <label class="switch"><input type="checkbox" ${s.groupsEnabled?'checked':''} onchange="cls().settings.groupsEnabled=this.checked"><span class="slider"></span></label>
+        <label class="switch"><input type="checkbox" ${s.GroupsEnabled?'checked':''} onchange="saveSettingsField('groupsEnabled',this.checked)"><span class="slider"></span></label>
       </div>
       <div class="toggle-row">
         <div><div class="tname">Comments</div><div class="tdesc">Allow students to comment on groupmates' posts within this site.</div></div>
-        <label class="switch"><input type="checkbox" ${s.commentsEnabled?'checked':''} onchange="cls().settings.commentsEnabled=this.checked"><span class="slider"></span></label>
+        <label class="switch"><input type="checkbox" ${s.CommentsEnabled?'checked':''} onchange="saveSettingsField('commentsEnabled',this.checked)"><span class="slider"></span></label>
       </div>
       <div class="toggle-row">
         <div><div class="tname">Replies</div><div class="tdesc">Allow students to reply to comments they receive.</div></div>
-        <label class="switch"><input type="checkbox" ${s.repliesEnabled?'checked':''} onchange="cls().settings.repliesEnabled=this.checked"><span class="slider"></span></label>
+        <label class="switch"><input type="checkbox" ${s.RepliesEnabled?'checked':''} onchange="saveSettingsField('repliesEnabled',this.checked)"><span class="slider"></span></label>
       </div>
       <div class="toggle-row">
         <div><div class="tname">Picture / video</div><div class="tdesc">Allow photo uploads and YouTube links on posts.</div></div>
-        <label class="switch"><input type="checkbox" ${s.pictureEnabled?'checked':''} onchange="cls().settings.pictureEnabled=this.checked"><span class="slider"></span></label>
+        <label class="switch"><input type="checkbox" ${s.PictureEnabled?'checked':''} onchange="saveSettingsField('pictureEnabled',this.checked)"><span class="slider"></span></label>
       </div>
     </div>
 
@@ -981,9 +1005,25 @@ function renderSettings(){
         Managed directly in your Teacher Credentials Google Sheet (username + password per teacher) — not shown here, since passwords should never be visible in the page itself.
       </div>
       <label class="field-label" style="margin-top:12px;">Drive folder for uploaded images</label>
-      <input type="text" value="1A2b3C4d5E6f-mockDriveFolderId">
+      <input type="text" value="${s.DriveImageFolderID||''}" disabled>
     </div>
   `;
+}
+
+async function saveSettingsField(field, value){
+  classData.settings[field.charAt(0).toUpperCase()+field.slice(1)] = value; // rough local mirror
+  showLoading('Saving…');
+  const result = await callApi('saveSettings', {
+    classId: currentClass,
+    groupSize: classData.settings.GroupSize,
+    groupsEnabled: field==='groupsEnabled' ? value : classData.settings.GroupsEnabled,
+    commentsEnabled: field==='commentsEnabled' ? value : classData.settings.CommentsEnabled,
+    repliesEnabled: field==='repliesEnabled' ? value : classData.settings.RepliesEnabled,
+    pictureEnabled: field==='pictureEnabled' ? value : classData.settings.PictureEnabled,
+  });
+  hideLoading();
+  if(result.success) showToast('Saved.');
+  else showToast(result.error || "Couldn't save.");
 }
 </script>
 
