@@ -176,6 +176,8 @@
   .hidden{display:none !important;}
   .toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(10px);background:var(--ink);color:#fff;padding:10px 16px;border-radius:10px;font-size:0.85rem;opacity:0;pointer-events:none;transition:all .25s ease;max-width:90%;text-align:center;z-index:50;}
   .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+  .mock-banner{font-family:'IBM Plex Mono',monospace;font-size:0.76rem;color:var(--gold);background:#FBF6E2;border:1px solid rgba(201,162,39,0.35);border-radius:10px;padding:10px 14px;margin-bottom:16px;}
+  .version-tag{font-family:'IBM Plex Mono',monospace;font-size:0.68rem;color:var(--ink-soft);opacity:0.7;margin-top:6px;}
 </style>
 </head>
 <body>
@@ -207,12 +209,13 @@
     <div class="brand">Weekly Forum<small>TEACHER CONSOLE</small></div>
     <div class="login-card">
       <label class="field-label">Username</label>
-      <input type="text" id="userInput" placeholder="e.g. mockteacher" autocomplete="off">
+      <input type="text" id="userInput" placeholder="your real username" autocomplete="off">
       <label class="field-label" style="margin-top:12px;">Password</label>
       <input type="password" id="pwInput" placeholder="••••••••">
       <button class="btn btn-primary btn-block" style="margin-top:14px;" onclick="login()">Enter</button>
       <div class="error-msg" id="loginError">Incorrect username or password.</div>
     </div>
+    <div class="version-tag">v0.2 — 2026-06-25</div>
   </div>
 
   <div class="class-select-screen hidden" id="classSelectScreen">
@@ -239,35 +242,54 @@
       <button class="nav-btn" data-tab="settings" onclick="switchTab('settings')">Settings</button>
     </div>
 
+    <div class="mock-banner">⚠️ Login and class list are real. Everything below (roster, schedule, grading, rubric) is still test/mock data — not wired to your real Sheets yet.</div>
     <div id="content"></div>
   </div>
 </div>
 
 <script>
-/* ====================== AUTH (mock — see security note in spec) ====================== */
-const TEACHER_CREDENTIALS = {
-  "mockteacher": {password:"demo1234", displayName:"Ms. Carter"},
-};
+/* ====================== AUTH — now wired to the real backend ====================== */
+const API_URL = "https://script.google.com/macros/s/AKfycbyMbuD6_z3PTOt8P_dS8TPTImZB-r1cnraENT82KGxD6eL2EGK0IxSC5spUu38SfFnX/exec";
+
+async function callApi(action, payload){
+  const res = await fetch(API_URL, {
+    method: "POST",
+    headers: { "Content-Type": "text/plain;charset=utf-8" }, // avoids a CORS preflight
+    body: JSON.stringify(Object.assign({ action }, payload || {})),
+  });
+  return res.json();
+}
+
 let currentTeacher = null;
 let currentClass = null;
+let realClassNames = [];
 
-function login(){
+async function login(){
   const user = document.getElementById('userInput').value.trim();
   const pw = document.getElementById('pwInput').value;
-  const record = TEACHER_CREDENTIALS[user];
-  if(record && record.password === pw){
-    currentTeacher = record;
+  document.getElementById('loginError').style.display = 'none';
+  const result = await callApi('teacherLogin', { username: user, password: pw });
+  if(result.success){
+    currentTeacher = { displayName: result.displayName };
     document.getElementById('loginScreen').classList.add('hidden');
-    showClassSelect();
+    await showClassSelect();
   } else {
+    document.getElementById('loginError').textContent = result.error || 'Incorrect username or password.';
     document.getElementById('loginError').style.display = 'block';
   }
 }
 
-function showClassSelect(){
+async function showClassSelect(){
   document.getElementById('mainApp').classList.add('hidden');
   document.getElementById('classSelectScreen').classList.remove('hidden');
-  document.getElementById('classGrid').innerHTML = Object.keys(CLASSES).map(name=>
+  document.getElementById('classGrid').innerHTML = `<div class="empty-note">Loading classes…</div>`;
+  const result = await callApi('getClassesList');
+  if(!result.success){
+    document.getElementById('classGrid').innerHTML = `<div class="empty-note">${result.error}</div>`;
+    return;
+  }
+  realClassNames = result.classes;
+  document.getElementById('classGrid').innerHTML = realClassNames.map(name=>
     `<div class="class-card" onclick="enterClass('${name}')">${name}</div>`).join('');
 }
 
@@ -277,6 +299,12 @@ function enterClass(name){
   document.getElementById('mainApp').classList.remove('hidden');
   document.getElementById('whoName').textContent = currentTeacher.displayName;
   document.getElementById('classPill').textContent = name;
+  // NOTE: login + class list above are real. Everything past this point (roster, schedule,
+  // grading, rubric) still runs on the local mock CLASSES object below — not your real Sheets yet.
+  if(!CLASSES[name]){
+    // A real class with no matching mock data (e.g. one you added for real, not in the original demo)
+    CLASSES[name] = makeClass({});
+  }
   switchTab('grading');
 }
 
