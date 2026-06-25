@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Weekly Forum — Live</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400..700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#EFF1EA;
+    --card:#FFFFFF;
+    --ink:#20261F;
+    --ink-soft:#5B6358;
+    --stamp-red:#B23A2E;
+    --postal-blue:#3D5A73;
+    --gold:#C9A227;
+    --border:#D7DACE;
+    --radius:14px;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--paper);color:var(--ink);font-family:'IBM Plex Sans', sans-serif;-webkit-font-smoothing:antialiased;}
+  .app{width:100%;max-width:1400px;margin:0 auto;padding:0 12px 80px;}
+  @media (min-width:900px){ .app{width:80%;} }
+
+  header.topbar{display:flex;align-items:center;justify-content:space-between;padding:18px 4px 14px;margin-bottom:4px;}
+  .brand{font-family:'Fraunces', serif;font-weight:600;font-size:1.3rem;letter-spacing:-0.01em;}
+  .brand small{display:block;font-family:'IBM Plex Mono', monospace;font-size:0.6rem;color:var(--ink-soft);letter-spacing:0.08em;text-transform:uppercase;margin-top:2px;}
+  .who{display:flex;align-items:center;gap:8px;font-family:'IBM Plex Mono', monospace;font-size:0.74rem;color:var(--ink-soft);}
+  .who-self{display:flex;align-items:center;gap:8px;background:none;border:none;cursor:pointer;padding:4px 6px;border-radius:10px;font-family:'IBM Plex Mono', monospace;font-size:0.74rem;color:var(--ink-soft);}
+  .who-self:hover{background:#F7F8F4;}
+
+  .profile-avatar-big{width:96px;height:96px;border-radius:50%;background:var(--postal-blue);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'Fraunces',serif;font-weight:600;font-size:2.1rem;margin:0 auto 16px;overflow:hidden;}
+  .profile-avatar-big img{width:100%;height:100%;object-fit:cover;}
+  .profile-name{font-family:'Fraunces',serif;font-weight:600;font-size:1.3rem;}
+  .profile-sn{font-family:'IBM Plex Mono',monospace;font-size:0.8rem;color:var(--ink-soft);margin-top:2px;}
+  .avatar{width:32px;height:32px;border-radius:50%;background:var(--postal-blue);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'Fraunces',serif;font-weight:600;font-size:0.9rem;flex-shrink:0;overflow:hidden;}
+  .avatar img{width:100%;height:100%;object-fit:cover;}
+
+  .home-btn{font-family:'IBM Plex Sans',sans-serif;font-weight:600;font-size:0.86rem;color:#fff;background:var(--stamp-red);border:none;border-radius:10px;padding:9px 16px;cursor:pointer;display:flex;align-items:center;gap:6px;box-shadow:0 2px 8px rgba(178,58,46,0.3);}
+  .home-btn:hover{opacity:0.92;}
+  .home-btn:active{transform:scale(0.97);}
+
+  .dash-intro{font-family:'IBM Plex Mono',monospace;font-size:0.7rem;color:var(--ink-soft);text-transform:uppercase;letter-spacing:0.07em;margin:6px 4px 14px;}
+  .dash-grid{display:flex;flex-direction:column;gap:14px;}
+  .dash-card{
+    background:var(--card);border:1px solid var(--border);border-radius:var(--radius);
+    padding:20px;display:flex;align-items:center;gap:16px;cursor:pointer;
+    transition:transform .1s ease, box-shadow .15s ease;
+  }
+  .dash-card:hover{transform:translateY(-1px);box-shadow:0 4px 14px rgba(32,38,31,0.07);}
+  .dash-card:active{transform:scale(0.99);}
+  .dash-icon{
+    width:52px;height:52px;border-radius:50%;flex-shrink:0;
+    display:flex;align-items:center;justify-content:center;font-size:1.5rem;
+    color:#fff;
+  }
+  .dash-card.c-newpost .dash-icon{background:var(--stamp-red);}
+  .dash-card.c-previous .dash-icon{background:var(--postal-blue);}
+  .dash-card.c-grades .dash-icon{background:var(--gold);}
+  .dash-text{flex:1;}
+  .dash-title{font-family:'Fraunces',serif;font-weight:600;font-size:1.15rem;}
+  .dash-sub{font-size:0.84rem;color:var(--ink-soft);margin-top:2px;line-height:1.4;}
+  .dash-chev{color:var(--ink-soft);font-size:1.3rem;}
+  .dash-badge{
+    font-family:'IBM Plex Mono',monospace;font-size:0.65rem;background:#FBEAE7;color:var(--stamp-red);
+    padding:2px 8px;border-radius:10px;margin-left:8px;white-space:nowrap;
+  }
+
+  .login-screen{min-height:80vh;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;gap:18px;}
+  .login-screen .brand{font-size:2rem;}
+  .login-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:28px 24px;width:100%;max-width:340px;}
+  .login-card label{display:block;text-align:left;font-size:0.75rem;color:var(--ink-soft);font-family:'IBM Plex Mono',monospace;letter-spacing:0.05em;text-transform:uppercase;margin-bottom:6px;}
+  input[type=text], input[type=number], textarea{width:100%;font-family:'IBM Plex Sans',sans-serif;font-size:1rem;padding:11px 12px;border:1px solid var(--border);border-radius:10px;background:#fff;color:var(--ink);}
+  input:focus, textarea:focus{outline:none;border-color:var(--postal-blue);box-shadow:0 0 0 3px rgba(61,90,115,0.12);}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border:none;border-radius:10px;padding:11px 18px;font-family:'IBM Plex Sans',sans-serif;font-weight:600;font-size:0.92rem;cursor:pointer;transition:transform .08s ease, opacity .15s ease;}
+  .btn:active{transform:scale(0.97);}
+  .btn-primary{background:var(--stamp-red);color:#fff;}
+  .btn-primary:hover{opacity:0.92;}
+  .btn-block{width:100%;}
+  .btn-ghost{background:transparent;color:var(--postal-blue);border:1px solid var(--border);}
+  .error-msg{color:var(--stamp-red);font-size:0.82rem;margin-top:8px;display:none;}
+
+  .card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px;margin-bottom:16px;}
+  .week-head .label{font-family:'IBM Plex Mono',monospace;font-size:0.68rem;color:var(--ink-soft);text-transform:uppercase;letter-spacing:0.06em;}
+  .week-head .title{font-family:'Fraunces',serif;font-weight:600;font-size:1.25rem;margin-top:2px;}
+  .deadline-pill{display:inline-block;margin-top:8px;font-family:'IBM Plex Mono',monospace;font-size:0.7rem;background:#FBEAE7;color:var(--stamp-red);padding:4px 10px;border-radius:20px;border:1px solid rgba(178,58,46,0.3);}
+
+  .prompt-card{border-left:3px solid var(--gold);}
+  .prompt-card .eyebrow{font-family:'IBM Plex Mono',monospace;font-size:0.68rem;color:var(--gold);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:4px;}
+  .prompt-card .ptext{font-family:'Fraunces',serif;font-size:1.05rem;line-height:1.4;}
+
+  .your-entry-row{display:flex;align-items:center;justify-content:space-between;gap:10px;}
+  .your-entry-row .info{font-size:0.88rem;color:var(--ink-soft);}
+  .your-entry-row .ttl{font-weight:600;font-size:0.98rem;color:var(--ink);}
+
+  .section-label{font-family:'IBM Plex Mono',monospace;font-size:0.68rem;color:var(--ink-soft);text-transform:uppercase;letter-spacing:0.07em;margin:18px 4px 8px;}
+
+  .member-row{display:flex;align-items:center;gap:12px;padding:12px 4px;border-bottom:1px solid var(--border);cursor:pointer;}
+  .member-row:last-child{border-bottom:none;}
+  .member-row.disabled{cursor:default;opacity:0.55;}
+  .member-row .mtext{flex:1;}
+  .member-row .mtitle{font-weight:600;font-size:1rem;color:var(--ink);}
+  .member-row .mauthor{font-size:0.8rem;color:var(--ink-soft);margin-top:2px;}
+  .member-row .mname{font-weight:600;font-size:0.92rem;}
+  .member-row .mstatus{font-size:0.82rem;color:var(--ink-soft);margin-top:1px;}
+  .member-row .mstatus.posted{color:var(--postal-blue);}
+  .member-row .chev{color:var(--ink-soft);font-size:1.1rem;}
+
+  .rubric-table-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:var(--radius);background:var(--card);-webkit-overflow-scrolling:touch;scrollbar-width:none;-ms-overflow-style:none;}
+  .rubric-table-wrap::-webkit-scrollbar{display:none;height:0;}
+  table.rubric-table{border-collapse:collapse;width:100%;}
+  .rubric-table td{padding:12px 14px;border-bottom:1px solid var(--border);border-right:1px solid var(--border);vertical-align:top;text-align:left;font-size:0.82rem;}
+  .rubric-table tr:last-child td{border-bottom:none;}
+  .rubric-table td.crit-name{
+    font-family:'Fraunces',serif;font-weight:600;font-size:0.95rem;white-space:nowrap;
+    background:#FAFBF8;position:sticky;left:0;min-width:150px;z-index:1;
+  }
+  .rubric-table td.crit-name .crit-max{font-family:'IBM Plex Mono',monospace;font-weight:400;font-size:0.68rem;color:var(--ink-soft);margin-top:3px;white-space:normal;}
+  .rubric-table td.tier-cell{min-width:160px;max-width:210px;}
+  .rubric-table td.tier-cell .tlabel{font-weight:600;font-size:0.82rem;color:var(--ink);}
+  .rubric-table td.tier-cell .tdesc{font-size:0.76rem;color:var(--ink-soft);margin-top:4px;line-height:1.45;}
+  .rubric-table td.tier-cell .tpts{font-family:'IBM Plex Mono',monospace;font-size:0.72rem;font-weight:600;margin-top:8px;display:inline-block;padding:2px 8px;border-radius:8px;}
+  .rubric-table td.tier-cell.empty{background:#FAFAF7;}
+
+  .rubric-table td.tier-cell.qual-green{background:#EAF6EC;}
+  .rubric-table td.tier-cell.qual-green .tpts{color:#2E7D4F;background:rgba(46,125,79,0.14);}
+  .rubric-table td.tier-cell.qual-yellow{background:#FBF6E2;}
+  .rubric-table td.tier-cell.qual-yellow .tpts{color:#A67C00;background:rgba(166,124,0,0.14);}
+  .rubric-table td.tier-cell.qual-red{background:#FBEAE7;}
+  .rubric-table td.tier-cell.qual-red .tpts{color:var(--stamp-red);background:rgba(178,58,46,0.14);}
+
+  .rubric-table td.tier-cell.selected{box-shadow:inset 0 0 0 2px var(--ink);}
+  .rubric-table td.tier-cell.selected .sel-check{font-family:'IBM Plex Mono',monospace;font-size:0.66rem;font-weight:600;color:var(--ink);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:5px;}
+  .rubric-table td.tier-cell.dimmed{opacity:0.4;}
+
+  .feedback-card{border-left:3px solid var(--postal-blue);}
+  .feedback-card .eyebrow{font-family:'IBM Plex Mono',monospace;font-size:0.68rem;color:var(--postal-blue);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:4px;}
+  .feedback-card .feedback-text{font-size:0.92rem;line-height:1.55;}
+  .rubric-scroll-hint{font-family:'IBM Plex Mono',monospace;font-size:0.68rem;color:var(--ink-soft);text-align:right;margin:6px 4px 0;}
+
+  .floating-scrollbar{
+    position:fixed;left:50%;bottom:16px;transform:translateX(-50%);
+    width:min(608px, calc(100% - 32px));height:12px;
+    background:rgba(215,218,206,0.55);border:1px solid var(--border);
+    border-radius:8px;z-index:60;display:none;
+    box-shadow:0 2px 10px rgba(32,38,31,0.12);
+    backdrop-filter:blur(2px);
+  }
+  .floating-scrollbar.show{display:block;}
+  .floating-scrollbar-thumb{
+    position:absolute;top:1px;left:0;height:8px;
+    background:var(--postal-blue);border-radius:6px;cursor:grab;
+    min-width:40px;
+  }
+  .floating-scrollbar-thumb:active{cursor:grabbing;background:var(--stamp-red);}
+
+  .composer-form input#postTitle{margin-bottom:10px;font-weight:600;}
+  textarea#postText{min-height:30vh;resize:vertical;line-height:1.6;}
+  .meta-row{display:flex;justify-content:space-between;align-items:center;margin-top:8px;font-family:'IBM Plex Mono',monospace;font-size:0.74rem;color:var(--ink-soft);}
+  .media-row{display:flex;gap:10px;margin-top:14px;}
+  .media-slot{flex:1;border:1.5px dashed var(--border);border-radius:10px;min-height:90px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;cursor:pointer;color:var(--ink-soft);font-size:0.78rem;text-align:center;padding:8px;position:relative;overflow:hidden;background:#FAFBF8;}
+  .media-slot img, .media-slot .yt-thumb{width:100%;height:100%;object-fit:cover;position:absolute;inset:0;}
+  .media-slot .yt-thumb::after{content:'▶';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#fff;font-size:1.4rem;background:rgba(0,0,0,0.18);}
+
+  .toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(10px);background:var(--ink);color:#fff;padding:10px 16px;border-radius:10px;font-size:0.85rem;opacity:0;pointer-events:none;transition:all .25s ease;max-width:90%;text-align:center;z-index:50;}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+  .modal-overlay{position:fixed;inset:0;background:rgba(32,38,31,0.6);display:none;align-items:center;justify-content:center;z-index:100;padding:20px;}
+  .modal-overlay.show{display:flex;}
+  .modal-box{background:var(--card);border-radius:18px;padding:30px 26px;max-width:380px;width:100%;text-align:center;box-shadow:0 14px 44px rgba(32,38,31,0.35);}
+  .modal-box .modal-icon{font-size:2.4rem;margin-bottom:10px;}
+  .modal-box h3{font-family:'Fraunces',serif;font-weight:600;font-size:1.25rem;margin:0 0 10px;}
+  .modal-box p{font-size:0.92rem;color:var(--ink-soft);line-height:1.55;margin:0 0 22px;}
+
+  .back-link{display:inline-flex;align-items:center;gap:8px;font-family:'IBM Plex Sans',sans-serif;font-weight:600;font-size:0.9rem;color:#fff;cursor:pointer;margin-bottom:18px;background:var(--postal-blue);border:none;border-radius:10px;padding:10px 18px;box-shadow:0 2px 8px rgba(61,90,115,0.3);}
+  .back-link:hover{opacity:0.92;}
+  .back-link:active{transform:scale(0.97);}
+  .post-card{position:relative;}
+  .stamp{position:absolute;top:14px;right:14px;width:54px;height:54px;border-radius:50%;border:2px solid var(--postal-blue);color:var(--postal-blue);display:flex;flex-direction:column;align-items:center;justify-content:center;transform:rotate(7deg);font-family:'IBM Plex Mono',monospace;opacity:0.85;}
+  .stamp .wk{font-size:0.6rem;letter-spacing:0.05em;}
+  .stamp .num{font-size:1.1rem;font-weight:600;line-height:1;}
+  .post-detail-title{font-family:'Fraunces',serif;font-weight:600;font-size:1.3rem;margin:0 60px 10px 0;}
+  .post-head{display:flex;align-items:center;gap:10px;margin-bottom:12px;}
+  .post-head .name{font-weight:600;font-size:0.92rem;}
+  .post-head .when{font-family:'IBM Plex Mono',monospace;font-size:0.7rem;color:var(--ink-soft);}
+  .post-body{line-height:1.65;font-size:0.97rem;margin-bottom:4px;white-space:pre-wrap;}
+  .post-media{display:flex;gap:10px;margin-top:12px;}
+  .post-media img{flex:1;border-radius:10px;object-fit:cover;max-height:200px;width:100%;}
+  .yt-embed{flex:1;position:relative;display:block;max-height:200px;height:160px;background-size:cover;background-position:center;border-radius:10px;overflow:hidden;}
+  .yt-embed::after{content:'▶';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#fff;font-size:2rem;background:rgba(0,0,0,0.2);}
+  .word-count{font-family:'IBM Plex Mono',monospace;font-size:0.72rem;color:var(--ink-soft);margin-top:10px;}
+
+  .comments{margin-top:14px;border-top:1px solid var(--border);padding-top:12px;}
+  .comment{display:flex;gap:10px;margin-bottom:12px;}
+  .comment .avatar{width:28px;height:28px;font-size:0.78rem;}
+  .comment-body{flex:1;background:#F7F8F4;border-radius:10px;padding:10px 12px;}
+  .comment-body .c-name{font-weight:600;font-size:0.84rem;}
+  .comment-body .c-text{font-size:0.88rem;margin-top:2px;line-height:1.5;white-space:pre-wrap;}
+  .reply{margin-left:38px;margin-top:8px;}
+  .reply .comment-body{background:#EEF1EC;}
+  .reply-link{font-family:'IBM Plex Mono',monospace;font-size:0.7rem;color:var(--postal-blue);cursor:pointer;background:none;border:none;padding:0;margin-top:4px;}
+  .reply-box-wrap{margin-top:8px;}
+  .reply-box{display:flex;gap:8px;}
+  .reply-box input{flex:1;padding:7px 10px;font-size:0.84rem;}
+  .comment-input-row{display:flex;gap:8px;margin-top:12px;}
+  .comment-input-row input{flex:1;}
+  .closed-note{font-family:'IBM Plex Mono',monospace;font-size:0.76rem;color:var(--ink-soft);background:#F2F0E8;border:1px dashed var(--border);border-radius:10px;padding:10px 12px;margin-top:12px;text-align:center;}
+
+  .week-list-row{display:flex;align-items:center;justify-content:space-between;padding:14px 4px;border-bottom:1px solid var(--border);cursor:pointer;}
+  .week-list-row:last-child{border-bottom:none;}
+  .week-list-row .wtitle{font-weight:600;font-size:0.95rem;}
+  .week-list-row .wsub{font-size:0.78rem;color:var(--ink-soft);margin-top:2px;}
+
+  .grade-week-card .gw-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;}
+  .grade-week-card .gw-title{font-family:'Fraunces',serif;font-weight:600;font-size:1.05rem;}
+  .grade-week-card .gw-total{font-family:'IBM Plex Mono',monospace;font-size:0.85rem;color:var(--gold);font-weight:600;}
+  .grade-row{padding:8px 0;border-bottom:1px solid var(--border);}
+  .grade-row:last-child{border-bottom:none;}
+  .grade-row .gname{font-weight:600;font-size:0.86rem;display:flex;justify-content:space-between;}
+  .grade-row .gtier{font-size:0.8rem;color:var(--ink-soft);margin-top:2px;}
+  .grade-row .gfeedback{font-size:0.82rem;color:var(--postal-blue);margin-top:4px;font-style:italic;}
+
+  .empty-note{text-align:center;color:var(--ink-soft);font-size:0.85rem;padding:30px 10px;border:1px dashed var(--border);border-radius:var(--radius);background:var(--card);}
+  .hidden{display:none !important;}
+</style>
+</head>
+<body>
+
+<div class="toast" id="toast"></div>
+
+<div class="modal-overlay" id="tabWarningModal">
+  <div class="modal-box">
+    <div class="modal-icon">⚠️</div>
+    <h3>Stay on this page</h3>
+    <p>You switched away while writing. Please stay on this page — using translation tools or other apps while writing isn't allowed, and this has been logged.</p>
+    <button class="btn btn-primary btn-block" onclick="closeTabWarningModal()">OK</button>
+  </div>
+</div>
+
+<div class="app">
+
+  <!-- ===================== LOGIN SCREEN ===================== -->
+  <div class="login-screen" id="loginScreen">
+    <div class="brand">Weekly Forum<small>EFL BLOG &amp; DISCUSSION</small></div>
+    <div class="login-card">
+      <label for="studentNumberInput">Student Number</label>
+      <input type="text" id="studentNumberInput" placeholder="e.g. 2111001" autocomplete="off">
+      <button class="btn btn-primary btn-block" style="margin-top:14px;" onclick="login()">Enter</button>
+      <div class="error-msg" id="loginError">Student number not found. Check and try again.</div>
+    </div>
+  </div>
+
+  <!-- ===================== MAIN APP ===================== -->
+  <div id="mainApp" class="hidden">
+    <header class="topbar">
+      <div class="brand">Weekly Forum<small>EFL BLOG &amp; DISCUSSION</small></div>
+      <div class="who">
+        <button class="home-btn hidden" id="homeBtn" onclick="renderDashboard()">🏠 Dashboard</button>
+        <button class="who-self" onclick="renderProfilePage()">
+          <span id="whoName">—</span>
+          <div class="avatar" id="whoAvatar">?</div>
+        </button>
+      </div>
+    </header>
+
+    <div id="content"></div>
+  </div>
+</div>
+
+<script>
+/* ====================================================================
+   LIVE BACKEND WIRING
+   This file talks to the real Apps Script API instead of mock data.
+   Phase 1 scope: login, New Post (prompt/group/rubric), posting,
+   viewing a post, commenting, replying.
+   NOT yet wired: Previous Entries history list, Grades, real image
+   upload (still a placeholder), profile pictures. Those come in
+   later passes once their backend endpoints exist.
+   ==================================================================== */
+
+const API_URL = "https://script.google.com/macros/s/AKfycbyMbuD6_z3PTOt8P_dS8TPTImZB-r1cnraENT82KGxD6eL2EGK0IxSC5spUu38SfFnX/exec";
+
+// Hardcoded for now since there's only one week of Schedule data in testing.
+// Once there are several weeks, this should become "whichever week's PostOpen<=now<=PostClose,
+// or the most recent one" — a small follow-up, not done yet.
+const CURRENT_WEEK = 1;
+
+async function callApi(action, payload) {
+  const res = await fetch(API_URL, {
+    method: "POST",
+    headers: { "Content-Type": "text/plain;charset=utf-8" }, // avoids a CORS preflight
+    body: JSON.stringify(Object.assign({ action }, payload || {})),
+  });
+  return res.json();
+}
+
+let currentStudent = null;
+let currentClassId = null;
+let currentName = null;
+let activeTab = 'dashboard';
+let currentPostData = null; // cached response from getNewPostData, so we don't refetch on every small render
+
+function initials(name){ return (name||'?').split(' ').map(n=>n[0]).join(''); }
+function avatarInner(name){ return initials(name); } // no real profile pictures wired up yet
+
+let toastTimer;
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=> t.classList.remove('show'), 2800);
+}
+
+/* ============ AUTH ============ */
+async function login(){
+  const val = document.getElementById('studentNumberInput').value.trim();
+  if(!val) return;
+  document.getElementById('loginError').style.display = 'none';
+  const result = await callApi('studentLogin', { studentNumber: val });
+  if(result.success){
+    currentStudent = val;
+    currentClassId = result.classId;
+    currentName = result.name;
+    document.getElementById('loginScreen').classList.add('hidden');
+    document.getElementById('mainApp').classList.remove('hidden');
+    document.getElementById('whoName').textContent = currentName;
+    document.getElementById('whoAvatar').textContent = avatarInner(currentName);
+    renderDashboard();
+  } else {
+    document.getElementById('loginError').textContent = result.error || 'Student number not found.';
+    document.getElementById('loginError').style.display = 'block';
+  }
+}
+
+function updateHomeButton(onDashboard){
+  document.getElementById('homeBtn').classList.toggle('hidden', onDashboard);
+}
+
+/* ============ DASHBOARD ============ */
+function renderDashboard(){
+  activeTab = 'dashboard';
+  updateHomeButton(true);
+  document.getElementById('content').innerHTML = `
+    <div class="dash-intro">What would you like to do?</div>
+    <div class="dash-grid">
+      <div class="dash-card c-newpost" onclick="enterSection('newpost')">
+        <div class="dash-icon">📝</div>
+        <div class="dash-text">
+          <div class="dash-title">New Post</div>
+          <div class="dash-sub">Write this week's entry, read your group's posts and comment</div>
+        </div>
+        <div class="dash-chev">›</div>
+      </div>
+      <div class="dash-card c-previous" onclick="enterSection('previous')">
+        <div class="dash-icon">📚</div>
+        <div class="dash-text">
+          <div class="dash-title">Previous Entries / Grades</div>
+          <div class="dash-sub">Not wired up yet — coming in a later phase</div>
+        </div>
+        <div class="dash-chev">›</div>
+      </div>
+    </div>
+  `;
+}
+
+function enterSection(section){
+  activeTab = section;
+  updateHomeButton(false);
+  if(section==='newpost') renderNewPostTab();
+  if(section==='previous') renderPreviousPlaceholder();
+}
+
+function renderPreviousPlaceholder(){
+  document.getElementById('content').innerHTML = `
+    <div class="card empty-note">
+      Previous Entries &amp; Grades isn't wired up to the real backend yet — that's a later phase
+      (needs a "list past weeks" endpoint and the grading flow to exist first). For now this is
+      only live in the New Post tab.
+    </div>
+  `;
+}
+
+function renderProfilePage(){
+  activeTab = 'profile';
+  updateHomeButton(false);
+  document.getElementById('content').innerHTML = `
+    <button class="back-link" onclick="renderDashboard()">← Back to dashboard</button>
+    <div class="card" style="text-align:center;">
+      <div class="profile-avatar-big">${avatarInner(currentName)}</div>
+      <div class="profile-name">${currentName}</div>
+      <div class="profile-sn">${currentStudent} · ${currentClassId}</div>
+      <button class="btn btn-primary" style="margin-top:16px;" onclick="showToast('Profile pictures aren\\'t wired up yet — coming in a later phase.')">Change profile picture</button>
+    </div>
+  `;
+}
+
+/* ============ NEW POST TAB ============ */
+async function renderNewPostTab(){
+  document.getElementById('content').innerHTML = `<div class="card empty-note">Loading…</div>`;
+  const data = await callApi('getNewPostData', { classId: currentClassId, studentNumber: currentStudent, week: CURRENT_WEEK });
+  if(!data.success){
+    document.getElementById('content').innerHTML = `<div class="card empty-note">${data.error}</div>`;
+    return;
+  }
+  currentPostData = data;
+  const sched = data.schedule;
+  const now = new Date();
+  const postOpen = now >= new Date(sched.PostOpen) && now <= new Date(sched.PostClose);
+
+  let entryBlockHtml;
+  if(data.myPost){
+    entryBlockHtml = `
+      <div class="card your-entry-row">
+        <div><div class="info">Your entry</div><div class="ttl">${data.myPost.Title}</div></div>
+        <button class="btn btn-ghost" onclick="openPostDetail('${data.myPost.PostID}')">${postOpen ? 'View / Edit' : 'View'}</button>
+      </div>`;
+  } else if(!postOpen){
+    entryBlockHtml = `<div class="card" style="text-align:center;color:var(--ink-soft);">The posting window for this week has closed — no entry was submitted.</div>`;
+  } else {
+    entryBlockHtml = `
+      <div class="card composer-card" id="composerCard">
+        <button class="btn btn-primary btn-block" id="startWritingBtn" onclick="openComposer()">Start writing</button>
+        <div class="composer-form hidden" id="composerForm">
+          <input type="text" id="postTitle" placeholder="Give your entry a title...">
+          <textarea id="postText" placeholder="Write about the prompt... (typing only — pasted text is blocked)"></textarea>
+          <div class="meta-row">
+            <span id="wordCountLabel">0 words</span>
+            <span>Min 40 words for full marks</span>
+          </div>
+          ${data.settings.PictureEnabled ? `
+          <div class="media-row">
+            <div class="media-slot" id="imageSlot" onclick="mockImageUpload()"><span>📷</span><span>Add a photo</span></div>
+            <div class="media-slot" id="ytSlot" onclick="mockYouTubeAdd()"><span>▶</span><span>Add YouTube link</span></div>
+          </div>` : ''}
+          <button class="btn btn-primary btn-block" style="margin-top:14px;" onclick="submitPost()">Post entry</button>
+        </div>
+      </div>`;
+  }
+
+  let membersHtml = '';
+  if(data.settings.GroupsEnabled){
+    membersHtml = data.groupMembers.map(m=>{
+      const isMe = m.studentNumber===currentStudent;
+      if(m.postId){
+        return `
+          <div class="member-row" onclick="openPostDetail('${m.postId}')">
+            <div class="avatar" style="background:var(--postal-blue)">${avatarInner(m.name)}</div>
+            <div class="mtext"><div class="mtitle">${m.title}</div><div class="mauthor">${m.name}${isMe?' (you)':''}</div></div>
+            <div class="chev">›</div>
+          </div>`;
+      }
+      return `
+        <div class="member-row disabled">
+          <div class="avatar" style="background:var(--border);color:var(--ink-soft);">${avatarInner(m.name)}</div>
+          <div class="mtext"><div class="mname">${m.name}${isMe?' (you)':''}</div><div class="mstatus">No posts yet</div></div>
+        </div>`;
+    }).join('');
+  }
+
+  const rubricHtml = buildRubricTable(data.rubric);
+
+  document.getElementById('content').innerHTML = `
+    <div class="card week-head">
+      <div class="label">Week ${String(sched.Week).padStart(2,'0')} · ${sched.DateRangeLabel}</div>
+      <div class="title">This week's blog entry</div>
+      <div class="deadline-pill ${postOpen?'':''}" style="${postOpen?'':'background:#F2F0E8;color:var(--ink-soft);border-color:var(--border);'}">
+        ${postOpen ? 'Posting window is open' : 'Posting window closed'}
+      </div>
+    </div>
+    <div class="card prompt-card">
+      <div class="eyebrow">Prompt</div>
+      <div class="ptext">${sched.Prompt}</div>
+    </div>
+    ${entryBlockHtml}
+    ${data.settings.GroupsEnabled ? `
+    <div class="section-label">Your group this week</div>
+    <div class="card">${membersHtml}</div>` : ''}
+    <div class="section-label">Rubric</div>
+    ${rubricHtml}
+  `;
+  wireComposerEvents();
+}
+
+function openComposer(){
+  document.getElementById('startWritingBtn').classList.add('hidden');
+  document.getElementById('composerForm').classList.remove('hidden');
+}
+
+function wireComposerEvents(){
+  const postTextEl = document.getElementById('postText');
+  if(!postTextEl) return;
+  postTextEl.addEventListener('paste', e=>{ e.preventDefault(); showToast("Pasting isn't allowed — please type your entry yourself."); });
+  postTextEl.addEventListener('drop', e=>{ e.preventDefault(); showToast("Dropping text isn't allowed — please type your entry yourself."); });
+  postTextEl.addEventListener('input', ()=>{
+    const words = postTextEl.value.trim().split(/\s+/).filter(Boolean).length;
+    document.getElementById('wordCountLabel').textContent = words + (words===1 ? ' word' : ' words');
+  });
+}
+
+// Image/YouTube upload pipeline (compression + Drive storage) isn't built yet — placeholders for now.
+let mockImage = null, mockYT = null;
+function mockImageUpload(){
+  showToast("Real image upload isn't wired up yet — coming in a later phase.");
+}
+function mockYouTubeAdd(){
+  showToast("YouTube embedding isn't wired up yet — coming in a later phase.");
+}
+
+async function submitPost(){
+  const title = document.getElementById('postTitle').value.trim();
+  const text = document.getElementById('postText').value;
+  if(!title){ showToast("Give your entry a title first."); return; }
+  if(!text.trim()){ showToast("Write something before posting."); return; }
+  const result = await callApi('createPost', {
+    classId: currentClassId, studentNumber: currentStudent, week: CURRENT_WEEK,
+    title, textContent: text, imageURL: '', youtubeURL: '',
+  });
+  if(result.success){
+    showToast("Entry posted.");
+    renderNewPostTab();
+  } else {
+    showToast(result.error || "Couldn't post — try again.");
+  }
+}
+
+/* ============ POST DETAIL ============ */
+async function openPostDetail(postId){
+  document.getElementById('content').innerHTML = `<div class="card empty-note">Loading…</div>`;
+  const data = await callApi('getPostDetail', { classId: currentClassId, postId, studentNumber: currentStudent });
+  if(!data.success){
+    document.getElementById('content').innerHTML = `<div class="card empty-note">${data.error}</div>`;
+    return;
+  }
+  const post = data.post;
+  const wc = post.TextContent.trim().split(/\s+/).filter(Boolean).length;
+
+  const commentsHtml = data.comments.map(c=>{
+    let replyHtml = '';
+    if(c.reply){
+      replyHtml = `<div class="reply"><div class="comment"><div class="avatar" style="background:var(--postal-blue)">${avatarInner(c.reply.name)}</div><div class="comment-body"><div class="c-name">${c.reply.name}</div><div class="c-text">${c.reply.text}</div></div></div></div>`;
+    } else if(data.replyOpen && data.isOwnPost){
+      replyHtml = `<div class="reply"><button class="reply-link" onclick="showReplyBox('${c.commentId}')">Reply</button>
+        <div class="reply-box-wrap hidden" id="replybox-${c.commentId}">
+          <div class="reply-box">
+            <input type="text" id="replyinput-${c.commentId}" placeholder="Write a reply...">
+            <button class="btn btn-ghost" onclick="submitReply('${c.commentId}')">Send</button>
+          </div>
+          <div class="word-count" id="replyinput-wc-${c.commentId}">0 words (30+ needed for credit)</div>
+        </div></div>`;
+    } else if(!c.reply && data.isOwnPost && !data.replyOpen){
+      replyHtml = `<div class="reply"><div class="closed-note" style="margin-top:6px;">Reply period closed.</div></div>`;
+    }
+    return `<div class="comment"><div class="avatar" style="background:var(--postal-blue)">${avatarInner(c.name)}</div><div class="comment-body"><div class="c-name">${c.name}</div><div class="c-text">${c.text}</div></div></div>${replyHtml}`;
+  }).join('');
+
+  let commentInputHtml;
+  if(!data.commentOpen){
+    commentInputHtml = `<div class="closed-note">Comment period closed for this week.</div>`;
+  } else if(data.isOwnPost){
+    commentInputHtml = '';
+  } else {
+    commentInputHtml = `<div class="comment-input-row"><input type="text" id="newcomment" placeholder="Write a comment..."><button class="btn btn-primary" onclick="submitComment('${postId}')">Send</button></div>
+       <div class="word-count" id="newcomment-wc">0 words (30+ needed for credit)</div>`;
+  }
+
+  document.getElementById('content').innerHTML = `
+    <button class="back-link" onclick="renderNewPostTab()">← Back</button>
+    <div class="card post-card">
+      <div class="stamp"><span class="wk">WEEK</span><span class="num">${String(post.Week).padStart(2,'0')}</span></div>
+      <div class="post-detail-title">${post.Title}</div>
+      <div class="post-head">
+        <div class="avatar" style="background:var(--postal-blue)">${avatarInner(data.authorName)}</div>
+        <div><div class="name">${data.authorName}</div><div class="when">${data.scheduleLabel}</div></div>
+      </div>
+      <div class="post-body">${post.TextContent}</div>
+      <div class="word-count">${wc} words</div>
+      <div class="comments">
+        ${commentsHtml}
+        ${commentInputHtml}
+      </div>
+    </div>
+  `;
+
+  if(data.commentOpen && !data.isOwnPost) wireWordCounter('newcomment', 'newcomment-wc');
+  if(data.replyOpen && data.isOwnPost){
+    data.comments.filter(c=>!c.reply).forEach(c=>{
+      wireWordCounter(`replyinput-${c.commentId}`, `replyinput-wc-${c.commentId}`);
+    });
+  }
+}
+
+function wireWordCounter(inputId, labelId){
+  const el = document.getElementById(inputId);
+  const label = document.getElementById(labelId);
+  if(!el || !label) return;
+  el.addEventListener('input', ()=>{
+    const words = el.value.trim().split(/\s+/).filter(Boolean).length;
+    label.textContent = words + (words===1 ? ' word' : ' words') + ' (30+ needed for credit)';
+    label.style.color = words>=30 ? 'var(--postal-blue)' : 'var(--ink-soft)';
+  });
+}
+
+function showReplyBox(commentId){
+  document.getElementById(`replybox-${commentId}`).classList.toggle('hidden');
+}
+
+async function submitComment(postId){
+  const input = document.getElementById('newcomment');
+  const text = input.value.trim();
+  if(!text) return;
+  const result = await callApi('createComment', { classId: currentClassId, postId, studentNumber: currentStudent, content: text });
+  if(result.success) openPostDetail(postId);
+  else showToast(result.error || "Couldn't post comment.");
+}
+
+async function submitReply(commentId){
+  const input = document.getElementById(`replyinput-${commentId}`);
+  const text = input.value.trim();
+  if(!text) return;
+  // We need the postId to re-render after — pull it from currentPostData isn't reliable here since
+  // we're inside a post detail view; simplest is to re-fetch using the post id already in the URL-less
+  // page state. We stash it on the comment button's data via closure instead:
+  const result = await callApi('createReply', { classId: currentClassId, commentId, studentNumber: currentStudent, content: text });
+  if(result.success) location.reload(); // simplest reliable refresh for this phase
+  else showToast(result.error || "Couldn't post reply.");
+}
+
+/* ============ RUBRIC TABLE (read-only preview) ============ */
+function qualityClass(label, points, maxPoints){
+  const l = (label||'').toLowerCase();
+  if(l.includes('excellent') || l.includes('good') || l.includes('on time')) return 'qual-green';
+  if(l.includes('average')) return 'qual-yellow';
+  if(l.includes('needs improvement') || l.includes('no submission') || l.includes('late') || l.includes('missing')) return 'qual-red';
+  const ratio = maxPoints>0 ? points/maxPoints : 0;
+  if(ratio>=0.7) return 'qual-green';
+  if(ratio>=0.3) return 'qual-yellow';
+  return 'qual-red';
+}
+
+function buildRubricTable(rubric){
+  if(!rubric || rubric.length===0) return `<div class="card empty-note">No rubric set up yet.</div>`;
+  const maxTiers = Math.max(...rubric.map(c=>c.tiers.length));
+  const rows = rubric.map(crit=>{
+    const maxPoints = Math.max(...crit.tiers.map(t=>Number(t.points)||0));
+    const cells = [];
+    for(let i=0;i<maxTiers;i++){
+      const t = crit.tiers[i];
+      if(!t){ cells.push('<td class="tier-cell empty"></td>'); continue; }
+      const cls = qualityClass(t.label, Number(t.points)||0, maxPoints);
+      cells.push(`
+        <td class="tier-cell ${cls}">
+          <div class="tlabel">${t.label}</div>
+          ${t.desc ? `<div class="tdesc">${t.desc}</div>` : ''}
+          <span class="tpts">${t.points} pts</span>
+        </td>`);
+    }
+    return `<tr><td class="crit-name">${crit.name}<div class="crit-max">${maxPoints} pts max</div></td>${cells.join('')}</tr>`;
+  }).join('');
+  return `
+    <div class="rubric-table-wrap" id="rubricTableWrap">
+      <table class="rubric-table"><tbody>${rows}</tbody></table>
+    </div>
+    <div class="rubric-scroll-hint">Scroll sideways to see all levels →</div>
+  `;
+}
+
+/* ============ TAB-SWITCH DETECTION (client-side only, see spec) ============ */
+let tabAwaySince = null;
+function markTabAway(){
+  if(tabAwaySince) return;
+  tabAwaySince = Date.now();
+}
+function markTabReturn(){
+  if(!tabAwaySince) return;
+  const awayMs = Date.now() - tabAwaySince;
+  tabAwaySince = null;
+  if(awayMs > 1500 && currentStudent) showTabWarningModal();
+}
+function showTabWarningModal(){ document.getElementById('tabWarningModal').classList.add('show'); }
+function closeTabWarningModal(){ document.getElementById('tabWarningModal').classList.remove('show'); }
+window.addEventListener('blur', markTabAway);
+window.addEventListener('focus', markTabReturn);
+document.addEventListener('visibilitychange', ()=>{ if(document.hidden) markTabAway(); else markTabReturn(); });
+window.addEventListener('pagehide', markTabAway);
+window.addEventListener('pageshow', markTabReturn);
+</script>
+
+</body>
+</html>
