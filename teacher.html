@@ -1,0 +1,944 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Weekly Forum — Teacher Interface</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400..700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#EFF1EA; --card:#FFFFFF; --ink:#20261F; --ink-soft:#5B6358;
+    --stamp-red:#B23A2E; --postal-blue:#3D5A73; --gold:#C9A227; --border:#D7DACE;
+    --radius:14px;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--paper);color:var(--ink);font-family:'IBM Plex Sans',sans-serif;-webkit-font-smoothing:antialiased;}
+  .app{width:100%;max-width:1500px;margin:0 auto;padding:0 16px 60px;}
+  @media (min-width:1100px){ .app{width:92%;} }
+
+  header.topbar{display:flex;align-items:center;justify-content:space-between;padding:18px 4px 14px;border-bottom:1px solid var(--border);margin-bottom:18px;gap:12px;flex-wrap:wrap;}
+  .brand{font-family:'Fraunces',serif;font-weight:600;font-size:1.3rem;}
+  .brand small{display:block;font-family:'IBM Plex Mono',monospace;font-size:0.6rem;color:var(--ink-soft);letter-spacing:0.08em;text-transform:uppercase;margin-top:2px;}
+  .who-row{display:flex;align-items:center;gap:10px;font-family:'IBM Plex Mono',monospace;font-size:0.78rem;color:var(--ink-soft);}
+  .class-pill{font-family:'IBM Plex Mono',monospace;font-size:0.72rem;background:#EEF1EC;color:var(--postal-blue);padding:4px 10px;border-radius:12px;}
+  .switch-class-btn{font-family:'IBM Plex Sans',sans-serif;font-weight:600;font-size:0.82rem;color:#fff;background:var(--stamp-red);border:none;border-radius:9px;padding:8px 14px;cursor:pointer;}
+  .switch-class-btn:hover{opacity:0.92;}
+
+  .nav{display:flex;gap:6px;margin-bottom:22px;flex-wrap:wrap;}
+  .nav button{font-family:'IBM Plex Sans',sans-serif;font-weight:600;font-size:0.86rem;padding:9px 16px;border-radius:10px;border:1px solid var(--border);background:var(--card);color:var(--ink-soft);cursor:pointer;}
+  .nav button.active{background:var(--ink);color:#fff;border-color:var(--ink);}
+
+  .card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:18px 20px;margin-bottom:16px;}
+  .section-label{font-family:'IBM Plex Mono',monospace;font-size:0.7rem;color:var(--ink-soft);text-transform:uppercase;letter-spacing:0.07em;margin:18px 4px 8px;}
+
+  input[type=text], input[type=number], input[type=password], input[type=datetime-local], textarea, select{
+    width:100%;font-family:'IBM Plex Sans',sans-serif;font-size:0.92rem;padding:9px 11px;
+    border:1px solid var(--border);border-radius:8px;background:#fff;color:var(--ink);
+  }
+  textarea{resize:vertical;}
+  label.field-label{display:block;font-family:'IBM Plex Mono',monospace;font-size:0.68rem;color:var(--ink-soft);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:5px;}
+
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border:none;border-radius:9px;padding:10px 16px;font-weight:600;font-size:0.88rem;cursor:pointer;}
+  .btn-primary{background:var(--stamp-red);color:#fff;}
+  .btn-primary:hover{opacity:0.92;}
+  .btn-ghost{background:transparent;color:var(--postal-blue);border:1px solid var(--border);}
+  .btn-block{width:100%;}
+  .btn-sm{padding:6px 11px;font-size:0.78rem;}
+
+  /* Login */
+  .login-screen{min-height:80vh;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;gap:18px;}
+  .login-screen .brand{font-size:2rem;}
+  .login-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:28px 24px;width:100%;max-width:340px;}
+  .error-msg{color:var(--stamp-red);font-size:0.82rem;margin-top:8px;display:none;}
+
+  /* Class select */
+  .class-select-screen{min-height:80vh;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;gap:8px;padding:20px;}
+  .class-select-screen h2{font-family:'Fraunces',serif;font-weight:600;font-size:1.7rem;margin:0;}
+  .class-select-screen p{color:var(--ink-soft);font-size:0.92rem;margin:0 0 20px;}
+  .class-grid{display:flex;flex-wrap:wrap;gap:14px;justify-content:center;max-width:520px;}
+  .class-card{
+    background:var(--card);border:1px solid var(--border);border-radius:var(--radius);
+    width:160px;height:110px;display:flex;align-items:center;justify-content:center;
+    font-family:'Fraunces',serif;font-weight:600;font-size:1.2rem;color:var(--postal-blue);
+    cursor:pointer;transition:transform .1s ease, box-shadow .15s ease;
+  }
+  .class-card:hover{transform:translateY(-2px);box-shadow:0 6px 16px rgba(32,38,31,0.1);}
+
+  /* Grading layout */
+  .grading-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px;flex-wrap:wrap;}
+  .grading-toolbar select{max-width:260px;}
+  .grading-layout{display:grid;grid-template-columns:1fr;gap:18px;align-items:start;}
+  @media (min-width:760px){
+    .grading-layout{grid-template-columns:1.2fr 1fr;}
+    .grading-layout > div{height:calc(100vh - 200px);min-height:480px;overflow-y:auto;}
+  }
+
+  .submission-card{}
+  .sub-title{font-family:'Fraunces',serif;font-weight:600;font-size:1.25rem;margin-bottom:8px;}
+  .sub-meta{display:flex;align-items:center;gap:10px;margin-bottom:14px;}
+  .avatar{width:34px;height:34px;border-radius:50%;background:var(--postal-blue);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'Fraunces',serif;font-weight:600;font-size:0.92rem;flex-shrink:0;}
+  .sub-meta .nm{font-weight:600;font-size:0.92rem;}
+  .sub-meta .wc{font-family:'IBM Plex Mono',monospace;font-size:0.72rem;color:var(--ink-soft);}
+  .sub-body{line-height:1.65;font-size:0.96rem;white-space:pre-wrap;margin-bottom:10px;}
+  .sub-media img{width:100%;border-radius:10px;margin-bottom:10px;}
+  .sub-subhead{font-family:'IBM Plex Mono',monospace;font-size:0.7rem;color:var(--ink-soft);text-transform:uppercase;letter-spacing:0.06em;margin:18px 0 8px;border-top:1px solid var(--border);padding-top:14px;}
+  .sub-comment{display:flex;gap:9px;margin-bottom:10px;}
+  .sub-comment .avatar{width:26px;height:26px;font-size:0.7rem;}
+  .sub-comment-body{flex:1;background:#F7F8F4;border-radius:9px;padding:8px 11px;}
+  .sub-comment-body .cn{font-weight:600;font-size:0.8rem;}
+  .sub-comment-body .ct{font-size:0.84rem;margin-top:1px;line-height:1.45;}
+  .sub-comment-body .cwc{font-family:'IBM Plex Mono',monospace;font-size:0.66rem;color:var(--ink-soft);margin-top:4px;}
+  .empty-note{color:var(--ink-soft);font-size:0.84rem;font-style:italic;}
+
+  .grade-sidebar{position:relative;}
+  .progress-bar{display:flex;align-items:center;justify-content:space-between;background:#F7F8F4;border-radius:10px;padding:10px 14px;margin-bottom:14px;}
+  .progress-bar .ptext{font-family:'IBM Plex Mono',monospace;font-size:0.78rem;color:var(--ink-soft);}
+  .progress-bar .ptotal{font-weight:600;color:var(--ink);}
+  .student-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;}
+  .student-nav .id{display:flex;align-items:center;gap:10px;}
+  .student-nav .id .nm{font-weight:600;font-size:1.02rem;}
+  .nav-arrow{width:34px;height:34px;border-radius:50%;border:1px solid var(--border);background:#fff;cursor:pointer;font-size:1rem;color:var(--ink-soft);}
+  .nav-arrow:hover{background:#F7F8F4;}
+
+  .feedback-box label.field-label{margin-top:0;}
+  .feedback-box textarea{min-height:80px;margin-bottom:16px;}
+
+  .criterion{border:1px solid var(--border);border-radius:10px;margin-bottom:10px;overflow:hidden;}
+  .criterion-head{display:flex;justify-content:space-between;align-items:center;padding:11px 14px;cursor:pointer;background:#FAFBF8;}
+  .criterion-head .cname{font-weight:600;font-size:0.9rem;}
+  .criterion-head .cpts{font-family:'IBM Plex Mono',monospace;font-size:0.74rem;color:var(--ink-soft);}
+  .criterion-head .ctoggle{font-size:0.85rem;color:var(--ink-soft);}
+  .criterion-body{padding:6px 14px 12px;display:none;}
+  .criterion.open .criterion-body{display:block;}
+  .criterion.open .criterion-head{background:#fff;border-bottom:1px solid var(--border);}
+  .tier-option{display:flex;gap:10px;align-items:flex-start;padding:8px 6px;border-radius:8px;cursor:pointer;}
+  .tier-option:hover{background:#F7F8F4;}
+  .tier-option input{margin-top:3px;}
+  .tier-option .tlabel{font-weight:600;font-size:0.85rem;}
+  .tier-option .tdesc{font-size:0.78rem;color:var(--ink-soft);margin-top:2px;line-height:1.4;}
+  .tier-option .tpts{font-family:'IBM Plex Mono',monospace;font-size:0.72rem;color:var(--gold);margin-top:3px;display:inline-block;}
+  .tier-option.auto-suggested{background:#FBF6E2;}
+  .auto-tag{font-family:'IBM Plex Mono',monospace;font-size:0.62rem;color:var(--gold);text-transform:uppercase;letter-spacing:0.04em;margin-left:6px;}
+
+  .grade-actions{display:flex;gap:10px;margin-top:16px;}
+
+  .toggle-row{display:flex;align-items:center;justify-content:space-between;padding:12px 4px;border-bottom:1px solid var(--border);}
+  .toggle-row:last-child{border-bottom:none;}
+  .toggle-row .tname{font-weight:600;font-size:0.92rem;}
+  .toggle-row .tdesc{font-size:0.8rem;color:var(--ink-soft);margin-top:2px;}
+  .switch{position:relative;width:46px;height:26px;flex-shrink:0;}
+  .switch input{opacity:0;width:0;height:0;}
+  .switch .slider{position:absolute;inset:0;background:var(--border);border-radius:26px;cursor:pointer;transition:background .15s;}
+  .switch .slider::before{content:'';position:absolute;width:20px;height:20px;left:3px;top:3px;background:#fff;border-radius:50%;transition:transform .15s;}
+  .switch input:checked + .slider{background:var(--postal-blue);}
+  .switch input:checked + .slider::before{transform:translateX(20px);}
+
+  table.roster-table{width:100%;border-collapse:collapse;font-size:0.88rem;}
+  table.roster-table th{text-align:left;font-family:'IBM Plex Mono',monospace;font-size:0.68rem;color:var(--ink-soft);text-transform:uppercase;letter-spacing:0.05em;padding:8px 10px;border-bottom:1px solid var(--border);}
+  table.roster-table td{padding:10px;border-bottom:1px solid var(--border);}
+  table.roster-table tr:last-child td{border-bottom:none;}
+
+  .group-pill{display:inline-block;background:#EEF1EC;color:var(--postal-blue);font-family:'IBM Plex Mono',monospace;font-size:0.72rem;padding:3px 9px;border-radius:12px;margin:2px;}
+
+  .week-edit-grid{display:grid;grid-template-columns:1fr;gap:12px;}
+  @media (min-width:700px){ .week-edit-grid{grid-template-columns:1fr 1fr;} }
+
+  /* Rubric editor */
+  .version-pill{display:inline-flex;align-items:center;gap:8px;font-family:'IBM Plex Mono',monospace;font-size:0.78rem;padding:8px 14px;border-radius:10px;border:1px solid var(--border);background:#fff;cursor:pointer;margin:0 8px 8px 0;}
+  .version-pill.active{background:var(--ink);color:#fff;border-color:var(--ink);}
+  .version-pill .vrange{opacity:0.7;}
+  .editor-criterion{border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:12px;background:#FAFBF8;}
+  .editor-criterion-head{display:grid;grid-template-columns:2fr 1fr 1fr auto;gap:8px;align-items:end;margin-bottom:10px;}
+  .editor-tier-row{display:grid;grid-template-columns:1.2fr 2fr 0.7fr auto;gap:8px;align-items:end;margin-bottom:8px;}
+  @media (max-width:700px){ .editor-criterion-head, .editor-tier-row{grid-template-columns:1fr;} }
+  .icon-btn{background:none;border:1px solid var(--border);border-radius:8px;width:34px;height:34px;cursor:pointer;color:var(--stamp-red);flex-shrink:0;}
+  .icon-btn:hover{background:#FBEAE7;}
+  .icon-btn:disabled{opacity:0.3;cursor:not-allowed;}
+  .icon-btn:disabled:hover{background:none;}
+  .editor-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px;}
+  .new-version-row{display:flex;gap:10px;align-items:end;margin-top:18px;border-top:1px solid var(--border);padding-top:16px;}
+  .new-version-row > div{flex:1;}
+  .total-pts-note{font-family:'IBM Plex Mono',monospace;font-size:0.76rem;color:var(--ink-soft);margin-top:10px;}
+
+  /* Modal */
+  .modal-overlay{position:fixed;inset:0;background:rgba(32,38,31,0.55);display:none;align-items:flex-start;justify-content:center;z-index:100;padding:60px 20px;}
+  .modal-overlay.show{display:flex;}
+  .modal-box{background:var(--card);border-radius:16px;padding:20px;max-width:420px;width:100%;box-shadow:0 14px 44px rgba(32,38,31,0.3);max-height:80vh;display:flex;flex-direction:column;}
+  .student-search-list{margin:14px 0;overflow-y:auto;flex:1;min-height:60px;}
+  .search-result-row{display:flex;align-items:center;gap:12px;padding:10px 8px;border-radius:9px;cursor:pointer;}
+  .search-result-row:hover{background:#F7F8F4;}
+  .search-result-row .nm{font-weight:600;font-size:0.92rem;}
+  .search-result-row .st{font-size:0.78rem;color:var(--ink-soft);margin-top:1px;}
+  .search-btn{width:34px;height:34px;border-radius:50%;border:1px solid var(--border);background:#fff;cursor:pointer;font-size:0.95rem;}
+  .search-btn:hover{background:#F7F8F4;}
+
+  .hidden{display:none !important;}
+  .toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(10px);background:var(--ink);color:#fff;padding:10px 16px;border-radius:10px;font-size:0.85rem;opacity:0;pointer-events:none;transition:all .25s ease;max-width:90%;text-align:center;z-index:50;}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+</style>
+</head>
+<body>
+
+<div class="toast" id="toast"></div>
+
+<div class="modal-overlay" id="studentSearchModal">
+  <div class="modal-box">
+    <input type="text" id="studentSearchInput" placeholder="Search students..." oninput="filterStudentSearch()">
+    <div id="studentSearchList" class="student-search-list"></div>
+    <button class="btn btn-ghost btn-block" onclick="closeStudentSearch()">Close</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="confirmModal">
+  <div class="modal-box" style="text-align:center;">
+    <div class="modal-icon" style="font-size:2.2rem;margin-bottom:6px;">⚠️</div>
+    <p id="confirmModalText" style="font-size:0.92rem;color:var(--ink-soft);line-height:1.5;margin:0 0 18px;"></p>
+    <div style="display:flex;gap:10px;">
+      <button class="btn btn-ghost" style="flex:1;" onclick="closeConfirmModal()">Cancel</button>
+      <button class="btn btn-primary" style="flex:1;" id="confirmModalOkBtn">Remove</button>
+    </div>
+  </div>
+</div>
+
+<div class="app">
+
+  <div class="login-screen" id="loginScreen">
+    <div class="brand">Weekly Forum<small>TEACHER CONSOLE</small></div>
+    <div class="login-card">
+      <label class="field-label">Username</label>
+      <input type="text" id="userInput" placeholder="e.g. mockteacher" autocomplete="off">
+      <label class="field-label" style="margin-top:12px;">Password</label>
+      <input type="password" id="pwInput" placeholder="••••••••">
+      <button class="btn btn-primary btn-block" style="margin-top:14px;" onclick="login()">Enter</button>
+      <div class="error-msg" id="loginError">Incorrect username or password.</div>
+    </div>
+  </div>
+
+  <div class="class-select-screen hidden" id="classSelectScreen">
+    <h2>Select a class</h2>
+    <p>Which class would you like to manage?</p>
+    <div class="class-grid" id="classGrid"></div>
+  </div>
+
+  <div id="mainApp" class="hidden">
+    <header class="topbar">
+      <div class="brand">Weekly Forum<small>TEACHER CONSOLE</small></div>
+      <div class="who-row">
+        <span id="whoName">—</span>
+        <span class="class-pill" id="classPill">—</span>
+        <button class="switch-class-btn" onclick="showClassSelect()">🏫 Switch Class</button>
+      </div>
+    </header>
+
+    <div class="nav">
+      <button class="nav-btn active" data-tab="grading" onclick="switchTab('grading')">Grading</button>
+      <button class="nav-btn" data-tab="schedule" onclick="switchTab('schedule')">Schedule &amp; Deadlines</button>
+      <button class="nav-btn" data-tab="roster" onclick="switchTab('roster')">Roster &amp; Groups</button>
+      <button class="nav-btn" data-tab="rubric" onclick="switchTab('rubric')">Rubric</button>
+      <button class="nav-btn" data-tab="settings" onclick="switchTab('settings')">Settings</button>
+    </div>
+
+    <div id="content"></div>
+  </div>
+</div>
+
+<script>
+/* ====================== AUTH (mock — see security note in spec) ====================== */
+const TEACHER_CREDENTIALS = {
+  "mockteacher": {password:"demo1234", displayName:"Ms. Carter"},
+};
+let currentTeacher = null;
+let currentClass = null;
+
+function login(){
+  const user = document.getElementById('userInput').value.trim();
+  const pw = document.getElementById('pwInput').value;
+  const record = TEACHER_CREDENTIALS[user];
+  if(record && record.password === pw){
+    currentTeacher = record;
+    document.getElementById('loginScreen').classList.add('hidden');
+    showClassSelect();
+  } else {
+    document.getElementById('loginError').style.display = 'block';
+  }
+}
+
+function showClassSelect(){
+  document.getElementById('mainApp').classList.add('hidden');
+  document.getElementById('classSelectScreen').classList.remove('hidden');
+  document.getElementById('classGrid').innerHTML = Object.keys(CLASSES).map(name=>
+    `<div class="class-card" onclick="enterClass('${name}')">${name}</div>`).join('');
+}
+
+function enterClass(name){
+  currentClass = name;
+  document.getElementById('classSelectScreen').classList.add('hidden');
+  document.getElementById('mainApp').classList.remove('hidden');
+  document.getElementById('whoName').textContent = currentTeacher.displayName;
+  document.getElementById('classPill').textContent = name;
+  switchTab('grading');
+}
+
+function cls(){ return CLASSES[currentClass]; }
+
+let toastTimer;
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=> t.classList.remove('show'), 2400);
+}
+function initials(name){ return name.split(' ').map(n=>n[0]).join(''); }
+
+/* ====================== MOCK DATA — one bundle per class ====================== */
+function makeRubricV2(){
+  return [
+    {id:"wordcount", num:"①", name:"Word Count", maxPoints:10, autoType:"WordCount", tiers:[
+      {label:"No submission", desc:"", points:0},
+      {label:"1–39 words", desc:"", points:2},
+      {label:"40–79 words", desc:"", points:6},
+      {label:"80+ words", desc:"", points:10},
+    ]},
+    {id:"content", num:"②", name:"Content", maxPoints:30, autoType:"Manual", tiers:[
+      {label:"No submission", desc:"", points:0},
+      {label:"Needs improvement", desc:"Does not clearly address the topic, or provides so little detail that the reader cannot engage with it.", points:6},
+      {label:"Average", desc:"Addresses the topic but lacks detail, or provides detail without any personal connection or opinion.", points:18},
+      {label:"Good", desc:"Addresses the topic with some detail. May be missing personal experience or opinion but not both.", points:24},
+      {label:"Excellent", desc:"Clearly addresses the topic with sufficient detail for the reader to understand and engage. Includes both personal experience and opinion.", points:30},
+    ]},
+    {id:"paragraph", num:"③", name:"Paragraph Structure", maxPoints:15, autoType:"Manual", tiers:[
+      {label:"No submission", desc:"", points:0},
+      {label:"Needs Improvement", desc:"Paragraphs lack focus or ideas are presented as an unorganized list.", points:3},
+      {label:"Average", desc:"Most paragraphs have a clear focus but some drift off topic or mix unrelated ideas.", points:9},
+      {label:"Good", desc:"Each paragraph has a clear focus. Ideas within each paragraph are related and stay on topic.", points:15},
+    ]},
+    {id:"format", num:"④", name:"Format", maxPoints:10, autoType:"Manual", tiers:[
+      {label:"No submission", desc:"", points:0},
+      {label:"Needs Improvement", desc:"Significant formatting issues that affect readability.", points:0},
+      {label:"Average", desc:"Mostly appropriate indentation / spacing between words and paragraphs / capitalization and punctuation.", points:5},
+      {label:"Good", desc:"Properly indented, appropriate spacing between words and paragraphs, reasonable capitalization and punctuation.", points:10},
+    ]},
+    {id:"engagement", num:"⑤", name:"Engagement", maxPoints:10, autoType:"Manual", tiers:[
+      {label:"No submission", desc:"", points:0},
+      {label:"Needs Improvement", desc:"No question or call to action, or it feels disconnected from the content.", points:0},
+      {label:"Good", desc:"Ends with a question or call to action that connects naturally to the content.", points:10},
+    ]},
+    {id:"picture", num:"⑥", name:"Picture", maxPoints:5, autoType:"PictureTimeliness", tiers:[
+      {label:"Late / missing / irrelevant", desc:"No photo, wrong photo, or past deadline.", points:0},
+      {label:"On time", desc:"Relevant photo uploaded by deadline.", points:5},
+    ]},
+    {id:"comments", num:"⑦", name:"Comments", maxPoints:10, autoType:"CommentCompletion", tiers:[
+      {label:"Needs improvement", desc:"Missing comments, under 30 words, or past deadline.", points:0},
+      {label:"Good", desc:"Commented on all members' blogs with 30+ words by deadline.", points:10},
+    ]},
+    {id:"replies", num:"⑧", name:"Replies", maxPoints:10, autoType:"ReplyCompletion", tiers:[
+      {label:"Needs improvement", desc:"Missing replies, under 30 words, or past deadline.", points:0},
+      {label:"Good", desc:"Replied to all comments on own blog with 30+ words by deadline.", points:10},
+    ]},
+  ];
+}
+function makeRubricV1(){
+  /* Earlier, simpler rubric used in weeks 1–5, before Engagement/Picture/Replies were added */
+  return [
+    {id:"wordcount", num:"①", name:"Word Count", maxPoints:10, autoType:"WordCount", tiers:[
+      {label:"No submission", desc:"", points:0},
+      {label:"1–39 words", desc:"", points:2},
+      {label:"40–79 words", desc:"", points:6},
+      {label:"80+ words", desc:"", points:10},
+    ]},
+    {id:"content", num:"②", name:"Content", maxPoints:30, autoType:"Manual", tiers:[
+      {label:"No submission", desc:"", points:0},
+      {label:"Needs improvement", desc:"Does not clearly address the topic.", points:6},
+      {label:"Average", desc:"Addresses the topic but lacks detail.", points:18},
+      {label:"Good", desc:"Addresses the topic with some detail.", points:24},
+      {label:"Excellent", desc:"Clearly addresses the topic with sufficient detail.", points:30},
+    ]},
+    {id:"paragraph", num:"③", name:"Paragraph Structure", maxPoints:15, autoType:"Manual", tiers:[
+      {label:"No submission", desc:"", points:0},
+      {label:"Needs Improvement", desc:"Paragraphs lack focus.", points:3},
+      {label:"Average", desc:"Most paragraphs have a clear focus.", points:9},
+      {label:"Good", desc:"Each paragraph has a clear focus.", points:15},
+    ]},
+    {id:"format", num:"④", name:"Format", maxPoints:10, autoType:"Manual", tiers:[
+      {label:"No submission", desc:"", points:0},
+      {label:"Needs Improvement", desc:"Significant formatting issues.", points:0},
+      {label:"Average", desc:"Mostly appropriate formatting.", points:5},
+      {label:"Good", desc:"Properly formatted throughout.", points:10},
+    ]},
+    {id:"comments", num:"⑤", name:"Comments", maxPoints:10, autoType:"CommentCompletion", tiers:[
+      {label:"Needs improvement", desc:"Missing comments or past deadline.", points:0},
+      {label:"Good", desc:"Commented on all members' blogs by deadline.", points:10},
+    ]},
+  ];
+}
+
+function makeClass(rosterSeed){
+  return {
+    roster: rosterSeed,
+    settings: {groupSize:3, groupsEnabled:true, commentsEnabled:true, repliesEnabled:true, pictureEnabled:true},
+    schedule: {
+      7: {label:"Monday, June 22 – Friday, June 26", prompt:"What is your favorite place on campus?",
+          postOpen:"2026-06-22T13:00", postClose:"2026-06-22T14:30",
+          pictureDeadline:"2026-06-23T23:59", commentDeadline:"2026-06-24T23:59", replyDeadline:"2026-06-26T23:59"},
+      6: {label:"Monday, June 15 – Friday, June 19", prompt:"Describe a meal you cooked recently.",
+          postOpen:"2026-06-15T13:00", postClose:"2026-06-15T14:30",
+          pictureDeadline:"2026-06-16T23:59", commentDeadline:"2026-06-17T23:59", replyDeadline:"2026-06-19T23:59"},
+    },
+    groups: { 7: {A:Object.keys(rosterSeed)}, 6: {A:Object.keys(rosterSeed)} },
+    rubricVersions: [
+      {startWeek:1, criteria: makeRubricV1()},
+      {startWeek:6, criteria: makeRubricV2()},
+    ],
+    submissions: {},
+    gradingSelections: {},
+    gradingFeedback: {},
+    gradingIdx: 0,
+    gradingWeek: 6,
+  };
+}
+
+const CLASSES = {
+  "EWS I": makeClass({
+    "2111001": {name:"Gakuto Ishiguri", avatarColor:"#3D5A73", active:true},
+    "2111002": {name:"Mei Tanaka", avatarColor:"#B23A2E", active:true},
+    "2111003": {name:"Haruto Suzuki", avatarColor:"#C9A227", active:true},
+  }),
+  "EWS II": makeClass({
+    "2111101": {name:"Riko Yamada", avatarColor:"#7A8C6B", active:true},
+    "2111102": {name:"Sora Kimura", avatarColor:"#A4633D", active:true},
+  }),
+  "EWS III": makeClass({
+    "2111201": {name:"Yui Nakata", avatarColor:"#6B5B95", active:true},
+  }),
+};
+
+/* Submissions only mocked for EWS I, Week 6, to keep the demo focused */
+CLASSES["EWS I"].submissions[6] = {
+  "2111001": {
+    title:"My homemade curry",
+    text:"Last weekend I cooked Japanese curry for the first time by myself. I used potato, carrot and chicken. It took about one hour but it was worth it. My family said it was delicious, so I was very happy.",
+    image:null,
+    commentsReceived:[{from:"2111002", text:"That sounds delicious! What kind of curry roux did you use?", reply:null}],
+    commentsMade:[],
+  },
+  "2111002": {
+    title:"Grandma's dumplings",
+    text:"On Sunday I helped my grandmother make dumplings. We made over 100! It was tiring but fun, and we talked a lot while we worked. I learned how to fold them properly this time.",
+    image:"https://images.unsplash.com/photo-1496116218417-1a781b1c416c?w=500&q=60",
+    commentsReceived:[],
+    commentsMade:[{toPost:"My homemade curry", text:"That sounds delicious! What kind of curry roux did you use?"}],
+  },
+  "2111003": {
+    title:"asdf",
+    text:"asdfasdf asdfasdf asdfasdf asdfasdf asdf",
+    image:null,
+    commentsReceived:[],
+    commentsMade:[],
+  },
+};
+
+/* ====================== RUBRIC VERSIONING ====================== */
+function getRubricVersionForWeek(week){
+  const versions = cls().rubricVersions;
+  let best = versions[0];
+  versions.forEach(v=>{ if(v.startWeek<=week && v.startWeek>=best.startWeek) best = v; });
+  return best;
+}
+
+/* ====================== NAV ====================== */
+function switchTab(tab){
+  document.querySelectorAll('.nav-btn').forEach(b=> b.classList.toggle('active', b.dataset.tab===tab));
+  if(tab==='grading') renderGrading();
+  if(tab==='schedule') renderSchedule();
+  if(tab==='roster') renderRoster();
+  if(tab==='rubric') renderRubricTab();
+  if(tab==='settings') renderSettings();
+}
+
+/* ====================== AUTO-GRADING LOGIC ====================== */
+function wordCount(text){ return text.trim().split(/\s+/).filter(Boolean).length; }
+
+function autoSelectTier(crit, sub){
+  if(crit.autoType==='WordCount'){
+    const wc = wordCount(sub.text);
+    if(wc===0) return 0;
+    if(wc<40) return 1;
+    if(wc<80) return 2;
+    return 3;
+  }
+  if(crit.autoType==='PictureTimeliness') return sub.image ? 1 : 0;
+  if(crit.autoType==='CommentCompletion'){
+    const requiredCount = 2;
+    return sub.commentsMade.length >= requiredCount ? 1 : 0;
+  }
+  if(crit.autoType==='ReplyCompletion'){
+    const received = sub.commentsReceived.length;
+    if(received===0) return null;
+    return sub.commentsReceived.every(c=>c.reply) ? 1 : 0;
+  }
+  return null;
+}
+
+function getSelections(sn, rubric){
+  const c = cls();
+  if(!c.gradingSelections[sn]){
+    const sub = c.submissions[c.gradingWeek] && c.submissions[c.gradingWeek][sn];
+    const sel = {};
+    if(sub){
+      rubric.forEach(crit=>{
+        const auto = autoSelectTier(crit, sub);
+        if(auto!==null) sel[crit.id] = auto;
+      });
+    }
+    c.gradingSelections[sn] = sel;
+  }
+  return c.gradingSelections[sn];
+}
+
+/* ====================== GRADING SCREEN ====================== */
+function renderGrading(){
+  const c = cls();
+  const studentNumbers = Object.keys(c.roster).filter(sn=>c.roster[sn].active);
+  if(studentNumbers.length===0){
+    document.getElementById('content').innerHTML = `<div class="card empty-note">No active students in this class yet.</div>`;
+    return;
+  }
+  c.gradingIdx = c.gradingIdx % studentNumbers.length;
+  const sn = studentNumbers[c.gradingIdx];
+  const sub = c.submissions[c.gradingWeek] && c.submissions[c.gradingWeek][sn];
+  const author = c.roster[sn];
+  const rubricVersion = getRubricVersionForWeek(c.gradingWeek);
+  const rubric = rubricVersion.criteria;
+  const sel = getSelections(sn, rubric);
+  const gradedCount = studentNumbers.filter(s=>c.gradingFeedback[s]!==undefined).length;
+
+  const weekOptions = Object.keys(c.schedule).sort((a,b)=>b-a).map(w=>
+    `<option value="${w}" ${+w===c.gradingWeek?'selected':''}>Week 0${w}</option>`).join('');
+
+  let bodyHtml;
+  if(!sub){
+    bodyHtml = `<div class="card"><div class="empty-note">No submission from this student for this week.</div></div>`;
+  } else {
+    const wc = wordCount(sub.text);
+    const mediaHtml = sub.image ? `<div class="sub-media"><img src="${sub.image}"></div>` : '';
+    const receivedHtml = sub.commentsReceived.length
+      ? sub.commentsReceived.map(cm=>{
+          const cAuthor = c.roster[cm.from];
+          const cwc = wordCount(cm.text);
+          return `
+            <div class="sub-comment">
+              <div class="avatar" style="background:${cAuthor.avatarColor}">${initials(cAuthor.name)}</div>
+              <div class="sub-comment-body">
+                <div class="cn">${cAuthor.name}</div>
+                <div class="ct">${cm.text}</div>
+                <div class="cwc">${cwc} words ${cm.reply ? '· replied' : '· no reply yet'}</div>
+              </div>
+            </div>`;
+        }).join('')
+      : `<div class="empty-note">No comments received.</div>`;
+    const madeHtml = sub.commentsMade.length
+      ? sub.commentsMade.map(cm=>{
+          const cwc = wordCount(cm.text);
+          return `
+            <div class="sub-comment">
+              <div class="avatar" style="background:var(--border);color:var(--ink-soft);">→</div>
+              <div class="sub-comment-body">
+                <div class="cn">On: "${cm.toPost}"</div>
+                <div class="ct">${cm.text}</div>
+                <div class="cwc">${cwc} words</div>
+              </div>
+            </div>`;
+        }).join('')
+      : `<div class="empty-note">No comments made on groupmates.</div>`;
+
+    bodyHtml = `
+      <div class="card submission-card">
+        <div class="sub-title">${sub.title}</div>
+        <div class="sub-meta">
+          <div class="avatar" style="background:${author.avatarColor}">${initials(author.name)}</div>
+          <div><div class="nm">${author.name}</div><div class="wc">${wc} words</div></div>
+        </div>
+        <div class="sub-body">${sub.text}</div>
+        ${mediaHtml}
+        <div class="sub-subhead">Comments received (on their post)</div>
+        ${receivedHtml}
+        <div class="sub-subhead">Comments made (on groupmates' posts)</div>
+        ${madeHtml}
+      </div>`;
+  }
+
+  const criteriaHtml = rubric.map(crit=>{
+    const selIdx = sel[crit.id];
+    const tiersHtml = crit.tiers.map((t,i)=>{
+      const checked = i===selIdx ? 'checked' : '';
+      const autoTag = (i===selIdx && crit.autoType!=='Manual') ? '<span class="auto-tag">Auto-suggested</span>' : '';
+      return `
+        <label class="tier-option ${i===selIdx && crit.autoType!=='Manual' ? 'auto-suggested' : ''}">
+          <input type="radio" name="${crit.id}-${sn}" value="${i}" ${checked} onchange="selectTier('${sn}','${crit.id}',${i})">
+          <div>
+            <div class="tlabel">${t.label}${autoTag}</div>
+            ${t.desc ? `<div class="tdesc">${t.desc}</div>` : ''}
+            <div class="tpts">${t.points} pts</div>
+          </div>
+        </label>`;
+    }).join('');
+    return `
+      <div class="criterion open" id="crit-${crit.id}">
+        <div class="criterion-head" onclick="toggleCriterion('${crit.id}')">
+          <div><div class="cname">${crit.num} ${crit.name}</div></div>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span class="cpts">${crit.maxPoints} pts max</span>
+            <span class="ctoggle">▾</span>
+          </div>
+        </div>
+        <div class="criterion-body">${tiersHtml}</div>
+      </div>`;
+  }).join('');
+
+  document.getElementById('content').innerHTML = `
+    <div class="grading-toolbar">
+      <select onchange="cls().gradingWeek=parseInt(this.value); cls().gradingIdx=0; cls().gradingSelections={}; renderGrading();">${weekOptions}</select>
+      <div class="progress-bar" style="flex:1;max-width:240px;">
+        <span class="ptext">Graded</span>
+        <span class="ptext ptotal">${gradedCount} / ${studentNumbers.length}</span>
+      </div>
+      <button class="search-btn" onclick="openStudentSearch()" title="Search students">🔍</button>
+    </div>
+    <div class="total-pts-note" style="margin:-8px 0 14px;">Using rubric version starting Week 0${rubricVersion.startWeek} (visit the Rubric tab to manage versions)</div>
+    <div class="grading-layout">
+      <div>${bodyHtml}</div>
+      <div class="grade-sidebar card">
+        <div class="student-nav">
+          <button class="nav-arrow" onclick="navStudent(-1)">‹</button>
+          <div class="id">
+            <div class="avatar" style="background:${author.avatarColor}">${initials(author.name)}</div>
+            <div class="nm">${author.name}</div>
+          </div>
+          <button class="nav-arrow" onclick="navStudent(1)">›</button>
+        </div>
+        <div class="feedback-box">
+          <label class="field-label">Overall feedback (shown to student)</label>
+          <textarea id="feedbackInput" placeholder="Write some overall advice...">${c.gradingFeedback[sn] || ''}</textarea>
+        </div>
+        ${criteriaHtml}
+        <div class="grade-actions">
+          <button class="btn btn-ghost" style="flex:1;" onclick="saveGrade(false)">Save</button>
+          <button class="btn btn-primary" style="flex:1;" onclick="saveGrade(true)">Save &amp; Next →</button>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function toggleCriterion(critId){
+  document.getElementById('crit-'+critId).classList.toggle('open');
+}
+function selectTier(sn, critId, idx){
+  const c = cls();
+  if(!c.gradingSelections[sn]) c.gradingSelections[sn] = {};
+  c.gradingSelections[sn][critId] = idx;
+}
+function navStudent(dir){
+  const c = cls();
+  const studentNumbers = Object.keys(c.roster).filter(sn=>c.roster[sn].active);
+  c.gradingIdx = (c.gradingIdx + dir + studentNumbers.length) % studentNumbers.length;
+  renderGrading();
+}
+function saveGrade(andNext){
+  const c = cls();
+  const studentNumbers = Object.keys(c.roster).filter(sn=>c.roster[sn].active);
+  const sn = studentNumbers[c.gradingIdx];
+  c.gradingFeedback[sn] = document.getElementById('feedbackInput').value;
+  showToast(`Saved grade for ${c.roster[sn].name}.`);
+  if(andNext) navStudent(1); else renderGrading();
+}
+
+/* ====================== STUDENT SEARCH MODAL ====================== */
+function openStudentSearch(){
+  document.getElementById('studentSearchModal').classList.add('show');
+  const input = document.getElementById('studentSearchInput');
+  input.value = '';
+  renderStudentSearchList('');
+  input.focus();
+}
+function closeStudentSearch(){ document.getElementById('studentSearchModal').classList.remove('show'); }
+function filterStudentSearch(){ renderStudentSearchList(document.getElementById('studentSearchInput').value.toLowerCase()); }
+function renderStudentSearchList(query){
+  const c = cls();
+  const studentNumbers = Object.keys(c.roster).filter(sn=>c.roster[sn].active);
+  const filtered = studentNumbers.filter(sn=>
+    c.roster[sn].name.toLowerCase().includes(query) || sn.includes(query));
+  document.getElementById('studentSearchList').innerHTML = filtered.map(sn=>{
+    const m = c.roster[sn];
+    const graded = c.gradingFeedback[sn] !== undefined;
+    return `
+      <div class="search-result-row" onclick="jumpToStudent('${sn}')">
+        <div class="avatar" style="background:${m.avatarColor};">${initials(m.name)}</div>
+        <div>
+          <div class="nm">${m.name}</div>
+          <div class="st">${graded ? '✓ Graded' : 'Not graded yet'}</div>
+        </div>
+      </div>`;
+  }).join('') || '<div class="empty-note">No matching students.</div>';
+}
+function jumpToStudent(sn){
+  const c = cls();
+  const studentNumbers = Object.keys(c.roster).filter(s=>c.roster[s].active);
+  c.gradingIdx = studentNumbers.indexOf(sn);
+  closeStudentSearch();
+  renderGrading();
+}
+
+/* ====================== SCHEDULE TAB ====================== */
+function renderSchedule(){
+  const c = cls();
+  const weeksHtml = Object.keys(c.schedule).sort((a,b)=>b-a).map(w=>{
+    const s = c.schedule[w];
+    return `
+      <div class="card">
+        <div class="sub-title" style="font-size:1.05rem;">Week 0${w}</div>
+        <label class="field-label">Prompt</label>
+        <input type="text" value="${s.prompt}" onchange="cls().schedule[${w}].prompt=this.value">
+        <div class="week-edit-grid" style="margin-top:12px;">
+          <div><label class="field-label">Post opens</label><input type="datetime-local" value="${s.postOpen}" onchange="cls().schedule[${w}].postOpen=this.value"></div>
+          <div><label class="field-label">Post closes</label><input type="datetime-local" value="${s.postClose}" onchange="cls().schedule[${w}].postClose=this.value"></div>
+          <div><label class="field-label">Picture deadline</label><input type="datetime-local" value="${s.pictureDeadline}" onchange="cls().schedule[${w}].pictureDeadline=this.value"></div>
+          <div><label class="field-label">Comment deadline</label><input type="datetime-local" value="${s.commentDeadline}" onchange="cls().schedule[${w}].commentDeadline=this.value"></div>
+          <div><label class="field-label">Reply deadline</label><input type="datetime-local" value="${s.replyDeadline}" onchange="cls().schedule[${w}].replyDeadline=this.value"></div>
+        </div>
+      </div>`;
+  }).join('');
+  document.getElementById('content').innerHTML = `
+    <div class="section-label">Weekly deadlines — ${currentClass}</div>
+    ${weeksHtml}
+    <button class="btn btn-ghost" onclick="showToast('In the real version, this adds a new week row.')">+ Add a new week</button>
+  `;
+}
+
+/* ====================== ROSTER & GROUPS TAB ====================== */
+function renderRoster(){
+  const c = cls();
+  const rosterRows = Object.entries(c.roster).map(([sn,m])=>`
+    <tr>
+      <td>${sn}</td>
+      <td>${m.name}</td>
+      <td><label class="switch"><input type="checkbox" ${m.active?'checked':''} onchange="cls().roster['${sn}'].active=this.checked; renderRoster();"><span class="slider"></span></label></td>
+    </tr>`).join('');
+
+  const groupWeekOptions = Object.keys(c.groups).sort((a,b)=>b-a).map(w=>`<option value="${w}">Week 0${w}</option>`).join('');
+  const latestWeek = Math.max(...Object.keys(c.groups).map(Number));
+  const currentGroups = c.groups[latestWeek];
+  const groupsHtml = Object.entries(currentGroups).map(([gid, members])=>`
+    <div style="margin-bottom:8px;">
+      <span class="group-pill">Group ${gid}</span>
+      ${members.map(sn=>`<span class="group-pill" style="background:#fff;border:1px solid var(--border);color:var(--ink);">${c.roster[sn].name}</span>`).join('')}
+    </div>`).join('');
+
+  document.getElementById('content').innerHTML = `
+    <div class="section-label">Roster — ${currentClass}</div>
+    <div class="card">
+      <table class="roster-table">
+        <thead><tr><th>Student #</th><th>Name</th><th>Active</th></tr></thead>
+        <tbody>${rosterRows || '<tr><td colspan="3" class="empty-note">No students yet.</td></tr>'}</tbody>
+      </table>
+    </div>
+
+    <div class="section-label">Groups</div>
+    <div class="card">
+      <div class="week-edit-grid" style="margin-bottom:14px;">
+        <div><label class="field-label">Group size</label><input type="number" value="${c.settings.groupSize}" min="2" max="6" onchange="cls().settings.groupSize=parseInt(this.value)"></div>
+        <div><label class="field-label">Generate for</label><select id="groupWeekSelect">${groupWeekOptions}</select></div>
+      </div>
+      <button class="btn btn-primary" onclick="showToast('Groups re-randomized for the selected week.')">🎲 Generate fresh groups</button>
+      <div class="sub-subhead" style="margin-top:18px;">Current groups (Week 0${latestWeek})</div>
+      ${groupsHtml || '<div class="empty-note">No groups yet.</div>'}
+    </div>
+  `;
+}
+
+/* ====================== RUBRIC TAB (versioned) ====================== */
+let rubricEditorVersionIdx = null;
+
+function renderRubricTab(){
+  const c = cls();
+  if(rubricEditorVersionIdx===null) rubricEditorVersionIdx = c.rubricVersions.length - 1;
+  const sorted = [...c.rubricVersions].sort((a,b)=>a.startWeek-b.startWeek);
+
+  const pillsHtml = sorted.map((v,i)=>{
+    const next = sorted[i+1];
+    const range = next ? `Weeks ${v.startWeek}–${next.startWeek-1}` : `Week ${v.startWeek}+ (current)`;
+    const realIdx = c.rubricVersions.indexOf(v);
+    return `<button class="version-pill ${realIdx===rubricEditorVersionIdx?'active':''}" onclick="rubricEditorVersionIdx=${realIdx}; renderRubricTab();">
+      Version ${i+1} <span class="vrange">· ${range}</span>
+    </button>`;
+  }).join('');
+
+  const version = c.rubricVersions[rubricEditorVersionIdx];
+  const totalPts = version.criteria.reduce((s,cr)=>s+cr.maxPoints,0);
+
+  const criteriaHtml = version.criteria.map((crit, ci)=>{
+    const tiersHtml = crit.tiers.map((t,ti)=>`
+      <div class="editor-tier-row">
+        <input type="text" value="${t.label}" placeholder="Tier label" onchange="updateTier(${ci},${ti},'label',this.value)">
+        <input type="text" value="${t.desc}" placeholder="Description (optional)" onchange="updateTier(${ci},${ti},'desc',this.value)">
+        <input type="number" value="${t.points}" placeholder="Pts" onchange="updateTier(${ci},${ti},'points',parseInt(this.value)||0)">
+        <div style="display:flex;gap:4px;">
+          <button class="icon-btn" style="color:var(--ink-soft);" ${ti===0?'disabled':''} onclick="moveTier(${ci},${ti},-1)" title="Move up">↑</button>
+          <button class="icon-btn" style="color:var(--ink-soft);" ${ti===crit.tiers.length-1?'disabled':''} onclick="moveTier(${ci},${ti},1)" title="Move down">↓</button>
+          <button class="icon-btn" onclick="removeTier(${ci},${ti})" title="Remove tier">✕</button>
+        </div>
+      </div>`).join('');
+    return `
+      <div class="editor-criterion">
+        <div class="editor-criterion-head">
+          <div><label class="field-label">Criterion name</label><input type="text" value="${crit.name}" onchange="updateCriterion(${ci},'name',this.value)"></div>
+          <div><label class="field-label">Max points</label><input type="number" value="${crit.maxPoints}" onchange="updateCriterion(${ci},'maxPoints',parseInt(this.value)||0)"></div>
+          <div><label class="field-label">Auto-grade by</label>
+            <select onchange="updateCriterion(${ci},'autoType',this.value)">
+              ${['Manual','WordCount','PictureTimeliness','CommentCompletion','ReplyCompletion'].map(t=>`<option value="${t}" ${crit.autoType===t?'selected':''}>${t}</option>`).join('')}
+            </select>
+          </div>
+          <button class="icon-btn" onclick="removeCriterion(${ci})" title="Remove criterion">✕</button>
+        </div>
+        <label class="field-label">Tiers</label>
+        ${tiersHtml}
+        <button class="btn btn-ghost btn-sm" onclick="addTier(${ci})">+ Add tier</button>
+      </div>`;
+  }).join('');
+
+  document.getElementById('content').innerHTML = `
+    <div class="section-label">Rubric versions — ${currentClass}</div>
+    <p style="font-size:0.86rem;color:var(--ink-soft);margin:0 0 14px;">
+      Editing a version changes grading for every week mapped to it — including past weeks. To change the rubric
+      <strong>going forward only</strong>, use "Save as new version" below instead, so already-graded weeks keep their original rubric.
+    </p>
+    <div>${pillsHtml}</div>
+    <div class="card" style="margin-top:14px;">
+      <div class="total-pts-note">Total: ${totalPts} points across ${version.criteria.length} criteria</div>
+      ${criteriaHtml}
+      <button class="btn btn-ghost" onclick="addCriterion()">+ Add criterion</button>
+      <div class="editor-actions">
+        <button class="btn btn-primary" onclick="showToast('Changes saved to this version.')">Save changes to this version</button>
+      </div>
+      <div class="new-version-row">
+        <div>
+          <label class="field-label">Start a new version from week</label>
+          <input type="number" id="newVersionWeek" min="1" placeholder="e.g. 9">
+        </div>
+        <button class="btn btn-ghost" onclick="saveAsNewVersion()">Save as new version →</button>
+      </div>
+    </div>
+  `;
+}
+
+function updateCriterion(ci, field, value){
+  cls().rubricVersions[rubricEditorVersionIdx].criteria[ci][field] = value;
+  if(field==='maxPoints' || field==='name') renderRubricTab();
+}
+/* ====================== CUSTOM CONFIRM MODAL (native confirm() is blocked in sandboxed iframes) ====================== */
+let _confirmCallback = null;
+function showConfirmModal(text, onConfirm){
+  document.getElementById('confirmModalText').textContent = text;
+  _confirmCallback = onConfirm;
+  document.getElementById('confirmModal').classList.add('show');
+}
+function closeConfirmModal(){
+  document.getElementById('confirmModal').classList.remove('show');
+  _confirmCallback = null;
+}
+document.getElementById('confirmModalOkBtn').onclick = function(){
+  const cb = _confirmCallback;
+  closeConfirmModal();
+  if(cb) cb();
+};
+
+function removeCriterion(ci){
+  const crit = cls().rubricVersions[rubricEditorVersionIdx].criteria[ci];
+  showConfirmModal(
+    `Remove "${crit.name}" completely from this rubric version? This can't be undone, and it affects every week using this version.`,
+    ()=>{
+      cls().rubricVersions[rubricEditorVersionIdx].criteria.splice(ci,1);
+      showToast(`"${crit.name}" removed.`);
+      renderRubricTab();
+    }
+  );
+}
+function addCriterion(){
+  cls().rubricVersions[rubricEditorVersionIdx].criteria.push({
+    id:'crit'+Date.now(), num:'•', name:'New Criterion', maxPoints:10, autoType:'Manual',
+    tiers:[{label:'No submission', desc:'', points:0}, {label:'Good', desc:'', points:10}]
+  });
+  renderRubricTab();
+}
+function updateTier(ci, ti, field, value){
+  cls().rubricVersions[rubricEditorVersionIdx].criteria[ci].tiers[ti][field] = value;
+}
+function removeTier(ci, ti){
+  cls().rubricVersions[rubricEditorVersionIdx].criteria[ci].tiers.splice(ti,1);
+  renderRubricTab();
+}
+function moveTier(ci, ti, dir){
+  const tiers = cls().rubricVersions[rubricEditorVersionIdx].criteria[ci].tiers;
+  const newIdx = ti + dir;
+  if(newIdx < 0 || newIdx >= tiers.length) return;
+  [tiers[ti], tiers[newIdx]] = [tiers[newIdx], tiers[ti]];
+  renderRubricTab();
+}
+function addTier(ci){
+  cls().rubricVersions[rubricEditorVersionIdx].criteria[ci].tiers.push({label:'New tier', desc:'', points:0});
+  renderRubricTab();
+}
+function saveAsNewVersion(){
+  const wk = parseInt(document.getElementById('newVersionWeek').value);
+  const c = cls();
+  if(!wk || wk<1){ showToast('Enter a valid starting week first.'); return; }
+  const currentVersion = c.rubricVersions[rubricEditorVersionIdx];
+  const cloned = JSON.parse(JSON.stringify(currentVersion.criteria));
+  c.rubricVersions.push({startWeek: wk, criteria: cloned});
+  rubricEditorVersionIdx = c.rubricVersions.length - 1;
+  showToast(`New rubric version created, effective Week ${wk} onward. Earlier weeks keep their original rubric.`);
+  renderRubricTab();
+}
+
+/* ====================== SETTINGS TAB ====================== */
+function renderSettings(){
+  const c = cls();
+  const s = c.settings;
+  document.getElementById('content').innerHTML = `
+    <div class="section-label">Feature toggles — ${currentClass}</div>
+    <div class="card">
+      <div class="toggle-row">
+        <div><div class="tname">Groups</div><div class="tdesc">Randomize students into weekly groups for commenting. Turn off if students discuss on an external forum instead.</div></div>
+        <label class="switch"><input type="checkbox" ${s.groupsEnabled?'checked':''} onchange="cls().settings.groupsEnabled=this.checked"><span class="slider"></span></label>
+      </div>
+      <div class="toggle-row">
+        <div><div class="tname">Comments</div><div class="tdesc">Allow students to comment on groupmates' posts within this site.</div></div>
+        <label class="switch"><input type="checkbox" ${s.commentsEnabled?'checked':''} onchange="cls().settings.commentsEnabled=this.checked"><span class="slider"></span></label>
+      </div>
+      <div class="toggle-row">
+        <div><div class="tname">Replies</div><div class="tdesc">Allow students to reply to comments they receive.</div></div>
+        <label class="switch"><input type="checkbox" ${s.repliesEnabled?'checked':''} onchange="cls().settings.repliesEnabled=this.checked"><span class="slider"></span></label>
+      </div>
+      <div class="toggle-row">
+        <div><div class="tname">Picture / video</div><div class="tdesc">Allow photo uploads and YouTube links on posts.</div></div>
+        <label class="switch"><input type="checkbox" ${s.pictureEnabled?'checked':''} onchange="cls().settings.pictureEnabled=this.checked"><span class="slider"></span></label>
+      </div>
+    </div>
+
+    <div class="section-label">Account</div>
+    <div class="card">
+      <label class="field-label">Teacher accounts</label>
+      <div style="font-size:0.88rem;color:var(--ink-soft);padding:8px 0;">
+        Managed directly in your Teacher Credentials Google Sheet (username + password per teacher) — not shown here, since passwords should never be visible in the page itself.
+      </div>
+      <label class="field-label" style="margin-top:12px;">Drive folder for uploaded images</label>
+      <input type="text" value="1A2b3C4d5E6f-mockDriveFolderId">
+    </div>
+  `;
+}
+</script>
+
+</body>
+</html>
