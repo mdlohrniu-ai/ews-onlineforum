@@ -178,11 +178,21 @@
   .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
   .mock-banner{font-family:'IBM Plex Mono',monospace;font-size:0.76rem;color:var(--gold);background:#FBF6E2;border:1px solid rgba(201,162,39,0.35);border-radius:10px;padding:10px 14px;margin-bottom:16px;}
   .version-tag{font-family:'IBM Plex Mono',monospace;font-size:0.68rem;color:var(--ink-soft);opacity:0.7;margin-top:6px;}
+  .loading-overlay{position:fixed;inset:0;background:rgba(239,241,234,0.88);display:none;align-items:center;justify-content:center;flex-direction:column;gap:14px;z-index:200;}
+  .loading-overlay.show{display:flex;}
+  .spinner{width:40px;height:40px;border:4px solid var(--border);border-top-color:var(--stamp-red);border-radius:50%;animation:spin 0.8s linear infinite;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+  .loading-overlay .ltext{font-family:'IBM Plex Mono',monospace;font-size:0.85rem;color:var(--ink-soft);}
 </style>
 </head>
 <body>
 
 <div class="toast" id="toast"></div>
+
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="spinner"></div>
+  <div class="ltext" id="loadingText">Loading…</div>
+</div>
 
 <div class="modal-overlay" id="studentSearchModal">
   <div class="modal-box">
@@ -215,7 +225,7 @@
       <button class="btn btn-primary btn-block" style="margin-top:14px;" onclick="login()">Enter</button>
       <div class="error-msg" id="loginError">Incorrect username or password.</div>
     </div>
-    <div class="version-tag">v0.2 — 2026-06-25</div>
+    <div class="version-tag">v0.3 — 2026-06-25</div>
   </div>
 
   <div class="class-select-screen hidden" id="classSelectScreen">
@@ -268,7 +278,9 @@ async function login(){
   const user = document.getElementById('userInput').value.trim();
   const pw = document.getElementById('pwInput').value;
   document.getElementById('loginError').style.display = 'none';
+  showLoading('Logging in…');
   const result = await callApi('teacherLogin', { username: user, password: pw });
+  hideLoading();
   if(result.success){
     currentTeacher = { displayName: result.displayName };
     document.getElementById('loginScreen').classList.add('hidden');
@@ -317,6 +329,13 @@ function showToast(msg){
   t.classList.add('show');
   clearTimeout(toastTimer);
   toastTimer = setTimeout(()=> t.classList.remove('show'), 2400);
+}
+function showLoading(text){
+  document.getElementById('loadingText').textContent = text || 'Loading…';
+  document.getElementById('loadingOverlay').classList.add('show');
+}
+function hideLoading(){
+  document.getElementById('loadingOverlay').classList.remove('show');
 }
 function initials(name){ return name.split(' ').map(n=>n[0]).join(''); }
 
