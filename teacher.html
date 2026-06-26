@@ -771,6 +771,9 @@ function renderRoster(){
       ${members.map(n=>`<span class="group-pill" style="background:#fff;border:1px solid var(--border);color:var(--ink);">${n}</span>`).join('')}</div>`;
   }).join('');
 
+  const activeCount = classData.roster.filter(r=>r.Active).length;
+  const defaultGroups = Math.max(1, Math.round(activeCount/3)); // aims for ~3 per group by default
+
   document.getElementById('content').innerHTML = `
     <div class="section-label">Roster — ${currentClass}</div>
     <div class="card">
@@ -783,9 +786,10 @@ function renderRoster(){
     <div class="section-label">Groups</div>
     <div class="card">
       <div class="week-edit-grid" style="margin-bottom:14px;">
-        <div><label class="field-label">Group size</label><input type="number" id="groupSizeInput" value="${classData.settings.GroupSize||3}" min="2" max="6"></div>
+        <div><label class="field-label">Number of groups</label><input type="number" id="numGroupsInput" value="${defaultGroups}" min="1" max="${activeCount||1}"></div>
         <div><label class="field-label">Generate for</label><select id="groupWeekSelect">${weekOptions}</select></div>
       </div>
+      <div style="font-size:0.78rem;color:var(--ink-soft);margin-bottom:12px;">${activeCount} active student${activeCount===1?'':'s'} — leftover students get spread across the first groups (e.g. 12 students / 5 groups → two groups of 3, three of 2).</div>
       <button class="btn btn-primary" onclick="doGenerateGroups()">🎲 Generate fresh groups</button>
       <div class="sub-subhead" style="margin-top:18px;">Current groups ${latestWeek!==null?`(Week ${String(latestWeek).padStart(2,'0')})`:''}</div>
       ${groupsHtml || '<div class="empty-note">No groups yet.</div>'}
@@ -809,9 +813,9 @@ async function toggleRosterActive(sn, active){
 
 async function doGenerateGroups(){
   const week = parseInt(document.getElementById('groupWeekSelect').value);
-  const groupSize = parseInt(document.getElementById('groupSizeInput').value) || 3;
+  const numberOfGroups = parseInt(document.getElementById('numGroupsInput').value) || 1;
   showLoading('Generating groups…');
-  const result = await callApi('generateGroups', { classId: currentClass, week, groupSize });
+  const result = await callApi('generateGroups', { classId: currentClass, week, numberOfGroups });
   hideLoading();
   if(result.success){
     showToast(`Created ${result.groupCount} group(s) for ${result.studentCount} students.`);
