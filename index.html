@@ -259,7 +259,7 @@
       <button class="btn btn-primary btn-block" style="margin-top:14px;" onclick="login()">Enter</button>
       <div class="error-msg" id="loginError">Student number not found. Check and try again.</div>
     </div>
-    <div class="version-tag">v0.4 — 2026-06-25</div>
+    <div class="version-tag">v0.5 — 2026-06-25</div>
   </div>
 
   <!-- ===================== MAIN APP ===================== -->
@@ -524,8 +524,14 @@ function wireComposerEvents(){
 /* ============ MEDIA: real image compression + Drive upload, real YouTube parsing ============ */
 let currentImageURL = '';
 let currentYouTubeID = '';
+let mediaUploadMode = 'compose'; // 'compose' (new post) or 'editPost' (existing post)
+let mediaUploadPostId = null;
+let mediaUploadSlotId = 'imageSlot';
 
-function triggerImageUpload(){
+function triggerImageUpload(mode, postId, slotId){
+  mediaUploadMode = mode || 'compose';
+  mediaUploadPostId = postId || null;
+  mediaUploadSlotId = slotId || 'imageSlot';
   document.getElementById('imageFileInput').click();
 }
 
@@ -570,8 +576,8 @@ async function handleImageFile(event){
     return;
   }
 
-  const slot = document.getElementById('imageSlot');
-  slot.innerHTML = `<img src="${dataUrl}">`;
+  const slot = document.getElementById(mediaUploadSlotId);
+  if(slot) slot.innerHTML = `<img src="${dataUrl}">`;
 
   showLoading('Uploading photo…');
   const base64Data = dataUrl.split(',')[1];
@@ -579,14 +585,24 @@ async function handleImageFile(event){
     classId: currentClassId, studentNumber: currentStudent,
     base64Data, mimeType: 'image/jpeg',
   });
-  hideLoading();
 
-  if(result.success){
+  if(!result.success){
+    hideLoading();
+    if(slot) slot.innerHTML = `<span>📷</span><span>Add a photo</span>`;
+    showToast(result.error || "Couldn't upload that photo — try again.");
+    return;
+  }
+
+  if(mediaUploadMode === 'editPost'){
+    showLoading('Saving photo…');
+    const saveResult = await callApi('updatePost', { classId: currentClassId, studentNumber: currentStudent, postId: mediaUploadPostId, imageURL: result.url });
+    hideLoading();
+    if(saveResult.success){ showToast('Photo updated.'); openPostDetail(mediaUploadPostId); }
+    else showToast(saveResult.error || "Couldn't save that photo.");
+  } else {
+    hideLoading();
     currentImageURL = result.url;
     showToast('Photo attached.');
-  } else {
-    slot.innerHTML = `<span>📷</span><span>Add a photo</span>`;
-    showToast(result.error || "Couldn't upload that photo — try again.");
   }
 }
 
@@ -595,28 +611,39 @@ function extractYouTubeId(url){
   return m ? m[1] : null;
 }
 
-function openYouTubeInput(){
-  const slot = document.getElementById('ytSlot');
+function openYouTubeInput(slotId, mode, postId){
+  mediaUploadMode = mode || 'compose';
+  mediaUploadPostId = postId || null;
+  const slot = document.getElementById(slotId);
   if(document.getElementById('ytInlineInput')) return; // already open
   slot.innerHTML = `
     <div style="width:100%;" onclick="event.stopPropagation()">
       <input type="text" id="ytInlineInput" placeholder="Paste YouTube link..." style="margin-bottom:6px;">
-      <button class="btn btn-ghost btn-sm" style="width:100%;" onclick="confirmYouTubeLink()">Add</button>
+      <button class="btn btn-ghost btn-sm" style="width:100%;" onclick="confirmYouTubeLink('${slotId}')">Add</button>
     </div>`;
   document.getElementById('ytInlineInput').focus();
 }
 
-function confirmYouTubeLink(){
+async function confirmYouTubeLink(slotId){
   const input = document.getElementById('ytInlineInput');
   const id = extractYouTubeId(input.value.trim());
-  const slot = document.getElementById('ytSlot');
+  const slot = document.getElementById(slotId);
   if(!id){
     showToast("That doesn't look like a YouTube link — try pasting the full URL.");
     return;
   }
-  currentYouTubeID = id;
-  slot.innerHTML = `<div class="yt-thumb" style="background-image:url(https://img.youtube.com/vi/${id}/hqdefault.jpg)"></div>`;
-  showToast('YouTube video attached.');
+
+  if(mediaUploadMode === 'editPost'){
+    showLoading('Saving video…');
+    const result = await callApi('updatePost', { classId: currentClassId, studentNumber: currentStudent, postId: mediaUploadPostId, youtubeURL: id });
+    hideLoading();
+    if(result.success){ showToast('Video updated.'); openPostDetail(mediaUploadPostId); }
+    else showToast(result.error || "Couldn't save that video.");
+  } else {
+    currentYouTubeID = id;
+    slot.innerHTML = `<div class="yt-thumb" style="background-image:url(https://img.youtube.com/vi/${id}/hqdefault.jpg)"></div>`;
+    showToast('YouTube video attached.');
+  }
 }
 
 async function submitPost(){
@@ -640,6 +667,8 @@ async function submitPost(){
 }
 
 /* ============ POST DETAIL ============ */
+let currentDetailData = null;
+
 async function openPostDetail(postId){
   document.getElementById('content').innerHTML = `<div class="card empty-note">Loading…</div>`;
   const data = await callApi('getPostDetail', { classId: currentClassId, postId, studentNumber: currentStudent });
@@ -647,6 +676,7 @@ async function openPostDetail(postId){
     document.getElementById('content').innerHTML = `<div class="card empty-note">${data.error}</div>`;
     return;
   }
+  currentDetailData = data;
   const post = data.post;
   const wc = post.TextContent.trim().split(/\s+/).filter(Boolean).length;
 
@@ -687,18 +717,42 @@ async function openPostDetail(postId){
     mediaHtml += '</div>';
   }
 
+  // Media can still be added/changed up until PictureDeadline, independent of whether
+  // the text-edit window (PostClose) has already passed.
+  let mediaEditHtml = '';
+  if(data.isOwnPost && data.pictureEditable){
+    mediaEditHtml = '<div class="media-row" style="margin-top:12px;">';
+    mediaEditHtml += post.ImageURL
+      ? `<button class="btn btn-ghost btn-sm" onclick="triggerImageUpload('editPost','${postId}','detailImageSlot')">🔁 Replace photo</button>`
+      : `<div class="media-slot" id="detailImageSlot" onclick="triggerImageUpload('editPost','${postId}','detailImageSlot')"><span>📷</span><span>Add a photo</span></div>`;
+    mediaEditHtml += post.YouTubeURL
+      ? `<button class="btn btn-ghost btn-sm" onclick="openYouTubeInput('detailYtSlot','editPost','${postId}')">🔁 Replace video</button>`
+      : `<div class="media-slot" id="detailYtSlot" onclick="openYouTubeInput('detailYtSlot','editPost','${postId}')"><span>▶</span><span>Add YouTube link</span></div>`;
+    mediaEditHtml += '</div>';
+  }
+
+  const editButtonHtml = (data.isOwnPost && data.postOpen)
+    ? `<button class="btn btn-ghost btn-sm" style="margin-bottom:12px;" onclick="startEditPost('${postId}')">✏️ Edit entry</button>`
+    : '';
+
   document.getElementById('content').innerHTML = `
     <button class="back-link" onclick="renderNewPostTab()">← Back</button>
     <div class="card post-card">
       <div class="stamp"><span class="wk">WEEK</span><span class="num">${String(post.Week).padStart(2,'0')}</span></div>
-      <div class="post-detail-title">${post.Title}</div>
+      <div id="postDetailTitleArea">
+        <div class="post-detail-title">${post.Title}</div>
+        ${editButtonHtml}
+      </div>
       <div class="post-head">
         <div class="avatar" style="background:var(--postal-blue)">${avatarInner(data.authorName)}</div>
         <div><div class="name">${data.authorName}</div><div class="when">${data.scheduleLabel}</div></div>
       </div>
-      <div class="post-body">${post.TextContent}</div>
+      <div id="postDetailBodyArea">
+        <div class="post-body">${post.TextContent}</div>
+        <div class="word-count">${wc} words</div>
+      </div>
       ${mediaHtml}
-      <div class="word-count">${wc} words</div>
+      ${mediaEditHtml}
       <div class="comments">
         ${commentsHtml}
         ${commentInputHtml}
@@ -712,6 +766,37 @@ async function openPostDetail(postId){
       wireWordCounter(`replyinput-${c.commentId}`, `replyinput-wc-${c.commentId}`);
     });
   }
+}
+
+function startEditPost(postId){
+  const post = currentDetailData.post;
+  document.getElementById('postDetailTitleArea').innerHTML = `
+    <input type="text" id="editTitleInput" value="${post.Title.replace(/"/g,'&quot;')}" style="font-weight:600;font-size:1.1rem;margin-bottom:10px;">`;
+  document.getElementById('postDetailBodyArea').innerHTML = `
+    <textarea id="editTextInput" style="min-height:200px;line-height:1.6;">${post.TextContent}</textarea>
+    <div class="meta-row"><span id="editWordCountLabel">${wordCountOf(post.TextContent)} words</span><span></span></div>
+    <div class="grade-actions" style="margin-top:10px;">
+      <button class="btn btn-ghost" style="flex:1;" onclick="openPostDetail('${postId}')">Cancel</button>
+      <button class="btn btn-primary" style="flex:1;" onclick="savePostEdit('${postId}')">Save changes</button>
+    </div>`;
+  const ta = document.getElementById('editTextInput');
+  ta.addEventListener('paste', e=>{ e.preventDefault(); showToast("Pasting isn't allowed — please type yourself."); });
+  ta.addEventListener('input', ()=>{
+    document.getElementById('editWordCountLabel').textContent = wordCountOf(ta.value) + ' words';
+  });
+}
+function wordCountOf(text){ return text.trim().split(/\s+/).filter(Boolean).length; }
+
+async function savePostEdit(postId){
+  const title = document.getElementById('editTitleInput').value.trim();
+  const text = document.getElementById('editTextInput').value;
+  if(!title){ showToast('Title can\'t be empty.'); return; }
+  if(!text.trim()){ showToast("Entry can't be empty."); return; }
+  showLoading('Saving…');
+  const result = await callApi('updatePost', { classId: currentClassId, studentNumber: currentStudent, postId, title, textContent: text });
+  hideLoading();
+  if(result.success){ showToast('Entry updated.'); openPostDetail(postId); }
+  else showToast(result.error || "Couldn't save changes.");
 }
 
 function wireWordCounter(inputId, labelId){
