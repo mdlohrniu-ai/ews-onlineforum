@@ -245,8 +245,8 @@
 <div class="modal-overlay" id="tabWarningModal">
   <div class="modal-box">
     <div class="modal-icon">⚠️</div>
-    <h3>Stay on this page</h3>
-    <p>You switched away while writing. Please stay on this page — using translation tools or other apps while writing isn't allowed, and this has been logged.</p>
+    <h3 id="tabWarningTitle">Stay on this page</h3>
+    <p id="tabWarningText">You switched away while writing. Please stay on this page — using translation tools or other apps while writing isn't allowed, and this has been logged.</p>
     <button class="btn btn-primary btn-block" onclick="closeTabWarningModal()">OK</button>
   </div>
 </div>
@@ -262,7 +262,7 @@
       <button class="btn btn-primary btn-block" style="margin-top:14px;" onclick="login()">Enter</button>
       <div class="error-msg" id="loginError">Student number not found. Check and try again.</div>
     </div>
-    <div class="version-tag">v0.9 — 2026-06-26</div>
+    <div class="version-tag">v0.10 — 2026-06-26</div>
   </div>
 
   <!-- ===================== MAIN APP ===================== -->
@@ -526,8 +526,8 @@ function openComposer(){
 function wireComposerEvents(){
   const postTextEl = document.getElementById('postText');
   if(!postTextEl) return;
-  postTextEl.addEventListener('paste', e=>{ e.preventDefault(); showToast("Pasting isn't allowed — please type your entry yourself."); });
-  postTextEl.addEventListener('drop', e=>{ e.preventDefault(); showToast("Dropping text isn't allowed — please type your entry yourself."); });
+  postTextEl.addEventListener('paste', e=>{ e.preventDefault(); showTabWarningModal("Pasting isn't allowed", "Please type your entry yourself — pasted text isn't accepted here."); });
+  postTextEl.addEventListener('drop', e=>{ e.preventDefault(); showTabWarningModal("Dropping text isn't allowed", "Please type your entry yourself — dropped text isn't accepted here."); });
   postTextEl.addEventListener('input', ()=>{
     const words = postTextEl.value.trim().split(/\s+/).filter(Boolean).length;
     document.getElementById('wordCountLabel').textContent = words + (words===1 ? ' word' : ' words');
@@ -562,15 +562,15 @@ function renderComposerMediaArea(){
       </div>`;
   } else if(currentMediaType === 'image'){
     area.innerHTML = `
-      <img src="${currentMediaValue}" style="width:100%;border-radius:10px;max-height:220px;object-fit:cover;display:block;">
-      <div class="media-row" style="margin-top:8px;">
+      <img src="${currentMediaValue}" style="display:block;margin:0 auto;max-width:320px;max-height:280px;width:auto;height:auto;border-radius:10px;object-fit:contain;">
+      <div class="media-row" style="margin-top:8px;justify-content:center;">
         <button class="btn btn-ghost btn-sm" onclick="triggerImageUpload('compose', null, 'composerMediaArea')">🔁 Replace photo</button>
         <button class="btn btn-ghost btn-sm" onclick="removeComposerMedia()">✕ Remove photo</button>
       </div>`;
   } else if(currentMediaType === 'youtube'){
     area.innerHTML = `
-      <div class="yt-thumb" style="width:100%;height:160px;border-radius:10px;background-size:cover;background-position:center;background-image:url(https://img.youtube.com/vi/${currentMediaValue}/hqdefault.jpg);"></div>
-      <div class="media-row" style="margin-top:8px;">
+      <div class="yt-thumb" style="margin:0 auto;width:320px;height:180px;border-radius:10px;background-size:cover;background-position:center;background-image:url(https://img.youtube.com/vi/${currentMediaValue}/hqdefault.jpg);"></div>
+      <div class="media-row" style="margin-top:8px;justify-content:center;">
         <button class="btn btn-ghost btn-sm" onclick="openYouTubeInput('composerMediaArea','compose', null)">🔁 Replace video</button>
         <button class="btn btn-ghost btn-sm" onclick="removeComposerMedia()">✕ Remove video</button>
       </div>`;
@@ -722,10 +722,7 @@ async function confirmYouTubeLink(slotId){
 // no upload involved, then refreshes from the real data.
 async function removeDetailMedia(postId, type){
   showLoading('Removing…');
-  const payload = { classId: currentClassId, studentNumber: currentStudent, postId };
-  if(type === 'image') payload.imageURL = '';
-  else payload.youtubeURL = '';
-  const result = await callApi('updatePost', payload);
+  const result = await callApi('updatePost', { classId: currentClassId, studentNumber: currentStudent, postId, imageURL: '', youtubeURL: '' });
   hideLoading();
   if(result.success){ showToast('Removed.'); openPostDetail(postId); }
   else showToast(result.error || "Couldn't remove that.");
@@ -783,7 +780,8 @@ async function openPostDetail(postId){
 
   // Arm writing-protection if there's an actual writing control on this page (a comment box,
   // or the possibility of a reply box) — not just because the post happens to be open.
-  isWritingSomething = (data.commentOpen && !data.isOwnPost) || (data.isOwnPost && data.replyOpen);
+  const hasReplyableComment = data.comments.some(c=>!c.reply);
+  isWritingSomething = (data.commentOpen && !data.isOwnPost) || (data.isOwnPost && data.replyOpen && hasReplyableComment);
 
   const commentsHtml = data.comments.map(c=>{
     let replyHtml = '';
@@ -829,7 +827,7 @@ async function openPostDetail(postId){
       </div>`;
     }
   } else if(post.YouTubeURL){
-    mediaColHtml = `<a href="https://www.youtube.com/watch?v=${post.YouTubeURL}" target="_blank" class="yt-embed" style="background-image:url(https://img.youtube.com/vi/${post.YouTubeURL}/hqdefault.jpg)"></a>`;
+    mediaColHtml = `<a href="https://www.youtube.com/watch?v=${post.YouTubeURL}" target="_blank" class="yt-embed" style="display:block;width:100%;height:150px;border-radius:10px;background-size:cover;background-position:center;background-image:url(https://img.youtube.com/vi/${post.YouTubeURL}/hqdefault.jpg)"></a>`;
     if(canEditMedia){
       mediaEditHtml = `<div class="media-row" style="margin-top:8px;">
         <button class="btn btn-ghost btn-sm" onclick="openYouTubeInput('detailMediaArea','editPost','${postId}')">🔁 Replace video</button>
@@ -896,7 +894,7 @@ function startEditPost(postId){
       <button class="btn btn-primary" style="flex:1;" onclick="savePostEdit('${postId}')">Save changes</button>
     </div>`;
   const ta = document.getElementById('editTextInput');
-  ta.addEventListener('paste', e=>{ e.preventDefault(); showToast("Pasting isn't allowed — please type yourself."); });
+  ta.addEventListener('paste', e=>{ e.preventDefault(); showTabWarningModal("Pasting isn't allowed", "Please type your entry yourself — pasted text isn't accepted here."); });
   ta.addEventListener('input', ()=>{
     document.getElementById('editWordCountLabel').textContent = wordCountOf(ta.value) + ' words';
   });
@@ -948,8 +946,7 @@ async function submitReply(commentId){
   showLoading('Submitting…');
   const result = await callApi('createReply', { classId: currentClassId, commentId, studentNumber: currentStudent, content: text });
   hideLoading();
-  // We need the postId to re-render after — simplest reliable approach for this phase is a full reload.
-  if(result.success) location.reload();
+  if(result.success) openPostDetail(currentDetailData.post.PostID);
   else showToast(result.error || "Couldn't post reply.");
 }
 
@@ -996,8 +993,13 @@ function buildRubricTable(rubric){
 let tabAwaySince = null;
 let isWritingSomething = false; // set explicitly when a writing UI opens/closes — see openComposer, startEditPost, openPostDetail, etc.
 
+function isWritingFieldId(id){
+  if(!id) return false;
+  return id === 'postText' || id === 'editTextInput' || id === 'newcomment' || id.startsWith('replyinput-');
+}
 function markTabAway(){
-  if(!isWritingSomething) return; // not writing anything right now — no need to watch for this
+  const active = document.activeElement;
+  if(!active || !isWritingFieldId(active.id)) return; // cursor wasn't actually in a writing field
   if(tabAwaySince) return;
   tabAwaySince = Date.now();
 }
@@ -1007,7 +1009,11 @@ function markTabReturn(){
   tabAwaySince = null;
   if(awayMs > 1500 && currentStudent) showTabWarningModal();
 }
-function showTabWarningModal(){ document.getElementById('tabWarningModal').classList.add('show'); }
+function showTabWarningModal(title, text){
+  document.getElementById('tabWarningTitle').textContent = title || 'Stay on this page';
+  document.getElementById('tabWarningText').textContent = text || "You switched away while writing. Please stay on this page — using translation tools or other apps while writing isn't allowed, and this has been logged.";
+  document.getElementById('tabWarningModal').classList.add('show');
+}
 function closeTabWarningModal(){ document.getElementById('tabWarningModal').classList.remove('show'); }
 window.addEventListener('blur', markTabAway);
 window.addEventListener('focus', markTabReturn);
