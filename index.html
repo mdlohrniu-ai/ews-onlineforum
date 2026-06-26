@@ -262,7 +262,7 @@
       <button class="btn btn-primary btn-block" style="margin-top:14px;" onclick="login()">Enter</button>
       <div class="error-msg" id="loginError">Student number not found. Check and try again.</div>
     </div>
-    <div class="version-tag">v0.6 — 2026-06-26</div>
+    <div class="version-tag">v0.8 — 2026-06-26</div>
   </div>
 
   <!-- ===================== MAIN APP ===================== -->
@@ -318,7 +318,8 @@ let activeTab = 'dashboard';
 let currentPostData = null; // cached response from getNewPostData, so we don't refetch on every small render
 
 function initials(name){ return (name||'?').split(' ').map(n=>n[0]).join(''); }
-function avatarInner(name){ return initials(name); } // no real profile pictures wired up yet
+function avatarInner(name, picURL){ return picURL ? `<img src="${picURL}">` : initials(name); }
+let currentProfilePicURL = '';
 
 let toastTimer;
 function showToast(msg){
@@ -349,10 +350,11 @@ async function login(){
     currentStudent = val;
     currentClassId = result.classId;
     currentName = result.name;
+    currentProfilePicURL = result.profilePicURL || '';
     document.getElementById('loginScreen').classList.add('hidden');
     document.getElementById('mainApp').classList.remove('hidden');
     document.getElementById('whoName').textContent = currentName;
-    document.getElementById('whoAvatar').textContent = avatarInner(currentName);
+    document.getElementById('whoAvatar').innerHTML = avatarInner(currentName, currentProfilePicURL);
     renderDashboard();
   } else {
     document.getElementById('loginError').textContent = result.error || 'Student number not found.';
@@ -414,10 +416,10 @@ function renderProfilePage(){
   document.getElementById('content').innerHTML = `
     <button class="back-link" onclick="renderDashboard()">← Back to dashboard</button>
     <div class="card" style="text-align:center;">
-      <div class="profile-avatar-big">${avatarInner(currentName)}</div>
+      <div class="profile-avatar-big" id="profileAvatarBig">${avatarInner(currentName, currentProfilePicURL)}</div>
       <div class="profile-name">${currentName}</div>
       <div class="profile-sn">${currentStudent} · ${currentClassId}</div>
-      <button class="btn btn-primary" style="margin-top:16px;" onclick="showToast('Profile pictures aren\\'t wired up yet — coming in a later phase.')">Change profile picture</button>
+      <button class="btn btn-primary" style="margin-top:16px;" onclick="triggerImageUpload('profile', null, 'profileAvatarBig')">Change profile picture</button>
     </div>
   `;
 }
@@ -472,14 +474,14 @@ async function renderNewPostTab(){
       if(m.postId){
         return `
           <div class="member-row" onclick="openPostDetail('${m.postId}')">
-            <div class="avatar" style="background:var(--postal-blue)">${avatarInner(m.name)}</div>
+            <div class="avatar" style="background:var(--postal-blue)">${avatarInner(m.name, m.profilePicURL)}</div>
             <div class="mtext"><div class="mtitle">${m.title}</div><div class="mauthor">${m.name}${isMe?' (you)':''}</div></div>
             <div class="chev">›</div>
           </div>`;
       }
       return `
         <div class="member-row disabled">
-          <div class="avatar" style="background:var(--border);color:var(--ink-soft);">${avatarInner(m.name)}</div>
+          <div class="avatar" style="background:var(--border);color:var(--ink-soft);">${avatarInner(m.name, m.profilePicURL)}</div>
           <div class="mtext"><div class="mname">${m.name}${isMe?' (you)':''}</div><div class="mstatus">No posts yet</div></div>
         </div>`;
     }).join('');
@@ -585,7 +587,9 @@ async function handleImageFile(event){
 
   const oldImageURL = mediaUploadMode === 'editPost'
     ? (currentDetailData && currentDetailData.post ? currentDetailData.post.ImageURL : '')
-    : currentImageURL;
+    : mediaUploadMode === 'profile'
+      ? currentProfilePicURL
+      : currentImageURL;
 
   showLoading('Uploading photo…');
   const base64Data = dataUrl.split(',')[1];
@@ -596,7 +600,11 @@ async function handleImageFile(event){
 
   if(!result.success){
     hideLoading();
-    if(slot) slot.innerHTML = `<span>📷</span><span>Add a photo</span>`;
+    if(slot){
+      slot.innerHTML = mediaUploadMode === 'profile'
+        ? avatarInner(currentName, currentProfilePicURL)
+        : `<span>📷</span><span>Add a photo</span>`;
+    }
     showToast(result.error || "Couldn't upload that photo — try again.");
     return;
   }
@@ -607,6 +615,17 @@ async function handleImageFile(event){
     hideLoading();
     if(saveResult.success){ showToast('Photo updated.'); openPostDetail(mediaUploadPostId); }
     else showToast(saveResult.error || "Couldn't save that photo.");
+  } else if(mediaUploadMode === 'profile'){
+    showLoading('Saving profile picture…');
+    const saveResult = await callApi('updateProfilePic', { classId: currentClassId, studentNumber: currentStudent, profilePicURL: result.url });
+    hideLoading();
+    if(saveResult.success){
+      currentProfilePicURL = result.url;
+      document.getElementById('whoAvatar').innerHTML = avatarInner(currentName, currentProfilePicURL);
+      showToast('Profile picture updated.');
+    } else {
+      showToast(saveResult.error || "Couldn't save that profile picture.");
+    }
   } else {
     hideLoading();
     currentImageURL = result.url;
@@ -623,6 +642,7 @@ function openYouTubeInput(slotId, mode, postId){
   mediaUploadMode = mode || 'compose';
   mediaUploadPostId = postId || null;
   const slot = document.getElementById(slotId);
+  if(!slot){ showToast("Couldn't open that — try refreshing the page."); return; }
   if(document.getElementById('ytInlineInput')) return; // already open
   slot.innerHTML = `
     <div style="width:100%;" onclick="event.stopPropagation()">
@@ -691,7 +711,7 @@ async function openPostDetail(postId){
   const commentsHtml = data.comments.map(c=>{
     let replyHtml = '';
     if(c.reply){
-      replyHtml = `<div class="reply"><div class="comment"><div class="avatar" style="background:var(--postal-blue)">${avatarInner(c.reply.name)}</div><div class="comment-body"><div class="c-name">${c.reply.name}</div><div class="c-text">${c.reply.text}</div></div></div></div>`;
+      replyHtml = `<div class="reply"><div class="comment"><div class="avatar" style="background:var(--postal-blue)">${avatarInner(c.reply.name, c.reply.profilePicURL)}</div><div class="comment-body"><div class="c-name">${c.reply.name}</div><div class="c-text">${c.reply.text}</div></div></div></div>`;
     } else if(data.replyOpen && data.isOwnPost){
       replyHtml = `<div class="reply"><button class="reply-link" onclick="showReplyBox('${c.commentId}')">Reply</button>
         <div class="reply-box-wrap hidden" id="replybox-${c.commentId}">
@@ -704,7 +724,7 @@ async function openPostDetail(postId){
     } else if(!c.reply && data.isOwnPost && !data.replyOpen){
       replyHtml = `<div class="reply"><div class="closed-note" style="margin-top:6px;">Reply period closed.</div></div>`;
     }
-    return `<div class="comment"><div class="avatar" style="background:var(--postal-blue)">${avatarInner(c.name)}</div><div class="comment-body"><div class="c-name">${c.name}</div><div class="c-text">${c.text}</div></div></div>${replyHtml}`;
+    return `<div class="comment"><div class="avatar" style="background:var(--postal-blue)">${avatarInner(c.name, c.profilePicURL)}</div><div class="comment-body"><div class="c-name">${c.name}</div><div class="c-text">${c.text}</div></div></div>${replyHtml}`;
   }).join('');
 
   let commentInputHtml;
@@ -724,15 +744,13 @@ async function openPostDetail(postId){
   if(post.YouTubeURL) mediaColHtml += `<a href="https://www.youtube.com/watch?v=${post.YouTubeURL}" target="_blank" class="yt-embed" style="background-image:url(https://img.youtube.com/vi/${post.YouTubeURL}/hqdefault.jpg)"></a>`;
 
   // Media can still be added/changed up until PictureDeadline, independent of whether
-  // the text-edit window (PostClose) has already passed.
+  // the text-edit window (PostClose) has already passed. Always the same slot element
+  // either way (not a plain button when replacing) — the inline YouTube input needs a
+  // container to render into, and a button with no matching id has nowhere to inject it.
   let mediaEditHtml = '';
   if(data.isOwnPost && data.pictureEditable){
-    mediaEditHtml += post.ImageURL
-      ? `<button class="btn btn-ghost btn-sm" onclick="triggerImageUpload('editPost','${postId}','detailImageSlot')">🔁 Replace photo</button>`
-      : `<div class="media-slot" id="detailImageSlot" onclick="triggerImageUpload('editPost','${postId}','detailImageSlot')"><span>📷</span><span>Add a photo</span></div>`;
-    mediaEditHtml += post.YouTubeURL
-      ? `<button class="btn btn-ghost btn-sm" onclick="openYouTubeInput('detailYtSlot','editPost','${postId}')">🔁 Replace video</button>`
-      : `<div class="media-slot" id="detailYtSlot" onclick="openYouTubeInput('detailYtSlot','editPost','${postId}')"><span>▶</span><span>Add YouTube link</span></div>`;
+    mediaEditHtml += `<div class="media-slot" id="detailImageSlot" onclick="triggerImageUpload('editPost','${postId}','detailImageSlot')"><span>📷</span><span>${post.ImageURL ? '🔁 Replace photo' : 'Add a photo'}</span></div>`;
+    mediaEditHtml += `<div class="media-slot" id="detailYtSlot" onclick="openYouTubeInput('detailYtSlot','editPost','${postId}')"><span>▶</span><span>${post.YouTubeURL ? '🔁 Replace video' : 'Add YouTube link'}</span></div>`;
   }
 
   const hasMediaCol = !!(mediaColHtml || mediaEditHtml);
@@ -750,7 +768,7 @@ async function openPostDetail(postId){
         ${editButtonHtml}
       </div>
       <div class="post-head">
-        <div class="avatar" style="background:var(--postal-blue)">${avatarInner(data.authorName)}</div>
+        <div class="avatar" style="background:var(--postal-blue)">${avatarInner(data.authorName, data.authorProfilePicURL)}</div>
         <div><div class="name">${data.authorName}</div><div class="when">${data.scheduleLabel}</div></div>
       </div>
       <div class="post-detail-grid">
@@ -883,9 +901,19 @@ function buildRubricTable(rubric){
   `;
 }
 
-/* ============ TAB-SWITCH DETECTION (client-side only, see spec) ============ */
+/* ============ TAB-SWITCH DETECTION — only while actively writing, not the whole app ============ */
 let tabAwaySince = null;
+let isWritingSomething = false;
+
+function isWritingFieldId(id){
+  if(!id) return false;
+  return id === 'postText' || id === 'editTextInput' || id === 'newcomment' || id.startsWith('replyinput-');
+}
+document.addEventListener('focusin', e=>{ if(isWritingFieldId(e.target.id)) isWritingSomething = true; });
+document.addEventListener('focusout', e=>{ if(isWritingFieldId(e.target.id)) isWritingSomething = false; });
+
 function markTabAway(){
+  if(!isWritingSomething) return; // not writing anything right now — no need to watch for this
   if(tabAwaySince) return;
   tabAwaySince = Date.now();
 }
