@@ -203,10 +203,10 @@
   .reply .comment-body{background:#EEF1EC;}
   .reply-link{font-family:'IBM Plex Mono',monospace;font-size:0.7rem;color:var(--postal-blue);cursor:pointer;background:none;border:none;padding:0;margin-top:4px;}
   .reply-box-wrap{margin-top:8px;}
-  .reply-box{display:flex;gap:8px;}
-  .reply-box input{flex:1;padding:7px 10px;font-size:0.84rem;}
-  .comment-input-row{display:flex;gap:8px;margin-top:12px;}
-  .comment-input-row input{flex:1;}
+  .reply-box{display:flex;gap:8px;align-items:flex-end;}
+  .reply-box textarea{flex:1;padding:7px 10px;font-size:0.84rem;min-height:46px;max-height:140px;resize:vertical;line-height:1.5;font-family:'IBM Plex Sans',sans-serif;}
+  .comment-input-row{display:flex;gap:8px;margin-top:12px;align-items:flex-end;}
+  .comment-input-row textarea{flex:1;min-height:52px;max-height:160px;resize:vertical;line-height:1.5;font-family:'IBM Plex Sans',sans-serif;}
   .closed-note{font-family:'IBM Plex Mono',monospace;font-size:0.76rem;color:var(--ink-soft);background:#F2F0E8;border:1px dashed var(--border);border-radius:10px;padding:10px 12px;margin-top:12px;text-align:center;}
 
   .week-list-row{display:flex;align-items:center;justify-content:space-between;padding:14px 4px;border-bottom:1px solid var(--border);cursor:pointer;}
@@ -237,7 +237,7 @@
   .tl-step.overdue:not(:last-child)::after{background:var(--stamp-red);}
   .tl-node{width:28px;height:28px;border-radius:50%;border:3px solid var(--border);background:#fff;z-index:1;display:flex;align-items:center;justify-content:center;font-size:0.85rem;font-weight:700;color:#fff;}
   .tl-step.done .tl-node{background:#2E7D4F;border-color:#2E7D4F;}
-  .tl-step.overdue .tl-node{background:var(--stamp-red);border-color:var(--stamp-red);}
+  .tl-step.overdue .tl-node{background:var(--stamp-red);border-color:var(--stamp-red);width:34px;height:34px;font-size:1.1rem;margin-top:-3px;}
   .tl-step.pending .tl-node{background:#fff;border-color:var(--border);}
   .tl-label{margin-top:8px;text-align:center;font-weight:600;font-size:0.78rem;}
   .tl-sub{font-size:0.66rem;color:var(--ink-soft);margin-top:1px;}
@@ -274,7 +274,7 @@
       <button class="btn btn-primary btn-block" style="margin-top:14px;" onclick="login()">Enter</button>
       <div class="error-msg" id="loginError">Student number not found. Check and try again.</div>
     </div>
-    <div class="version-tag">v0.15 — 2026-06-26</div>
+    <div class="version-tag">v0.16 — 2026-06-26</div>
   </div>
 
   <!-- ===================== MAIN APP ===================== -->
@@ -315,12 +315,22 @@ const API_URL = "https://script.google.com/macros/s/AKfycbyMbuD6_z3PTOt8P_dS8TPT
 const CURRENT_WEEK = 1;
 
 async function callApi(action, payload) {
-  const res = await fetch(API_URL, {
-    method: "POST",
-    headers: { "Content-Type": "text/plain;charset=utf-8" }, // avoids a CORS preflight
-    body: JSON.stringify(Object.assign({ action }, payload || {})),
-  });
-  return res.json();
+  try {
+    const res = await fetch(API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" }, // avoids a CORS preflight
+      body: JSON.stringify(Object.assign({ action }, payload || {})),
+    });
+    const json = await res.json();
+    if(typeof json.success === 'undefined'){
+      // Server responded, but not in the expected shape — treat as a failure rather than
+      // letting "undefined" leak into the UI.
+      return { success: false, error: "Got an unexpected response from the server. Please try again." };
+    }
+    return json;
+  } catch (err) {
+    return { success: false, error: "Couldn't reach the server — check your connection and try again." };
+  }
 }
 
 let currentStudent = null;
@@ -448,7 +458,9 @@ async function renderNewPostTab(){
   document.getElementById('content').innerHTML = `<div class="card empty-note">Loading…</div>`;
   const data = await callApi('getNewPostData', { classId: currentClassId, studentNumber: currentStudent, week: CURRENT_WEEK });
   if(!data.success){
-    document.getElementById('content').innerHTML = `<div class="card empty-note">${data.error}</div>`;
+    document.getElementById('content').innerHTML = `
+      <button class="back-link" onclick="renderDashboard()">← Back to dashboard</button>
+      <div class="card empty-note">${data.error || "Something went wrong loading this page."}</div>`;
     return;
   }
   currentPostData = data;
@@ -783,7 +795,9 @@ async function openPostDetail(postId){
   document.getElementById('content').innerHTML = `<div class="card empty-note">Loading…</div>`;
   const data = await callApi('getPostDetail', { classId: currentClassId, postId, studentNumber: currentStudent });
   if(!data.success){
-    document.getElementById('content').innerHTML = `<div class="card empty-note">${data.error}</div>`;
+    document.getElementById('content').innerHTML = `
+      <button class="back-link" onclick="renderNewPostTab()">← Back</button>
+      <div class="card empty-note">${data.error || "Something went wrong loading this post."}</div>`;
     return;
   }
   currentDetailData = data;
@@ -803,7 +817,7 @@ async function openPostDetail(postId){
       replyHtml = `<div class="reply"><button class="reply-link" onclick="showReplyBox('${c.commentId}')">Reply</button>
         <div class="reply-box-wrap hidden" id="replybox-${c.commentId}">
           <div class="reply-box">
-            <input type="text" id="replyinput-${c.commentId}" placeholder="Write a reply...">
+            <textarea id="replyinput-${c.commentId}" rows="2" placeholder="Write a reply..."></textarea>
             <button class="btn btn-ghost" onclick="submitReply('${c.commentId}')">Send</button>
           </div>
           <div class="word-count" id="replyinput-wc-${c.commentId}">0 words (30+ needed for credit)</div>
@@ -814,13 +828,14 @@ async function openPostDetail(postId){
     return `<div class="comment"><div class="avatar" style="background:var(--postal-blue)">${avatarInner(c.name, c.profilePicURL)}</div><div class="comment-body"><div class="c-name">${c.name}</div><div class="c-text">${c.text}</div></div></div>${replyHtml}`;
   }).join('');
 
+  const alreadyCommented = data.comments.some(c=>String(c.studentNumber)===String(currentStudent));
   let commentInputHtml;
   if(!data.commentOpen){
     commentInputHtml = `<div class="closed-note">Comment period closed for this week.</div>`;
-  } else if(data.isOwnPost){
+  } else if(data.isOwnPost || alreadyCommented){
     commentInputHtml = '';
   } else {
-    commentInputHtml = `<div class="comment-input-row"><input type="text" id="newcomment" placeholder="Write a comment..."><button class="btn btn-primary" onclick="submitComment('${postId}')">Send</button></div>
+    commentInputHtml = `<div class="comment-input-row"><textarea id="newcomment" rows="2" placeholder="Write a comment..."></textarea><button class="btn btn-primary" onclick="submitComment('${postId}')">Send</button></div>
        <div class="word-count" id="newcomment-wc">0 words (30+ needed for credit)</div>`;
   }
 
@@ -1030,8 +1045,14 @@ function buildCompletionTimeline(data){
       : (data.myPost && commentDeadlinePassed ? `<div class="tl-submitted">No comments received — nothing to reply to.</div>` : ''),
   });
 
-  const stepsHtml = steps.map(s=>{
-    const status = s.done ? 'done' : (now > new Date(s.deadline) ? 'overdue' : 'pending');
+  const stepsHtml = steps.map((s, i)=>{
+    let status = s.done ? 'done' : (now > new Date(s.deadline) ? 'overdue' : 'pending');
+    // Cascade: missing the blog post entirely makes "Post picture" and "Replies" impossible —
+    // force those to overdue immediately rather than waiting on their own deadlines. Comments
+    // is unaffected since commenting depends on groupmates' posts, not your own.
+    const postStep = steps[0];
+    const postOverdue = !postStep.done && now > new Date(postStep.deadline);
+    if(postOverdue && (s.label === 'Post picture' || s.label === 'Replies')) status = 'overdue';
     const icon = status === 'done' ? '✓' : (status === 'overdue' ? '✕' : '');
     return `
       <div class="tl-step ${status}">
