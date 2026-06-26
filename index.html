@@ -262,7 +262,7 @@
       <button class="btn btn-primary btn-block" style="margin-top:14px;" onclick="login()">Enter</button>
       <div class="error-msg" id="loginError">Student number not found. Check and try again.</div>
     </div>
-    <div class="version-tag">v0.8 — 2026-06-26</div>
+    <div class="version-tag">v0.9 — 2026-06-26</div>
   </div>
 
   <!-- ===================== MAIN APP ===================== -->
@@ -370,6 +370,7 @@ function updateHomeButton(onDashboard){
 function renderDashboard(){
   activeTab = 'dashboard';
   updateHomeButton(true);
+  isWritingSomething = false;
   document.getElementById('content').innerHTML = `
     <div class="dash-intro">What would you like to do?</div>
     <div class="dash-grid">
@@ -401,6 +402,7 @@ function enterSection(section){
 }
 
 function renderPreviousPlaceholder(){
+  isWritingSomething = false;
   document.getElementById('content').innerHTML = `
     <div class="card empty-note">
       Previous Entries &amp; Grades isn't wired up to the real backend yet — that's a later phase
@@ -413,19 +415,24 @@ function renderPreviousPlaceholder(){
 function renderProfilePage(){
   activeTab = 'profile';
   updateHomeButton(false);
+  isWritingSomething = false;
   document.getElementById('content').innerHTML = `
     <button class="back-link" onclick="renderDashboard()">← Back to dashboard</button>
     <div class="card" style="text-align:center;">
       <div class="profile-avatar-big" id="profileAvatarBig">${avatarInner(currentName, currentProfilePicURL)}</div>
       <div class="profile-name">${currentName}</div>
       <div class="profile-sn">${currentStudent} · ${currentClassId}</div>
-      <button class="btn btn-primary" style="margin-top:16px;" onclick="triggerImageUpload('profile', null, 'profileAvatarBig')">Change profile picture</button>
+      <div style="display:flex;gap:10px;justify-content:center;margin-top:16px;flex-wrap:wrap;">
+        <button class="btn btn-primary" onclick="triggerImageUpload('profile', null, 'profileAvatarBig')">Change profile picture</button>
+        ${currentProfilePicURL ? `<button class="btn btn-ghost" onclick="removeProfilePic()">Remove picture</button>` : ''}
+      </div>
     </div>
   `;
 }
 
 /* ============ NEW POST TAB ============ */
 async function renderNewPostTab(){
+  isWritingSomething = false;
   document.getElementById('content').innerHTML = `<div class="card empty-note">Loading…</div>`;
   const data = await callApi('getNewPostData', { classId: currentClassId, studentNumber: currentStudent, week: CURRENT_WEEK });
   if(!data.success){
@@ -457,11 +464,7 @@ async function renderNewPostTab(){
             <span id="wordCountLabel">0 words</span>
             <span>Min 40 words for full marks</span>
           </div>
-          ${data.settings.PictureEnabled ? `
-          <div class="media-row">
-            <div class="media-slot" id="imageSlot" onclick="triggerImageUpload('compose', null, 'imageSlot')"><span>📷</span><span>Add a photo</span></div>
-            <div class="media-slot" id="ytSlot" onclick="openYouTubeInput('ytSlot','compose', null)"><span>▶</span><span>Add YouTube link</span></div>
-          </div>` : ''}
+          ${data.settings.PictureEnabled ? `<div id="composerMediaArea"></div>` : ''}
           <button class="btn btn-primary" style="display:block;margin:14px auto 0;padding:11px 36px;" onclick="submitPost()">Post entry</button>
         </div>
       </div>`;
@@ -509,11 +512,15 @@ async function renderNewPostTab(){
     ${rubricHtml}
   `;
   wireComposerEvents();
+  currentMediaType = null;
+  currentMediaValue = null;
+  renderComposerMediaArea();
 }
 
 function openComposer(){
   document.getElementById('startWritingBtn').classList.add('hidden');
   document.getElementById('composerForm').classList.remove('hidden');
+  isWritingSomething = true;
 }
 
 function wireComposerEvents(){
@@ -528,9 +535,10 @@ function wireComposerEvents(){
 }
 
 /* ============ MEDIA: real image compression + Drive upload, real YouTube parsing ============ */
-let currentImageURL = '';
-let currentYouTubeID = '';
-let mediaUploadMode = 'compose'; // 'compose' (new post) or 'editPost' (existing post)
+// Photo or video, never both — tracked as one type+value pair rather than two separate slots.
+let currentMediaType = null;  // 'image' | 'youtube' | null
+let currentMediaValue = null; // URL (image) or video ID (youtube)
+let mediaUploadMode = 'compose'; // 'compose' (new post), 'editPost' (existing post), or 'profile'
 let mediaUploadPostId = null;
 let mediaUploadSlotId = 'imageSlot';
 
@@ -538,7 +546,41 @@ function triggerImageUpload(mode, postId, slotId){
   mediaUploadMode = mode || 'compose';
   mediaUploadPostId = postId || null;
   mediaUploadSlotId = slotId || 'imageSlot';
-  document.getElementById('imageFileInput').click();
+  const input = document.getElementById('imageFileInput');
+  input.value = ''; // reset so re-selecting the same file still fires 'change'
+  input.click();
+}
+
+function renderComposerMediaArea(){
+  const area = document.getElementById('composerMediaArea');
+  if(!area) return;
+  if(!currentMediaType){
+    area.innerHTML = `
+      <div class="media-row">
+        <div class="media-slot" id="imageSlot" onclick="triggerImageUpload('compose', null, 'imageSlot')"><span>📷</span><span>Add a photo</span></div>
+        <div class="media-slot" id="ytSlot" onclick="openYouTubeInput('ytSlot','compose', null)"><span>▶</span><span>Add YouTube link</span></div>
+      </div>`;
+  } else if(currentMediaType === 'image'){
+    area.innerHTML = `
+      <img src="${currentMediaValue}" style="width:100%;border-radius:10px;max-height:220px;object-fit:cover;display:block;">
+      <div class="media-row" style="margin-top:8px;">
+        <button class="btn btn-ghost btn-sm" onclick="triggerImageUpload('compose', null, 'composerMediaArea')">🔁 Replace photo</button>
+        <button class="btn btn-ghost btn-sm" onclick="removeComposerMedia()">✕ Remove photo</button>
+      </div>`;
+  } else if(currentMediaType === 'youtube'){
+    area.innerHTML = `
+      <div class="yt-thumb" style="width:100%;height:160px;border-radius:10px;background-size:cover;background-position:center;background-image:url(https://img.youtube.com/vi/${currentMediaValue}/hqdefault.jpg);"></div>
+      <div class="media-row" style="margin-top:8px;">
+        <button class="btn btn-ghost btn-sm" onclick="openYouTubeInput('composerMediaArea','compose', null)">🔁 Replace video</button>
+        <button class="btn btn-ghost btn-sm" onclick="removeComposerMedia()">✕ Remove video</button>
+      </div>`;
+  }
+}
+
+function removeComposerMedia(){
+  currentMediaType = null;
+  currentMediaValue = null;
+  renderComposerMediaArea();
 }
 
 // Resizes/re-compresses the image in the browser BEFORE it ever leaves the device —
@@ -583,13 +625,13 @@ async function handleImageFile(event){
   }
 
   const slot = document.getElementById(mediaUploadSlotId);
-  if(slot) slot.innerHTML = `<img src="${dataUrl}">`;
+  if(slot) slot.innerHTML = `<img src="${dataUrl}" style="width:100%;border-radius:10px;max-height:220px;object-fit:cover;display:block;">`;
 
   const oldImageURL = mediaUploadMode === 'editPost'
     ? (currentDetailData && currentDetailData.post ? currentDetailData.post.ImageURL : '')
     : mediaUploadMode === 'profile'
       ? currentProfilePicURL
-      : currentImageURL;
+      : (currentMediaType === 'image' ? currentMediaValue : '');
 
   showLoading('Uploading photo…');
   const base64Data = dataUrl.split(',')[1];
@@ -600,11 +642,8 @@ async function handleImageFile(event){
 
   if(!result.success){
     hideLoading();
-    if(slot){
-      slot.innerHTML = mediaUploadMode === 'profile'
-        ? avatarInner(currentName, currentProfilePicURL)
-        : `<span>📷</span><span>Add a photo</span>`;
-    }
+    if(mediaUploadMode === 'compose') renderComposerMediaArea();
+    else if(mediaUploadMode === 'profile' && slot) slot.innerHTML = avatarInner(currentName, currentProfilePicURL);
     showToast(result.error || "Couldn't upload that photo — try again.");
     return;
   }
@@ -622,13 +661,18 @@ async function handleImageFile(event){
     if(saveResult.success){
       currentProfilePicURL = result.url;
       document.getElementById('whoAvatar').innerHTML = avatarInner(currentName, currentProfilePicURL);
+      const bigSlot = document.getElementById('profileAvatarBig');
+      if(bigSlot) bigSlot.innerHTML = avatarInner(currentName, currentProfilePicURL);
       showToast('Profile picture updated.');
+      renderProfilePage();
     } else {
       showToast(saveResult.error || "Couldn't save that profile picture.");
     }
   } else {
     hideLoading();
-    currentImageURL = result.url;
+    currentMediaType = 'image';
+    currentMediaValue = result.url;
+    renderComposerMediaArea();
     showToast('Photo attached.');
   }
 }
@@ -655,7 +699,6 @@ function openYouTubeInput(slotId, mode, postId){
 async function confirmYouTubeLink(slotId){
   const input = document.getElementById('ytInlineInput');
   const id = extractYouTubeId(input.value.trim());
-  const slot = document.getElementById(slotId);
   if(!id){
     showToast("That doesn't look like a YouTube link — try pasting the full URL.");
     return;
@@ -668,9 +711,37 @@ async function confirmYouTubeLink(slotId){
     if(result.success){ showToast('Video updated.'); openPostDetail(mediaUploadPostId); }
     else showToast(result.error || "Couldn't save that video.");
   } else {
-    currentYouTubeID = id;
-    slot.innerHTML = `<div class="yt-thumb" style="background-image:url(https://img.youtube.com/vi/${id}/hqdefault.jpg)"></div>`;
+    currentMediaType = 'youtube';
+    currentMediaValue = id;
+    renderComposerMediaArea();
     showToast('YouTube video attached.');
+  }
+}
+
+// Removing media on an existing (already-posted) entry — calls the server directly,
+// no upload involved, then refreshes from the real data.
+async function removeDetailMedia(postId, type){
+  showLoading('Removing…');
+  const payload = { classId: currentClassId, studentNumber: currentStudent, postId };
+  if(type === 'image') payload.imageURL = '';
+  else payload.youtubeURL = '';
+  const result = await callApi('updatePost', payload);
+  hideLoading();
+  if(result.success){ showToast('Removed.'); openPostDetail(postId); }
+  else showToast(result.error || "Couldn't remove that.");
+}
+
+async function removeProfilePic(){
+  showLoading('Removing…');
+  const result = await callApi('updateProfilePic', { classId: currentClassId, studentNumber: currentStudent, profilePicURL: '' });
+  hideLoading();
+  if(result.success){
+    currentProfilePicURL = '';
+    document.getElementById('whoAvatar').innerHTML = avatarInner(currentName, '');
+    showToast('Profile picture removed.');
+    renderProfilePage();
+  } else {
+    showToast(result.error || "Couldn't remove that.");
   }
 }
 
@@ -682,11 +753,13 @@ async function submitPost(){
   showLoading('Submitting…');
   const result = await callApi('createPost', {
     classId: currentClassId, studentNumber: currentStudent, week: CURRENT_WEEK,
-    title, textContent: text, imageURL: currentImageURL, youtubeURL: currentYouTubeID,
+    title, textContent: text,
+    imageURL: currentMediaType === 'image' ? currentMediaValue : '',
+    youtubeURL: currentMediaType === 'youtube' ? currentMediaValue : '',
   });
   hideLoading();
   if(result.success){
-    currentImageURL = ''; currentYouTubeID = '';
+    currentMediaType = null; currentMediaValue = null;
     showToast("Entry posted.");
     renderNewPostTab();
   } else {
@@ -707,6 +780,10 @@ async function openPostDetail(postId){
   currentDetailData = data;
   const post = data.post;
   const wc = post.TextContent.trim().split(/\s+/).filter(Boolean).length;
+
+  // Arm writing-protection if there's an actual writing control on this page (a comment box,
+  // or the possibility of a reply box) — not just because the post happens to be open.
+  isWritingSomething = (data.commentOpen && !data.isOwnPost) || (data.isOwnPost && data.replyOpen);
 
   const commentsHtml = data.comments.map(c=>{
     let replyHtml = '';
@@ -737,20 +814,33 @@ async function openPostDetail(postId){
        <div class="word-count" id="newcomment-wc">0 words (30+ needed for credit)</div>`;
   }
 
-  // Photo above video when both exist, stacked vertically — this whole block sits in the
-  // right-hand column next to the text, not stretched full-width below it.
+  // Photo OR video, never both. Three states: neither set (show both add-options),
+  // photo set (show it + replace/remove), or video set (show it + replace/remove).
   let mediaColHtml = '';
-  if(post.ImageURL) mediaColHtml += `<img src="${post.ImageURL}">`;
-  if(post.YouTubeURL) mediaColHtml += `<a href="https://www.youtube.com/watch?v=${post.YouTubeURL}" target="_blank" class="yt-embed" style="background-image:url(https://img.youtube.com/vi/${post.YouTubeURL}/hqdefault.jpg)"></a>`;
-
-  // Media can still be added/changed up until PictureDeadline, independent of whether
-  // the text-edit window (PostClose) has already passed. Always the same slot element
-  // either way (not a plain button when replacing) — the inline YouTube input needs a
-  // container to render into, and a button with no matching id has nowhere to inject it.
   let mediaEditHtml = '';
-  if(data.isOwnPost && data.pictureEditable){
-    mediaEditHtml += `<div class="media-slot" id="detailImageSlot" onclick="triggerImageUpload('editPost','${postId}','detailImageSlot')"><span>📷</span><span>${post.ImageURL ? '🔁 Replace photo' : 'Add a photo'}</span></div>`;
-    mediaEditHtml += `<div class="media-slot" id="detailYtSlot" onclick="openYouTubeInput('detailYtSlot','editPost','${postId}')"><span>▶</span><span>${post.YouTubeURL ? '🔁 Replace video' : 'Add YouTube link'}</span></div>`;
+  const canEditMedia = data.isOwnPost && data.pictureEditable;
+
+  if(post.ImageURL){
+    mediaColHtml = `<img src="${post.ImageURL}">`;
+    if(canEditMedia){
+      mediaEditHtml = `<div class="media-row" style="margin-top:8px;">
+        <button class="btn btn-ghost btn-sm" onclick="triggerImageUpload('editPost','${postId}','detailMediaArea')">🔁 Replace photo</button>
+        <button class="btn btn-ghost btn-sm" onclick="removeDetailMedia('${postId}','image')">✕ Remove photo</button>
+      </div>`;
+    }
+  } else if(post.YouTubeURL){
+    mediaColHtml = `<a href="https://www.youtube.com/watch?v=${post.YouTubeURL}" target="_blank" class="yt-embed" style="background-image:url(https://img.youtube.com/vi/${post.YouTubeURL}/hqdefault.jpg)"></a>`;
+    if(canEditMedia){
+      mediaEditHtml = `<div class="media-row" style="margin-top:8px;">
+        <button class="btn btn-ghost btn-sm" onclick="openYouTubeInput('detailMediaArea','editPost','${postId}')">🔁 Replace video</button>
+        <button class="btn btn-ghost btn-sm" onclick="removeDetailMedia('${postId}','youtube')">✕ Remove video</button>
+      </div>`;
+    }
+  } else if(canEditMedia){
+    mediaEditHtml = `<div class="media-row">
+      <div class="media-slot" id="detailImageSlot" onclick="triggerImageUpload('editPost','${postId}','detailImageSlot')"><span>📷</span><span>Add a photo</span></div>
+      <div class="media-slot" id="detailYtSlot" onclick="openYouTubeInput('detailYtSlot','editPost','${postId}')"><span>▶</span><span>Add YouTube link</span></div>
+    </div>`;
   }
 
   const hasMediaCol = !!(mediaColHtml || mediaEditHtml);
@@ -776,7 +866,7 @@ async function openPostDetail(postId){
           <div class="post-body">${post.TextContent}</div>
           <div class="word-count">${wc} words</div>
         </div>
-        ${hasMediaCol ? `<div class="post-detail-media-col">${mediaColHtml}${mediaEditHtml}</div>` : ''}
+        ${hasMediaCol ? `<div class="post-detail-media-col" id="detailMediaArea">${mediaColHtml}${mediaEditHtml}</div>` : ''}
       </div>
       <div class="comments">
         ${commentsHtml}
@@ -794,6 +884,7 @@ async function openPostDetail(postId){
 }
 
 function startEditPost(postId){
+  isWritingSomething = true;
   const post = currentDetailData.post;
   document.getElementById('postDetailTitleArea').innerHTML = `
     <input type="text" id="editTitleInput" value="${post.Title.replace(/"/g,'&quot;')}" style="font-weight:600;font-size:1.1rem;margin-bottom:10px;">`;
@@ -903,14 +994,7 @@ function buildRubricTable(rubric){
 
 /* ============ TAB-SWITCH DETECTION — only while actively writing, not the whole app ============ */
 let tabAwaySince = null;
-let isWritingSomething = false;
-
-function isWritingFieldId(id){
-  if(!id) return false;
-  return id === 'postText' || id === 'editTextInput' || id === 'newcomment' || id.startsWith('replyinput-');
-}
-document.addEventListener('focusin', e=>{ if(isWritingFieldId(e.target.id)) isWritingSomething = true; });
-document.addEventListener('focusout', e=>{ if(isWritingFieldId(e.target.id)) isWritingSomething = false; });
+let isWritingSomething = false; // set explicitly when a writing UI opens/closes — see openComposer, startEditPost, openPostDetail, etc.
 
 function markTabAway(){
   if(!isWritingSomething) return; // not writing anything right now — no need to watch for this
