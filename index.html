@@ -274,7 +274,7 @@
       <button class="btn btn-primary btn-block" style="margin-top:14px;" onclick="login()">Enter</button>
       <div class="error-msg" id="loginError">Student number not found. Check and try again.</div>
     </div>
-    <div class="version-tag">v0.16 — 2026-06-26</div>
+    <div class="version-tag">v0.17 — 2026-06-26</div>
   </div>
 
   <!-- ===================== MAIN APP ===================== -->
@@ -952,6 +952,8 @@ function wireWordCounter(inputId, labelId){
     label.textContent = words + (words===1 ? ' word' : ' words') + ' (30+ needed for credit)';
     label.style.color = words>=30 ? 'var(--postal-blue)' : 'var(--ink-soft)';
   });
+  el.addEventListener('paste', e=>{ e.preventDefault(); showTabWarningModal("Pasting isn't allowed", "Please type your comment or reply yourself — pasted text isn't accepted here."); });
+  el.addEventListener('drop', e=>{ e.preventDefault(); showTabWarningModal("Dropping text isn't allowed", "Please type your comment or reply yourself — dropped text isn't accepted here."); });
 }
 
 function showReplyBox(commentId){
