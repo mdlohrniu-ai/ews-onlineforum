@@ -185,8 +185,11 @@
   .post-head .name{font-weight:600;font-size:0.92rem;}
   .post-head .when{font-family:'IBM Plex Mono',monospace;font-size:0.7rem;color:var(--ink-soft);}
   .post-body{line-height:1.65;font-size:0.97rem;margin-bottom:4px;white-space:pre-wrap;}
-  .post-media{display:flex;gap:10px;margin-top:12px;}
-  .post-media img{flex:1;border-radius:10px;object-fit:cover;max-height:200px;width:100%;}
+  .post-detail-grid{display:grid;grid-template-columns:1fr;gap:18px;align-items:start;margin-top:10px;}
+  @media (min-width:700px){ .post-detail-grid{grid-template-columns:1fr 260px;} }
+  .post-detail-media-col{display:flex;flex-direction:column;gap:10px;}
+  .post-detail-media-col img{width:100%;border-radius:10px;display:block;max-height:320px;object-fit:cover;}
+  .post-detail-media-col .yt-embed{width:100%;height:150px;border-radius:10px;display:block;}
   .yt-embed{flex:1;position:relative;display:block;max-height:200px;height:160px;background-size:cover;background-position:center;border-radius:10px;overflow:hidden;}
   .yt-embed::after{content:'▶';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#fff;font-size:2rem;background:rgba(0,0,0,0.2);}
   .word-count{font-family:'IBM Plex Mono',monospace;font-size:0.72rem;color:var(--ink-soft);margin-top:10px;}
@@ -259,7 +262,7 @@
       <button class="btn btn-primary btn-block" style="margin-top:14px;" onclick="login()">Enter</button>
       <div class="error-msg" id="loginError">Student number not found. Check and try again.</div>
     </div>
-    <div class="version-tag">v0.5 — 2026-06-25</div>
+    <div class="version-tag">v0.6 — 2026-06-26</div>
   </div>
 
   <!-- ===================== MAIN APP ===================== -->
@@ -278,6 +281,8 @@
     <div id="content"></div>
   </div>
 </div>
+
+<input type="file" id="imageFileInput" accept="image/*" class="hidden" onchange="handleImageFile(event)">
 
 <script>
 /* ====================================================================
@@ -452,10 +457,9 @@ async function renderNewPostTab(){
           </div>
           ${data.settings.PictureEnabled ? `
           <div class="media-row">
-            <div class="media-slot" id="imageSlot" onclick="triggerImageUpload()"><span>📷</span><span>Add a photo</span></div>
-            <div class="media-slot" id="ytSlot" onclick="openYouTubeInput()"><span>▶</span><span>Add YouTube link</span></div>
-          </div>
-          <input type="file" id="imageFileInput" accept="image/*" class="hidden" onchange="handleImageFile(event)">` : ''}
+            <div class="media-slot" id="imageSlot" onclick="triggerImageUpload('compose', null, 'imageSlot')"><span>📷</span><span>Add a photo</span></div>
+            <div class="media-slot" id="ytSlot" onclick="openYouTubeInput('ytSlot','compose', null)"><span>▶</span><span>Add YouTube link</span></div>
+          </div>` : ''}
           <button class="btn btn-primary" style="display:block;margin:14px auto 0;padding:11px 36px;" onclick="submitPost()">Post entry</button>
         </div>
       </div>`;
@@ -579,11 +583,15 @@ async function handleImageFile(event){
   const slot = document.getElementById(mediaUploadSlotId);
   if(slot) slot.innerHTML = `<img src="${dataUrl}">`;
 
+  const oldImageURL = mediaUploadMode === 'editPost'
+    ? (currentDetailData && currentDetailData.post ? currentDetailData.post.ImageURL : '')
+    : currentImageURL;
+
   showLoading('Uploading photo…');
   const base64Data = dataUrl.split(',')[1];
   const result = await callApi('uploadImage', {
     classId: currentClassId, studentNumber: currentStudent,
-    base64Data, mimeType: 'image/jpeg',
+    base64Data, mimeType: 'image/jpeg', oldImageURL,
   });
 
   if(!result.success){
@@ -709,27 +717,25 @@ async function openPostDetail(postId){
        <div class="word-count" id="newcomment-wc">0 words (30+ needed for credit)</div>`;
   }
 
-  let mediaHtml = '';
-  if(post.ImageURL || post.YouTubeURL){
-    mediaHtml = '<div class="post-media">';
-    if(post.ImageURL) mediaHtml += `<img src="${post.ImageURL}">`;
-    if(post.YouTubeURL) mediaHtml += `<a href="https://www.youtube.com/watch?v=${post.YouTubeURL}" target="_blank" class="yt-embed" style="background-image:url(https://img.youtube.com/vi/${post.YouTubeURL}/hqdefault.jpg)"></a>`;
-    mediaHtml += '</div>';
-  }
+  // Photo above video when both exist, stacked vertically — this whole block sits in the
+  // right-hand column next to the text, not stretched full-width below it.
+  let mediaColHtml = '';
+  if(post.ImageURL) mediaColHtml += `<img src="${post.ImageURL}">`;
+  if(post.YouTubeURL) mediaColHtml += `<a href="https://www.youtube.com/watch?v=${post.YouTubeURL}" target="_blank" class="yt-embed" style="background-image:url(https://img.youtube.com/vi/${post.YouTubeURL}/hqdefault.jpg)"></a>`;
 
   // Media can still be added/changed up until PictureDeadline, independent of whether
   // the text-edit window (PostClose) has already passed.
   let mediaEditHtml = '';
   if(data.isOwnPost && data.pictureEditable){
-    mediaEditHtml = '<div class="media-row" style="margin-top:12px;">';
     mediaEditHtml += post.ImageURL
       ? `<button class="btn btn-ghost btn-sm" onclick="triggerImageUpload('editPost','${postId}','detailImageSlot')">🔁 Replace photo</button>`
       : `<div class="media-slot" id="detailImageSlot" onclick="triggerImageUpload('editPost','${postId}','detailImageSlot')"><span>📷</span><span>Add a photo</span></div>`;
     mediaEditHtml += post.YouTubeURL
       ? `<button class="btn btn-ghost btn-sm" onclick="openYouTubeInput('detailYtSlot','editPost','${postId}')">🔁 Replace video</button>`
       : `<div class="media-slot" id="detailYtSlot" onclick="openYouTubeInput('detailYtSlot','editPost','${postId}')"><span>▶</span><span>Add YouTube link</span></div>`;
-    mediaEditHtml += '</div>';
   }
+
+  const hasMediaCol = !!(mediaColHtml || mediaEditHtml);
 
   const editButtonHtml = (data.isOwnPost && data.postOpen)
     ? `<button class="btn btn-ghost btn-sm" style="margin-bottom:12px;" onclick="startEditPost('${postId}')">✏️ Edit entry</button>`
@@ -747,12 +753,13 @@ async function openPostDetail(postId){
         <div class="avatar" style="background:var(--postal-blue)">${avatarInner(data.authorName)}</div>
         <div><div class="name">${data.authorName}</div><div class="when">${data.scheduleLabel}</div></div>
       </div>
-      <div id="postDetailBodyArea">
-        <div class="post-body">${post.TextContent}</div>
-        <div class="word-count">${wc} words</div>
+      <div class="post-detail-grid">
+        <div id="postDetailBodyArea">
+          <div class="post-body">${post.TextContent}</div>
+          <div class="word-count">${wc} words</div>
+        </div>
+        ${hasMediaCol ? `<div class="post-detail-media-col">${mediaColHtml}${mediaEditHtml}</div>` : ''}
       </div>
-      ${mediaHtml}
-      ${mediaEditHtml}
       <div class="comments">
         ${commentsHtml}
         ${commentInputHtml}
