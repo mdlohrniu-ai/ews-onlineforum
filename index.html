@@ -231,6 +231,18 @@
   @keyframes spin{to{transform:rotate(360deg);}}
   .loading-overlay .ltext{font-family:'IBM Plex Mono',monospace;font-size:0.85rem;color:var(--ink-soft);}
   .version-tag{font-family:'IBM Plex Mono',monospace;font-size:0.68rem;color:var(--ink-soft);opacity:0.7;margin-top:6px;}
+  .completion-timeline{display:flex;align-items:flex-start;margin-bottom:18px;padding:0 4px;}
+  .tl-step{flex:1;display:flex;flex-direction:column;align-items:center;position:relative;}
+  .tl-step:not(:last-child)::after{content:'';position:absolute;top:13px;left:50%;width:100%;height:4px;background:var(--border);z-index:0;}
+  .tl-step.done:not(:last-child)::after{background:#2E7D4F;}
+  .tl-step.overdue:not(:last-child)::after{background:var(--stamp-red);}
+  .tl-node{width:28px;height:28px;border-radius:50%;border:3px solid var(--border);background:#fff;z-index:1;display:flex;align-items:center;justify-content:center;font-size:0.85rem;font-weight:700;color:#fff;}
+  .tl-step.done .tl-node{background:#2E7D4F;border-color:#2E7D4F;}
+  .tl-step.overdue .tl-node{background:var(--stamp-red);border-color:var(--stamp-red);}
+  .tl-step.pending .tl-node{background:#fff;border-color:var(--border);}
+  .tl-label{margin-top:8px;text-align:center;font-weight:600;font-size:0.78rem;}
+  .tl-sub{font-size:0.66rem;color:var(--ink-soft);margin-top:1px;}
+  .tl-date{font-family:'IBM Plex Mono',monospace;font-size:0.66rem;color:var(--ink-soft);margin-top:4px;}
 </style>
 </head>
 <body>
@@ -262,7 +274,7 @@
       <button class="btn btn-primary btn-block" style="margin-top:14px;" onclick="login()">Enter</button>
       <div class="error-msg" id="loginError">Student number not found. Check and try again.</div>
     </div>
-    <div class="version-tag">v0.10 — 2026-06-26</div>
+    <div class="version-tag">v0.11 — 2026-06-26</div>
   </div>
 
   <!-- ===================== MAIN APP ===================== -->
@@ -472,7 +484,7 @@ async function renderNewPostTab(){
 
   let membersHtml = '';
   if(data.settings.GroupsEnabled){
-    membersHtml = data.groupMembers.map(m=>{
+    membersHtml = data.groupMembers.filter(m=>m.studentNumber!==currentStudent).map(m=>{
       const isMe = m.studentNumber===currentStudent;
       if(m.postId){
         return `
@@ -500,6 +512,7 @@ async function renderNewPostTab(){
         ${postOpen ? 'Posting window is open' : 'Posting window closed'}
       </div>
     </div>
+    ${buildCompletionTimeline(data)}
     <div class="card prompt-card">
       <div class="eyebrow">Prompt</div>
       <div class="ptext">${sched.Prompt}</div>
@@ -827,7 +840,10 @@ async function openPostDetail(postId){
       </div>`;
     }
   } else if(post.YouTubeURL){
-    mediaColHtml = `<a href="https://www.youtube.com/watch?v=${post.YouTubeURL}" target="_blank" class="yt-embed" style="display:block;width:100%;height:150px;border-radius:10px;background-size:cover;background-position:center;background-image:url(https://img.youtube.com/vi/${post.YouTubeURL}/hqdefault.jpg)"></a>`;
+    mediaColHtml = `<a href="https://www.youtube.com/watch?v=${post.YouTubeURL}" target="_blank" style="display:block;position:relative;border-radius:10px;overflow:hidden;">
+      <img src="https://img.youtube.com/vi/${post.YouTubeURL}/hqdefault.jpg" style="width:100%;height:150px;object-fit:cover;display:block;">
+      <span style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#fff;font-size:1.8rem;background:rgba(0,0,0,0.15);">▶</span>
+    </a>`;
     if(canEditMedia){
       mediaEditHtml = `<div class="media-row" style="margin-top:8px;">
         <button class="btn btn-ghost btn-sm" onclick="openYouTubeInput('detailMediaArea','editPost','${postId}')">🔁 Replace video</button>
@@ -960,6 +976,49 @@ function qualityClass(label, points, maxPoints){
   if(ratio>=0.7) return 'qual-green';
   if(ratio>=0.3) return 'qual-yellow';
   return 'qual-red';
+}
+
+function formatDeadline(d){
+  if(!d) return '';
+  const dt = new Date(d);
+  return dt.toLocaleString('en-US', {month:'short', day:'numeric', hour:'numeric', minute:'2-digit'});
+}
+
+function buildCompletionTimeline(data){
+  const now = new Date();
+  const sched = data.schedule;
+  const steps = [];
+
+  const postDone = !!data.myPost;
+  steps.push({
+    label: 'Post blog', sub: '',
+    done: postDone, deadline: sched.PostClose,
+  });
+
+  if(data.settings.PictureEnabled){
+    const pictureDone = !!(data.myPost && (data.myPost.ImageURL || data.myPost.YouTubeURL));
+    steps.push({ label: 'Post picture', sub: '', done: pictureDone, deadline: sched.PictureDeadline });
+  }
+
+  const commentsDone = data.commentsMade >= data.commentsRequired;
+  steps.push({ label: 'Comments', sub: '(1 per member)', done: commentsDone, deadline: sched.CommentDeadline });
+
+  const repliesDone = data.repliesMade >= data.repliesRequired;
+  steps.push({ label: 'Replies', sub: '(1 per comment received)', done: repliesDone, deadline: sched.ReplyDeadline });
+
+  const stepsHtml = steps.map(s=>{
+    const status = s.done ? 'done' : (now > new Date(s.deadline) ? 'overdue' : 'pending');
+    const icon = status === 'done' ? '✓' : (status === 'overdue' ? '✕' : '');
+    return `
+      <div class="tl-step ${status}">
+        <div class="tl-node">${icon}</div>
+        <div class="tl-label">${s.label}</div>
+        ${s.sub ? `<div class="tl-sub">${s.sub}</div>` : ''}
+        <div class="tl-date">${formatDeadline(s.deadline)}</div>
+      </div>`;
+  }).join('');
+
+  return `<div class="card"><div class="completion-timeline">${stepsHtml}</div></div>`;
 }
 
 function buildRubricTable(rubric){
