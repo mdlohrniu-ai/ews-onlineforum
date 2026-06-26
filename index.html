@@ -82,8 +82,7 @@
   .error-msg{color:var(--stamp-red);font-size:0.82rem;margin-top:8px;display:none;}
 
   .card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px;margin-bottom:16px;}
-  .week-head .label{font-family:'IBM Plex Mono',monospace;font-size:0.68rem;color:var(--ink-soft);text-transform:uppercase;letter-spacing:0.06em;}
-  .week-head .title{font-family:'Fraunces',serif;font-weight:600;font-size:1.25rem;margin-top:2px;}
+  .week-head .label{font-family:'Fraunces',serif;font-weight:600;font-size:1.7rem;color:var(--ink);text-align:center;display:block;}
   .deadline-pill{display:inline-block;margin-top:8px;font-family:'IBM Plex Mono',monospace;font-size:0.7rem;background:#FBEAE7;color:var(--stamp-red);padding:4px 10px;border-radius:20px;border:1px solid rgba(178,58,46,0.3);}
 
   .prompt-card{border-left:3px solid var(--gold);}
@@ -243,6 +242,7 @@
   .tl-label{margin-top:8px;text-align:center;font-weight:600;font-size:0.78rem;}
   .tl-sub{font-size:0.66rem;color:var(--ink-soft);margin-top:1px;}
   .tl-date{font-family:'IBM Plex Mono',monospace;font-size:0.66rem;color:var(--ink-soft);margin-top:4px;}
+  .tl-submitted{font-family:'IBM Plex Mono',monospace;font-size:0.62rem;color:var(--postal-blue);margin-top:2px;}
 </style>
 </head>
 <body>
@@ -274,7 +274,7 @@
       <button class="btn btn-primary btn-block" style="margin-top:14px;" onclick="login()">Enter</button>
       <div class="error-msg" id="loginError">Student number not found. Check and try again.</div>
     </div>
-    <div class="version-tag">v0.11 — 2026-06-26</div>
+    <div class="version-tag">v0.15 — 2026-06-26</div>
   </div>
 
   <!-- ===================== MAIN APP ===================== -->
@@ -507,8 +507,7 @@ async function renderNewPostTab(){
   document.getElementById('content').innerHTML = `
     <div class="card week-head">
       <div class="label">Week ${String(sched.Week).padStart(2,'0')} · ${sched.DateRangeLabel}</div>
-      <div class="title">This week's blog entry</div>
-      <div class="deadline-pill ${postOpen?'':''}" style="${postOpen?'':'background:#F2F0E8;color:var(--ink-soft);border-color:var(--border);'}">
+      <div class="deadline-pill" style="display:block;text-align:center;margin:10px auto 0;width:fit-content;${postOpen?'':'background:#F2F0E8;color:var(--ink-soft);border-color:var(--border);'}">
         ${postOpen ? 'Posting window is open' : 'Posting window closed'}
       </div>
     </div>
@@ -991,20 +990,45 @@ function buildCompletionTimeline(data){
 
   const postDone = !!data.myPost;
   steps.push({
-    label: 'Post blog', sub: '',
-    done: postDone, deadline: sched.PostClose,
+    label: 'Post blog', sub: '', done: postDone, deadline: sched.PostClose,
+    submittedHtml: postDone ? `<div class="tl-submitted">Submitted: ${formatDeadline(data.myPost.CreatedAt)}</div>` : '',
   });
 
   if(data.settings.PictureEnabled){
     const pictureDone = !!(data.myPost && (data.myPost.ImageURL || data.myPost.YouTubeURL));
-    steps.push({ label: 'Post picture', sub: '', done: pictureDone, deadline: sched.PictureDeadline });
+    steps.push({
+      label: 'Post picture', sub: '', done: pictureDone, deadline: sched.PictureDeadline,
+      submittedHtml: pictureDone ? `<div class="tl-submitted">Submitted: ${formatDeadline(data.myPost.LastEditedAt)}</div>` : '',
+    });
   }
 
-  const commentsDone = data.commentsMade >= data.commentsRequired;
-  steps.push({ label: 'Comments', sub: '(1 per member)', done: commentsDone, deadline: sched.CommentDeadline });
+  // "Done" requires either real completed work, OR confirmation that nothing was ever
+  // possible (the other side's window closed with zero participation) — not a perpetual
+  // "0 of 0" that would otherwise sit stuck on red forever through no fault of the student.
+  const postClosePassed = now > new Date(sched.PostClose);
+  const commentDeadlinePassed = now > new Date(sched.CommentDeadline);
 
-  const repliesDone = data.repliesMade >= data.repliesRequired;
-  steps.push({ label: 'Replies', sub: '(1 per comment received)', done: repliesDone, deadline: sched.ReplyDeadline });
+  const commentDetails = data.commentDetails || [];
+  const commentsDone = (commentDetails.length > 0 && commentDetails.every(c=>c.done))
+    || (commentDetails.length === 0 && postClosePassed); // no groupmate ever posted, and posting's now closed
+  steps.push({
+    label: 'Comments', sub: '(1 per member)', done: commentsDone, deadline: sched.CommentDeadline,
+    submittedHtml: commentDetails.length
+      ? commentDetails.map(c=> `<div class="tl-submitted">${c.name}: ${c.done ? formatDeadline(c.createdAt) : '—'}</div>`).join('')
+      : (postClosePassed ? `<div class="tl-submitted">No groupmates posted — nothing to comment on.</div>` : ''),
+  });
+
+  const replyDetails = data.replyDetails || [];
+  const repliesDone = !!data.myPost && (
+    (replyDetails.length > 0 && replyDetails.every(r=>r.done))
+    || (replyDetails.length === 0 && commentDeadlinePassed) // nobody ever commented, and commenting's now closed
+  );
+  steps.push({
+    label: 'Replies', sub: '(1 per comment received)', done: repliesDone, deadline: sched.ReplyDeadline,
+    submittedHtml: replyDetails.length
+      ? replyDetails.map(r=> `<div class="tl-submitted">${r.name}: ${r.done ? formatDeadline(r.createdAt) : '—'}</div>`).join('')
+      : (data.myPost && commentDeadlinePassed ? `<div class="tl-submitted">No comments received — nothing to reply to.</div>` : ''),
+  });
 
   const stepsHtml = steps.map(s=>{
     const status = s.done ? 'done' : (now > new Date(s.deadline) ? 'overdue' : 'pending');
@@ -1014,7 +1038,8 @@ function buildCompletionTimeline(data){
         <div class="tl-node">${icon}</div>
         <div class="tl-label">${s.label}</div>
         ${s.sub ? `<div class="tl-sub">${s.sub}</div>` : ''}
-        <div class="tl-date">${formatDeadline(s.deadline)}</div>
+        <div class="tl-date">Due: ${formatDeadline(s.deadline)}</div>
+        ${s.submittedHtml}
       </div>`;
   }).join('');
 
