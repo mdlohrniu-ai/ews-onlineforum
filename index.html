@@ -274,7 +274,7 @@
       <button class="btn btn-primary btn-block" style="margin-top:14px;" onclick="login()">Enter</button>
       <div class="error-msg" id="loginError">Student number not found. Check and try again.</div>
     </div>
-    <div class="version-tag">v0.19 — 2026-06-27</div>
+    <div class="version-tag">v0.20 — 2026-06-27</div>
   </div>
 
   <!-- ===================== MAIN APP ===================== -->
@@ -310,10 +310,10 @@
 
 const API_URL = "https://script.google.com/macros/s/AKfycbyMbuD6_z3PTOt8P_dS8TPTImZB-r1cnraENT82KGxD6eL2EGK0IxSC5spUu38SfFnX/exec";
 
-// Hardcoded for now since there's only one week of Schedule data in testing.
-// Once there are several weeks, this should become "whichever week's PostOpen<=now<=PostClose,
-// or the most recent one" — a small follow-up, not done yet.
-const CURRENT_WEEK = 1;
+// The week shown in the Current Post tab is resolved dynamically via getCurrentWeekInfo
+// (the earliest week whose ReplyDeadline hasn't passed yet) — set once renderNewPostTab
+// loads, and reused by submitPost(). Starts null until that lookup resolves.
+let currentWeek = null;
 
 async function callApi(action, payload) {
   try {
@@ -400,7 +400,7 @@ function renderDashboard(){
       <div class="dash-card c-newpost" onclick="enterSection('newpost')">
         <div class="dash-icon">📝</div>
         <div class="dash-text">
-          <div class="dash-title">New Post</div>
+          <div class="dash-title">Current Post</div>
           <div class="dash-sub">Write this week's entry, read your group's posts and comment</div>
         </div>
         <div class="dash-chev">›</div>
@@ -532,6 +532,7 @@ async function renderPreviousWeekDetail(week){
     <div class="card week-head">
       <div class="label">Week ${String(sched.Week).padStart(2,'0')} · ${sched.DateRangeLabel}</div>
     </div>
+    ${buildCompletionTimeline(data)}
     <div class="card prompt-card">
       <div class="eyebrow">Prompt</div>
       <div class="ptext">${sched.Prompt}</div>
@@ -600,7 +601,29 @@ function buildGradeSection(gradeData){
 async function renderNewPostTab(){
   isWritingSomething = false;
   document.getElementById('content').innerHTML = `<div class="card empty-note">Loading…</div>`;
-  const data = await callApi('getNewPostData', { classId: currentClassId, studentNumber: currentStudent, week: CURRENT_WEEK });
+
+  const info = await callApi('getCurrentWeekInfo', { classId: currentClassId });
+  if(!info.success){
+    document.getElementById('content').innerHTML = `
+      <button class="back-link" onclick="renderDashboard()">← Back to dashboard</button>
+      <div class="card empty-note">${info.error || "Something went wrong loading this page."}</div>`;
+    return;
+  }
+  if(info.status === 'none'){
+    document.getElementById('content').innerHTML = `
+      <button class="back-link" onclick="renderDashboard()">← Back to dashboard</button>
+      <div class="card empty-note">No forum available yet — check back soon.</div>`;
+    return;
+  }
+  if(info.status === 'upcoming'){
+    document.getElementById('content').innerHTML = `
+      <button class="back-link" onclick="renderDashboard()">← Back to dashboard</button>
+      <div class="card empty-note">New forum opens on ${formatLongDate(info.postOpen)}.</div>`;
+    return;
+  }
+
+  currentWeek = info.week;
+  const data = await callApi('getNewPostData', { classId: currentClassId, studentNumber: currentStudent, week: currentWeek });
   if(!data.success){
     document.getElementById('content').innerHTML = `
       <button class="back-link" onclick="renderDashboard()">← Back to dashboard</button>
@@ -917,7 +940,7 @@ async function submitPost(){
   if(!text.trim()){ showToast("Write something before posting."); return; }
   showLoading('Submitting…');
   const result = await callApi('createPost', {
-    classId: currentClassId, studentNumber: currentStudent, week: CURRENT_WEEK,
+    classId: currentClassId, studentNumber: currentStudent, week: currentWeek,
     title, textContent: text,
     imageURL: currentMediaType === 'image' ? currentMediaValue : '',
     youtubeURL: currentMediaType === 'youtube' ? currentMediaValue : '',
@@ -1149,6 +1172,12 @@ function formatDeadline(d){
   if(!d) return '';
   const dt = new Date(d);
   return dt.toLocaleString('en-US', {month:'short', day:'numeric', hour:'numeric', minute:'2-digit'});
+}
+
+function formatLongDate(d){
+  if(!d) return '';
+  const dt = new Date(d);
+  return dt.toLocaleDateString('en-US', {weekday:'long', month:'long', day:'numeric'});
 }
 
 function buildCompletionTimeline(data){
