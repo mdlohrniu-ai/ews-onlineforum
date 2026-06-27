@@ -274,7 +274,7 @@
       <button class="btn btn-primary btn-block" style="margin-top:14px;" onclick="login()">Enter</button>
       <div class="error-msg" id="loginError">Student number not found. Check and try again.</div>
     </div>
-    <div class="version-tag">v0.17 — 2026-06-26</div>
+    <div class="version-tag">v0.18 — 2026-06-27</div>
   </div>
 
   <!-- ===================== MAIN APP ===================== -->
@@ -301,10 +301,11 @@
    LIVE BACKEND WIRING
    This file talks to the real Apps Script API instead of mock data.
    Phase 1 scope: login, New Post (prompt/group/rubric), posting,
-   viewing a post, commenting, replying.
-   NOT yet wired: Previous Entries history list, Grades, real image
-   upload (still a placeholder), profile pictures. Those come in
-   later passes once their backend endpoints exist.
+   viewing a post, commenting, replying. Also now wired: Previous
+   Entries history list + per-week grade view.
+   NOT yet wired: real image upload is still a placeholder for some
+   flows, profile pictures. Those come in later passes once their
+   backend endpoints exist.
    ==================================================================== */
 
 const API_URL = "https://script.google.com/macros/s/AKfycbyMbuD6_z3PTOt8P_dS8TPTImZB-r1cnraENT82KGxD6eL2EGK0IxSC5spUu38SfFnX/exec";
@@ -408,7 +409,7 @@ function renderDashboard(){
         <div class="dash-icon">📚</div>
         <div class="dash-text">
           <div class="dash-title">Previous Entries / Grades</div>
-          <div class="dash-sub">Not wired up yet — coming in a later phase</div>
+          <div class="dash-sub">Review past weeks' entries and check your grades</div>
         </div>
         <div class="dash-chev">›</div>
       </div>
@@ -420,18 +421,7 @@ function enterSection(section){
   activeTab = section;
   updateHomeButton(false);
   if(section==='newpost') renderNewPostTab();
-  if(section==='previous') renderPreviousPlaceholder();
-}
-
-function renderPreviousPlaceholder(){
-  isWritingSomething = false;
-  document.getElementById('content').innerHTML = `
-    <div class="card empty-note">
-      Previous Entries &amp; Grades isn't wired up to the real backend yet — that's a later phase
-      (needs a "list past weeks" endpoint and the grading flow to exist first). For now this is
-      only live in the New Post tab.
-    </div>
-  `;
+  if(section==='previous') renderPreviousList();
 }
 
 function renderProfilePage(){
@@ -452,7 +442,153 @@ function renderProfilePage(){
   `;
 }
 
-/* ============ NEW POST TAB ============ */
+/* ============ PREVIOUS ENTRIES & GRADES ============ */
+async function renderPreviousList(){
+  activeTab = 'previous';
+  updateHomeButton(false);
+  isWritingSomething = false;
+  document.getElementById('content').innerHTML = `<div class="card empty-note">Loading…</div>`;
+  const result = await callApi('getPreviousWeeks', { classId: currentClassId, studentNumber: currentStudent });
+  if(!result.success){
+    document.getElementById('content').innerHTML = `
+      <button class="back-link" onclick="renderDashboard()">← Back to dashboard</button>
+      <div class="card empty-note">${result.error || "Couldn't load previous entries."}</div>`;
+    return;
+  }
+  if(!result.weeks.length){
+    document.getElementById('content').innerHTML = `
+      <button class="back-link" onclick="renderDashboard()">← Back to dashboard</button>
+      <div class="card empty-note">No previous weeks yet — check back once the first week's posting window opens.</div>`;
+    return;
+  }
+  const rowsHtml = result.weeks.map(w=>{
+    const sub = w.hasPosted
+      ? (w.isGraded ? 'Posted · Graded' : 'Posted · Not graded yet')
+      : 'No entry submitted';
+    return `
+      <div class="week-list-row" onclick="renderPreviousWeekDetail(${w.week})">
+        <div><div class="wtitle">Week ${String(w.week).padStart(2,'0')} · ${w.dateRangeLabel}</div><div class="wsub">${sub}</div></div>
+        <div class="chev">›</div>
+      </div>`;
+  }).join('');
+  document.getElementById('content').innerHTML = `
+    <button class="back-link" onclick="renderDashboard()">← Back to dashboard</button>
+    <div class="section-label">Previous entries</div>
+    <div class="card">${rowsHtml}</div>
+  `;
+}
+
+async function renderPreviousWeekDetail(week){
+  isWritingSomething = false;
+  document.getElementById('content').innerHTML = `<div class="card empty-note">Loading…</div>`;
+  const [data, gradeData] = await Promise.all([
+    callApi('getNewPostData', { classId: currentClassId, studentNumber: currentStudent, week }),
+    callApi('getGradeForStudent', { classId: currentClassId, studentNumber: currentStudent, week }),
+  ]);
+  if(!data.success){
+    document.getElementById('content').innerHTML = `
+      <button class="back-link" onclick="renderPreviousList()">← Back to previous entries</button>
+      <div class="card empty-note">${data.error || "Something went wrong loading this week."}</div>`;
+    return;
+  }
+  const sched = data.schedule;
+
+  let entryBlockHtml;
+  if(data.myPost){
+    entryBlockHtml = `
+      <div class="card your-entry-row">
+        <div><div class="info">Your entry</div><div class="ttl">${data.myPost.Title}</div></div>
+        <button class="btn btn-ghost" onclick="openPostDetail('${data.myPost.PostID}', {type:'previousWeek', week:${week}})">View</button>
+      </div>`;
+  } else {
+    entryBlockHtml = `<div class="card" style="text-align:center;color:var(--ink-soft);">No entry was submitted this week.</div>`;
+  }
+
+  let membersHtml = '';
+  if(data.settings.GroupsEnabled){
+    membersHtml = data.groupMembers.filter(m=>m.studentNumber!==currentStudent).map(m=>{
+      if(m.postId){
+        return `
+          <div class="member-row" onclick="openPostDetail('${m.postId}', {type:'previousWeek', week:${week}})">
+            <div class="avatar" style="background:var(--postal-blue)">${avatarInner(m.name, m.profilePicURL)}</div>
+            <div class="mtext"><div class="mtitle">${m.title}</div><div class="mauthor">${m.name}</div></div>
+            <div class="chev">›</div>
+          </div>`;
+      }
+      return `
+        <div class="member-row disabled">
+          <div class="avatar" style="background:var(--border);color:var(--ink-soft);">${avatarInner(m.name, m.profilePicURL)}</div>
+          <div class="mtext"><div class="mname">${m.name}</div><div class="mstatus">No posts</div></div>
+        </div>`;
+    }).join('');
+  }
+
+  const rubricHtml = buildRubricTable(data.rubric);
+
+  const gradeSectionHtml = (gradeData.success && gradeData.graded)
+    ? buildGradeSection(gradeData)
+    : `<div class="section-label">Grade</div><div class="card empty-note">Not graded yet — check back later.</div>`;
+
+  document.getElementById('content').innerHTML = `
+    <button class="back-link" onclick="renderPreviousList()">← Back to previous entries</button>
+    <div class="card week-head">
+      <div class="label">Week ${String(sched.Week).padStart(2,'0')} · ${sched.DateRangeLabel}</div>
+    </div>
+    <div class="card prompt-card">
+      <div class="eyebrow">Prompt</div>
+      <div class="ptext">${sched.Prompt}</div>
+    </div>
+    ${entryBlockHtml}
+    ${data.settings.GroupsEnabled ? `
+    <div class="section-label">Your group that week</div>
+    <div class="card">${membersHtml}</div>` : ''}
+    ${gradeSectionHtml}
+    <div class="section-label">Rubric</div>
+    ${rubricHtml}
+  `;
+}
+
+// Same look as the read-only rubric preview, but with the teacher's chosen tier per
+// criterion highlighted (dims the rest) and an overall-points + feedback card on top.
+function buildGradeSection(gradeData){
+  const criteria = gradeData.criteria;
+  if(!criteria.length) return `<div class="section-label">Grade</div><div class="card empty-note">No rubric to show.</div>`;
+  const maxTiers = Math.max(...criteria.map(c=>c.tiers.length));
+  const rows = criteria.map(crit=>{
+    const cells = [];
+    for(let i=0;i<maxTiers;i++){
+      const t = crit.tiers[i];
+      if(!t){ cells.push('<td class="tier-cell empty"></td>'); continue; }
+      const cls = qualityClass(t.label, Number(t.points)||0, crit.maxPoints);
+      const isSelected = crit.selectedTierOrder === i;
+      cells.push(`
+        <td class="tier-cell ${cls} ${isSelected?'selected':'dimmed'}">
+          ${isSelected ? `<div class="sel-check">✓ Selected</div>` : ''}
+          <div class="tlabel">${t.label}</div>
+          ${t.desc ? `<div class="tdesc">${t.desc}</div>` : ''}
+          <span class="tpts">${t.points} pts</span>
+        </td>`);
+    }
+    return `<tr><td class="crit-name">${crit.name}<div class="crit-max">${crit.maxPoints} pts max</div></td>${cells.join('')}</tr>`;
+  }).join('');
+
+  const feedbackHtml = gradeData.overallFeedback ? `
+    <div class="card feedback-card">
+      <div class="eyebrow">Teacher feedback</div>
+      <div class="feedback-text">${gradeData.overallFeedback}</div>
+    </div>` : '';
+
+  return `
+    <div class="section-label">Grade — ${gradeData.totalPoints} / ${gradeData.maxPoints} pts</div>
+    <div class="rubric-table-wrap">
+      <table class="rubric-table"><tbody>${rows}</tbody></table>
+    </div>
+    <div class="rubric-scroll-hint">Scroll sideways to see all levels →</div>
+    ${feedbackHtml}
+  `;
+}
+
+
 async function renderNewPostTab(){
   isWritingSomething = false;
   document.getElementById('content').innerHTML = `<div class="card empty-note">Loading…</div>`;
@@ -676,7 +812,7 @@ async function handleImageFile(event){
     showLoading('Saving photo…');
     const saveResult = await callApi('updatePost', { classId: currentClassId, studentNumber: currentStudent, postId: mediaUploadPostId, imageURL: result.url });
     hideLoading();
-    if(saveResult.success){ showToast('Photo updated.'); openPostDetail(mediaUploadPostId); }
+    if(saveResult.success){ showToast('Photo updated.'); openPostDetail(mediaUploadPostId, postDetailOrigin); }
     else showToast(saveResult.error || "Couldn't save that photo.");
   } else if(mediaUploadMode === 'profile'){
     showLoading('Saving profile picture…');
@@ -732,7 +868,7 @@ async function confirmYouTubeLink(slotId){
     showLoading('Saving video…');
     const result = await callApi('updatePost', { classId: currentClassId, studentNumber: currentStudent, postId: mediaUploadPostId, youtubeURL: id });
     hideLoading();
-    if(result.success){ showToast('Video updated.'); openPostDetail(mediaUploadPostId); }
+    if(result.success){ showToast('Video updated.'); openPostDetail(mediaUploadPostId, postDetailOrigin); }
     else showToast(result.error || "Couldn't save that video.");
   } else {
     currentMediaType = 'youtube';
@@ -748,7 +884,7 @@ async function removeDetailMedia(postId, type){
   showLoading('Removing…');
   const result = await callApi('updatePost', { classId: currentClassId, studentNumber: currentStudent, postId, imageURL: '', youtubeURL: '' });
   hideLoading();
-  if(result.success){ showToast('Removed.'); openPostDetail(postId); }
+  if(result.success){ showToast('Removed.'); openPostDetail(postId, postDetailOrigin); }
   else showToast(result.error || "Couldn't remove that.");
 }
 
@@ -790,13 +926,20 @@ async function submitPost(){
 
 /* ============ POST DETAIL ============ */
 let currentDetailData = null;
+let postDetailOrigin = { type: 'newpost' }; // {type:'newpost'} or {type:'previousWeek', week:N}
 
-async function openPostDetail(postId){
+function goBackFromPostDetail(){
+  if(postDetailOrigin && postDetailOrigin.type === 'previousWeek') renderPreviousWeekDetail(postDetailOrigin.week);
+  else renderNewPostTab();
+}
+
+async function openPostDetail(postId, origin){
+  postDetailOrigin = origin || { type: 'newpost' };
   document.getElementById('content').innerHTML = `<div class="card empty-note">Loading…</div>`;
   const data = await callApi('getPostDetail', { classId: currentClassId, postId, studentNumber: currentStudent });
   if(!data.success){
     document.getElementById('content').innerHTML = `
-      <button class="back-link" onclick="renderNewPostTab()">← Back</button>
+      <button class="back-link" onclick="goBackFromPostDetail()">← Back</button>
       <div class="card empty-note">${data.error || "Something went wrong loading this post."}</div>`;
     return;
   }
@@ -878,7 +1021,7 @@ async function openPostDetail(postId){
     : '';
 
   document.getElementById('content').innerHTML = `
-    <button class="back-link" onclick="renderNewPostTab()">← Back</button>
+    <button class="back-link" onclick="goBackFromPostDetail()">← Back</button>
     <div class="card post-card">
       <div class="stamp"><span class="wk">WEEK</span><span class="num">${String(post.Week).padStart(2,'0')}</span></div>
       <div id="postDetailTitleArea">
@@ -920,7 +1063,7 @@ function startEditPost(postId){
     <textarea id="editTextInput" style="min-height:200px;line-height:1.6;">${post.TextContent}</textarea>
     <div class="meta-row"><span id="editWordCountLabel">${wordCountOf(post.TextContent)} words</span><span></span></div>
     <div class="grade-actions" style="margin-top:10px;">
-      <button class="btn btn-ghost" style="flex:1;" onclick="openPostDetail('${postId}')">Cancel</button>
+      <button class="btn btn-ghost" style="flex:1;" onclick="openPostDetail('${postId}', postDetailOrigin)">Cancel</button>
       <button class="btn btn-primary" style="flex:1;" onclick="savePostEdit('${postId}')">Save changes</button>
     </div>`;
   const ta = document.getElementById('editTextInput');
@@ -939,7 +1082,7 @@ async function savePostEdit(postId){
   showLoading('Saving…');
   const result = await callApi('updatePost', { classId: currentClassId, studentNumber: currentStudent, postId, title, textContent: text });
   hideLoading();
-  if(result.success){ showToast('Entry updated.'); openPostDetail(postId); }
+  if(result.success){ showToast('Entry updated.'); openPostDetail(postId, postDetailOrigin); }
   else showToast(result.error || "Couldn't save changes.");
 }
 
@@ -967,7 +1110,7 @@ async function submitComment(postId){
   showLoading('Submitting…');
   const result = await callApi('createComment', { classId: currentClassId, postId, studentNumber: currentStudent, content: text });
   hideLoading();
-  if(result.success) openPostDetail(postId);
+  if(result.success) openPostDetail(postId, postDetailOrigin);
   else showToast(result.error || "Couldn't post comment.");
 }
 
@@ -978,7 +1121,7 @@ async function submitReply(commentId){
   showLoading('Submitting…');
   const result = await callApi('createReply', { classId: currentClassId, commentId, studentNumber: currentStudent, content: text });
   hideLoading();
-  if(result.success) openPostDetail(currentDetailData.post.PostID);
+  if(result.success) openPostDetail(currentDetailData.post.PostID, postDetailOrigin);
   else showToast(result.error || "Couldn't post reply.");
 }
 
