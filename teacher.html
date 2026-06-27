@@ -737,15 +737,53 @@ async function addNewWeek(){
   const w = parseInt(document.getElementById('newWeekNum').value);
   if(!w){ showToast('Enter a week number first.'); return; }
   if(classData.schedule.find(s=>s.Week===w)){ showToast('That week already exists.'); return; }
+
+  // Auto-fill deadlines from the nearest existing week, shifted by however many weeks apart
+  // they are — this keeps the same day-of-week and time-of-day, which covers the normal case
+  // (adding the very next week) as well as adding a week a bit further out or earlier.
+  const priorWeeks = classData.schedule.filter(s=>s.Week < w).sort((a,b)=>b.Week-a.Week);
+  const reference = priorWeeks[0] || classData.schedule.slice().sort((a,b)=>b.Week-a.Week)[0];
+  const weeksApart = reference ? (w - reference.Week) : 0;
+
+  const shiftDate = d => {
+    if(!d) return '';
+    const dt = new Date(d);
+    if(isNaN(dt.getTime())) return '';
+    dt.setDate(dt.getDate() + weeksApart*7);
+    return dt.toISOString();
+  };
+
+  const formatRangeDate = d => {
+    if(!d) return '';
+    const dt = new Date(d);
+    if(isNaN(dt.getTime())) return '';
+    return dt.toLocaleDateString('en-US', {month:'short', day:'numeric'});
+  };
+
+  const postOpen = reference ? shiftDate(reference.PostOpen) : '';
+  const postClose = reference ? shiftDate(reference.PostClose) : '';
+  const pictureDeadline = reference ? shiftDate(reference.PictureDeadline) : '';
+  const commentDeadline = reference ? shiftDate(reference.CommentDeadline) : '';
+  const replyDeadline = reference ? shiftDate(reference.ReplyDeadline) : '';
+
+  // Cosmetic only — blog-open date through reply-close date, e.g. "Jun 8 – Jun 14".
+  const dateRangeLabel = (postOpen && replyDeadline) ? `${formatRangeDate(postOpen)} – ${formatRangeDate(replyDeadline)}` : '';
+  const prompt = '';
+
   showLoading('Adding week…');
   const result = await callApi('saveSchedule', {
-    classId: currentClass, week: w, dateRangeLabel: '', prompt: '',
-    postOpen: '', postClose: '', pictureDeadline: '', commentDeadline: '', replyDeadline: '',
+    classId: currentClass, week: w, dateRangeLabel, prompt,
+    postOpen, postClose, pictureDeadline, commentDeadline, replyDeadline,
   });
   hideLoading();
   if(result.success){
-    classData.schedule.push({Week:w, DateRangeLabel:'', Prompt:'', PostOpen:'', PostClose:'', PictureDeadline:'', CommentDeadline:'', ReplyDeadline:''});
+    classData.schedule.push({Week:w, DateRangeLabel:dateRangeLabel, Prompt:prompt, PostOpen:postOpen, PostClose:postClose, PictureDeadline:pictureDeadline, CommentDeadline:commentDeadline, ReplyDeadline:replyDeadline});
     renderSchedule();
+    if(reference){
+      showToast(`Week added — deadlines copied from Week ${String(reference.Week).padStart(2,'0')} (shifted ${weeksApart} week${Math.abs(weeksApart)===1?'':'s'}). Double-check, then edit any field if needed.`);
+    } else {
+      showToast('Week added.');
+    }
   } else showToast(result.error || "Couldn't add week.");
 }
 

@@ -3,186 +3,246 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Weekly Forum — Teacher (Live)</title>
+<title>Weekly Forum — Live</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400..700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
   :root{
-    --paper:#EFF1EA; --card:#FFFFFF; --ink:#20261F; --ink-soft:#5B6358;
-    --stamp-red:#B23A2E; --postal-blue:#3D5A73; --gold:#C9A227; --border:#D7DACE;
+    --paper:#EFF1EA;
+    --card:#FFFFFF;
+    --ink:#20261F;
+    --ink-soft:#5B6358;
+    --stamp-red:#B23A2E;
+    --postal-blue:#3D5A73;
+    --gold:#C9A227;
+    --border:#D7DACE;
     --radius:14px;
   }
   *{box-sizing:border-box;}
-  body{margin:0;background:var(--paper);color:var(--ink);font-family:'IBM Plex Sans',sans-serif;-webkit-font-smoothing:antialiased;}
-  .app{width:100%;max-width:1500px;margin:0 auto;padding:0 16px 60px;}
-  @media (min-width:1100px){ .app{width:92%;} }
+  body{margin:0;background:var(--paper);color:var(--ink);font-family:'IBM Plex Sans', sans-serif;-webkit-font-smoothing:antialiased;}
+  .app{width:100%;max-width:1400px;margin:0 auto;padding:0 12px 80px;}
+  @media (min-width:900px){ .app{width:80%;} }
 
-  header.topbar{display:flex;align-items:center;justify-content:space-between;padding:18px 4px 14px;border-bottom:1px solid var(--border);margin-bottom:18px;gap:12px;flex-wrap:wrap;}
-  .brand{font-family:'Fraunces',serif;font-weight:600;font-size:1.3rem;}
-  .brand small{display:block;font-family:'IBM Plex Mono',monospace;font-size:0.6rem;color:var(--ink-soft);letter-spacing:0.08em;text-transform:uppercase;margin-top:2px;}
-  .who-row{display:flex;align-items:center;gap:10px;font-family:'IBM Plex Mono',monospace;font-size:0.78rem;color:var(--ink-soft);}
-  .class-pill{font-family:'IBM Plex Mono',monospace;font-size:0.72rem;background:#EEF1EC;color:var(--postal-blue);padding:4px 10px;border-radius:12px;}
-  .switch-class-btn{font-family:'IBM Plex Sans',sans-serif;font-weight:600;font-size:0.82rem;color:#fff;background:var(--stamp-red);border:none;border-radius:9px;padding:8px 14px;cursor:pointer;}
-  .switch-class-btn:hover{opacity:0.92;}
+  header.topbar{display:flex;align-items:center;justify-content:space-between;padding:18px 4px 14px;margin-bottom:4px;}
+  .brand{font-family:'Fraunces', serif;font-weight:600;font-size:1.3rem;letter-spacing:-0.01em;}
+  .brand small{display:block;font-family:'IBM Plex Mono', monospace;font-size:0.6rem;color:var(--ink-soft);letter-spacing:0.08em;text-transform:uppercase;margin-top:2px;}
+  .who{display:flex;align-items:center;gap:8px;font-family:'IBM Plex Mono', monospace;font-size:0.74rem;color:var(--ink-soft);}
+  .who-self{display:flex;align-items:center;gap:8px;background:none;border:none;cursor:pointer;padding:4px 6px;border-radius:10px;font-family:'IBM Plex Mono', monospace;font-size:0.74rem;color:var(--ink-soft);}
+  .who-self:hover{background:#F7F8F4;}
 
-  .nav{display:flex;gap:6px;margin-bottom:22px;flex-wrap:wrap;}
-  .nav button{font-family:'IBM Plex Sans',sans-serif;font-weight:600;font-size:0.86rem;padding:9px 16px;border-radius:10px;border:1px solid var(--border);background:var(--card);color:var(--ink-soft);cursor:pointer;}
-  .nav button.active{background:var(--ink);color:#fff;border-color:var(--ink);}
+  .profile-avatar-big{width:96px;height:96px;border-radius:50%;background:var(--postal-blue);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'Fraunces',serif;font-weight:600;font-size:2.1rem;margin:0 auto 16px;overflow:hidden;}
+  .profile-avatar-big img{width:100%;height:100%;object-fit:cover;}
+  .profile-name{font-family:'Fraunces',serif;font-weight:600;font-size:1.3rem;}
+  .profile-sn{font-family:'IBM Plex Mono',monospace;font-size:0.8rem;color:var(--ink-soft);margin-top:2px;}
+  .avatar{width:32px;height:32px;border-radius:50%;background:var(--postal-blue);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'Fraunces',serif;font-weight:600;font-size:0.9rem;flex-shrink:0;overflow:hidden;}
+  .avatar img{width:100%;height:100%;object-fit:cover;}
 
-  .card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:18px 20px;margin-bottom:16px;}
-  .section-label{font-family:'IBM Plex Mono',monospace;font-size:0.7rem;color:var(--ink-soft);text-transform:uppercase;letter-spacing:0.07em;margin:18px 4px 8px;}
+  .home-btn{font-family:'IBM Plex Sans',sans-serif;font-weight:600;font-size:0.86rem;color:#fff;background:var(--stamp-red);border:none;border-radius:10px;padding:9px 16px;cursor:pointer;display:flex;align-items:center;gap:6px;box-shadow:0 2px 8px rgba(178,58,46,0.3);}
+  .home-btn:hover{opacity:0.92;}
+  .home-btn:active{transform:scale(0.97);}
 
-  input[type=text], input[type=number], input[type=password], input[type=datetime-local], textarea, select{
-    width:100%;font-family:'IBM Plex Sans',sans-serif;font-size:0.92rem;padding:9px 11px;
-    border:1px solid var(--border);border-radius:8px;background:#fff;color:var(--ink);
+  .dash-intro{font-family:'IBM Plex Mono',monospace;font-size:0.7rem;color:var(--ink-soft);text-transform:uppercase;letter-spacing:0.07em;margin:6px 4px 14px;}
+  .dash-grid{display:flex;flex-direction:column;gap:14px;}
+  .dash-card{
+    background:var(--card);border:1px solid var(--border);border-radius:var(--radius);
+    padding:20px;display:flex;align-items:center;gap:16px;cursor:pointer;
+    transition:transform .1s ease, box-shadow .15s ease;
   }
-  textarea{resize:vertical;}
-  label.field-label{display:block;font-family:'IBM Plex Mono',monospace;font-size:0.68rem;color:var(--ink-soft);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:5px;}
+  .dash-card:hover{transform:translateY(-1px);box-shadow:0 4px 14px rgba(32,38,31,0.07);}
+  .dash-card:active{transform:scale(0.99);}
+  .dash-icon{
+    width:52px;height:52px;border-radius:50%;flex-shrink:0;
+    display:flex;align-items:center;justify-content:center;font-size:1.5rem;
+    color:#fff;
+  }
+  .dash-card.c-newpost .dash-icon{background:var(--stamp-red);}
+  .dash-card.c-previous .dash-icon{background:var(--postal-blue);}
+  .dash-card.c-grades .dash-icon{background:var(--gold);}
+  .dash-text{flex:1;}
+  .dash-title{font-family:'Fraunces',serif;font-weight:600;font-size:1.15rem;}
+  .dash-sub{font-size:0.84rem;color:var(--ink-soft);margin-top:2px;line-height:1.4;}
+  .dash-chev{color:var(--ink-soft);font-size:1.3rem;}
+  .dash-badge{
+    font-family:'IBM Plex Mono',monospace;font-size:0.65rem;background:#FBEAE7;color:var(--stamp-red);
+    padding:2px 8px;border-radius:10px;margin-left:8px;white-space:nowrap;
+  }
 
-  .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border:none;border-radius:9px;padding:10px 16px;font-weight:600;font-size:0.88rem;cursor:pointer;}
-  .btn-primary{background:var(--stamp-red);color:#fff;}
-  .btn-primary:hover{opacity:0.92;}
-  .btn-ghost{background:transparent;color:var(--postal-blue);border:1px solid var(--border);}
-  .btn-block{width:100%;}
-  .btn-sm{padding:6px 11px;font-size:0.78rem;}
-
-  /* Login */
   .login-screen{min-height:80vh;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;gap:18px;}
   .login-screen .brand{font-size:2rem;}
   .login-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:28px 24px;width:100%;max-width:340px;}
+  .login-card label{display:block;text-align:left;font-size:0.75rem;color:var(--ink-soft);font-family:'IBM Plex Mono',monospace;letter-spacing:0.05em;text-transform:uppercase;margin-bottom:6px;}
+  input[type=text], input[type=number], textarea{width:100%;font-family:'IBM Plex Sans',sans-serif;font-size:1rem;padding:11px 12px;border:1px solid var(--border);border-radius:10px;background:#fff;color:var(--ink);}
+  input:focus, textarea:focus{outline:none;border-color:var(--postal-blue);box-shadow:0 0 0 3px rgba(61,90,115,0.12);}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border:none;border-radius:10px;padding:11px 18px;font-family:'IBM Plex Sans',sans-serif;font-weight:600;font-size:0.92rem;cursor:pointer;transition:transform .08s ease, opacity .15s ease;}
+  .btn:active{transform:scale(0.97);}
+  .btn-primary{background:var(--stamp-red);color:#fff;}
+  .btn-primary:hover{opacity:0.92;}
+  .btn-block{width:100%;}
+  .btn-ghost{background:transparent;color:var(--postal-blue);border:1px solid var(--border);}
   .error-msg{color:var(--stamp-red);font-size:0.82rem;margin-top:8px;display:none;}
 
-  /* Class select */
-  .class-select-screen{min-height:80vh;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;gap:8px;padding:20px;}
-  .class-select-screen h2{font-family:'Fraunces',serif;font-weight:600;font-size:1.7rem;margin:0;}
-  .class-select-screen p{color:var(--ink-soft);font-size:0.92rem;margin:0 0 20px;}
-  .class-grid{display:flex;flex-wrap:wrap;gap:14px;justify-content:center;max-width:520px;}
-  .class-card{
-    background:var(--card);border:1px solid var(--border);border-radius:var(--radius);
-    width:160px;height:110px;display:flex;align-items:center;justify-content:center;
-    font-family:'Fraunces',serif;font-weight:600;font-size:1.2rem;color:var(--postal-blue);
-    cursor:pointer;transition:transform .1s ease, box-shadow .15s ease;
+  .card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px;margin-bottom:16px;}
+  .week-head .label{font-family:'Fraunces',serif;font-weight:600;font-size:1.7rem;color:var(--ink);text-align:center;display:block;}
+  .deadline-pill{display:inline-block;margin-top:8px;font-family:'IBM Plex Mono',monospace;font-size:0.7rem;background:#FBEAE7;color:var(--stamp-red);padding:4px 10px;border-radius:20px;border:1px solid rgba(178,58,46,0.3);}
+
+  .prompt-card{border-left:3px solid var(--gold);}
+  .prompt-card .eyebrow{font-family:'IBM Plex Mono',monospace;font-size:0.68rem;color:var(--gold);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:4px;}
+  .prompt-card .ptext{font-family:'Fraunces',serif;font-size:1.05rem;line-height:1.4;}
+
+  .your-entry-row{display:flex;align-items:center;justify-content:space-between;gap:10px;}
+  .your-entry-row .info{font-size:0.88rem;color:var(--ink-soft);}
+  .your-entry-row .ttl{font-weight:600;font-size:0.98rem;color:var(--ink);}
+
+  .section-label{font-family:'IBM Plex Mono',monospace;font-size:0.68rem;color:var(--ink-soft);text-transform:uppercase;letter-spacing:0.07em;margin:18px 4px 8px;}
+
+  .member-row{display:flex;align-items:center;gap:12px;padding:12px 4px;border-bottom:1px solid var(--border);cursor:pointer;}
+  .member-row:last-child{border-bottom:none;}
+  .member-row.disabled{cursor:default;opacity:0.55;}
+  .member-row .mtext{flex:1;}
+  .member-row .mtitle{font-weight:600;font-size:1rem;color:var(--ink);}
+  .member-row .mauthor{font-size:0.8rem;color:var(--ink-soft);margin-top:2px;}
+  .member-row .mname{font-weight:600;font-size:0.92rem;}
+  .member-row .mstatus{font-size:0.82rem;color:var(--ink-soft);margin-top:1px;}
+  .member-row .mstatus.posted{color:var(--postal-blue);}
+  .member-row .chev{color:var(--ink-soft);font-size:1.1rem;}
+
+  .rubric-table-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:var(--radius);background:var(--card);-webkit-overflow-scrolling:touch;scrollbar-width:none;-ms-overflow-style:none;}
+  .rubric-table-wrap::-webkit-scrollbar{display:none;height:0;}
+  table.rubric-table{border-collapse:collapse;width:100%;}
+  .rubric-table td{padding:12px 14px;border-bottom:1px solid var(--border);border-right:1px solid var(--border);vertical-align:top;text-align:left;font-size:0.82rem;}
+  .rubric-table tr:last-child td{border-bottom:none;}
+  .rubric-table td.crit-name{
+    font-family:'Fraunces',serif;font-weight:600;font-size:0.95rem;white-space:nowrap;
+    background:#FAFBF8;position:sticky;left:0;min-width:150px;z-index:1;
   }
-  .class-card:hover{transform:translateY(-2px);box-shadow:0 6px 16px rgba(32,38,31,0.1);}
+  .rubric-table td.crit-name .crit-max{font-family:'IBM Plex Mono',monospace;font-weight:400;font-size:0.68rem;color:var(--ink-soft);margin-top:3px;white-space:normal;}
+  .rubric-table td.tier-cell{min-width:160px;max-width:210px;}
+  .rubric-table td.tier-cell .tlabel{font-weight:600;font-size:0.82rem;color:var(--ink);}
+  .rubric-table td.tier-cell .tdesc{font-size:0.76rem;color:var(--ink-soft);margin-top:4px;line-height:1.45;}
+  .rubric-table td.tier-cell .tpts{font-family:'IBM Plex Mono',monospace;font-size:0.72rem;font-weight:600;margin-top:8px;display:inline-block;padding:2px 8px;border-radius:8px;}
+  .rubric-table td.tier-cell.empty{background:#FAFAF7;}
 
-  /* Grading layout */
-  .grading-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px;flex-wrap:wrap;}
-  .grading-toolbar select{max-width:260px;}
-  .grading-layout{display:grid;grid-template-columns:1fr;gap:18px;align-items:start;}
-  @media (min-width:760px){
-    .grading-layout{grid-template-columns:1.2fr 1fr;}
-    .grading-layout > div{height:calc(100vh - 200px);min-height:480px;overflow-y:auto;}
+  .rubric-table td.tier-cell.qual-green{background:#EAF6EC;}
+  .rubric-table td.tier-cell.qual-green .tpts{color:#2E7D4F;background:rgba(46,125,79,0.14);}
+  .rubric-table td.tier-cell.qual-yellow{background:#FBF6E2;}
+  .rubric-table td.tier-cell.qual-yellow .tpts{color:#A67C00;background:rgba(166,124,0,0.14);}
+  .rubric-table td.tier-cell.qual-red{background:#FBEAE7;}
+  .rubric-table td.tier-cell.qual-red .tpts{color:var(--stamp-red);background:rgba(178,58,46,0.14);}
+
+  .rubric-table td.tier-cell.selected{box-shadow:inset 0 0 0 2px var(--ink);}
+  .rubric-table td.tier-cell.selected .sel-check{font-family:'IBM Plex Mono',monospace;font-size:0.66rem;font-weight:600;color:var(--ink);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:5px;}
+  .rubric-table td.tier-cell.dimmed{opacity:0.4;}
+
+  .feedback-card{border-left:3px solid var(--postal-blue);}
+  .feedback-card .eyebrow{font-family:'IBM Plex Mono',monospace;font-size:0.68rem;color:var(--postal-blue);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:4px;}
+  .feedback-card .feedback-text{font-size:0.92rem;line-height:1.55;}
+  .rubric-scroll-hint{font-family:'IBM Plex Mono',monospace;font-size:0.68rem;color:var(--ink-soft);text-align:right;margin:6px 4px 0;}
+
+  .floating-scrollbar{
+    position:fixed;left:50%;bottom:16px;transform:translateX(-50%);
+    width:min(608px, calc(100% - 32px));height:12px;
+    background:rgba(215,218,206,0.55);border:1px solid var(--border);
+    border-radius:8px;z-index:60;display:none;
+    box-shadow:0 2px 10px rgba(32,38,31,0.12);
+    backdrop-filter:blur(2px);
   }
+  .floating-scrollbar.show{display:block;}
+  .floating-scrollbar-thumb{
+    position:absolute;top:1px;left:0;height:8px;
+    background:var(--postal-blue);border-radius:6px;cursor:grab;
+    min-width:40px;
+  }
+  .floating-scrollbar-thumb:active{cursor:grabbing;background:var(--stamp-red);}
 
-  .submission-card{}
-  .sub-title{font-family:'Fraunces',serif;font-weight:600;font-size:1.25rem;margin-bottom:8px;}
-  .sub-meta{display:flex;align-items:center;gap:10px;margin-bottom:14px;}
-  .avatar{width:34px;height:34px;border-radius:50%;background:var(--postal-blue);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'Fraunces',serif;font-weight:600;font-size:0.92rem;flex-shrink:0;}
-  .sub-meta .nm{font-weight:600;font-size:0.92rem;}
-  .sub-meta .wc{font-family:'IBM Plex Mono',monospace;font-size:0.72rem;color:var(--ink-soft);}
-  .sub-body{line-height:1.65;font-size:0.96rem;white-space:pre-wrap;margin-bottom:10px;}
-  .sub-media img{width:100%;border-radius:10px;margin-bottom:10px;}
-  .sub-subhead{font-family:'IBM Plex Mono',monospace;font-size:0.7rem;color:var(--ink-soft);text-transform:uppercase;letter-spacing:0.06em;margin:18px 0 8px;border-top:1px solid var(--border);padding-top:14px;}
-  .sub-comment{display:flex;gap:9px;margin-bottom:10px;}
-  .sub-comment .avatar{width:26px;height:26px;font-size:0.7rem;}
-  .sub-comment-body{flex:1;background:#F7F8F4;border-radius:9px;padding:8px 11px;}
-  .sub-comment-body .cn{font-weight:600;font-size:0.8rem;}
-  .sub-comment-body .ct{font-size:0.84rem;margin-top:1px;line-height:1.45;}
-  .sub-comment-body .cwc{font-family:'IBM Plex Mono',monospace;font-size:0.66rem;color:var(--ink-soft);margin-top:4px;}
-  .empty-note{color:var(--ink-soft);font-size:0.84rem;font-style:italic;}
+  .composer-form input#postTitle{margin-bottom:10px;font-weight:600;}
+  textarea#postText{min-height:30vh;resize:vertical;line-height:1.6;}
+  .meta-row{display:flex;justify-content:space-between;align-items:center;margin-top:8px;font-family:'IBM Plex Mono',monospace;font-size:0.74rem;color:var(--ink-soft);}
+  .media-row{display:flex;gap:10px;margin-top:14px;}
+  .media-slot{flex:1;border:1.5px dashed var(--border);border-radius:10px;min-height:90px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;cursor:pointer;color:var(--ink-soft);font-size:0.78rem;text-align:center;padding:8px;position:relative;overflow:hidden;background:#FAFBF8;}
+  .media-slot img, .media-slot .yt-thumb{width:100%;height:100%;object-fit:cover;position:absolute;inset:0;}
+  .media-slot .yt-thumb::after{content:'▶';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#fff;font-size:1.4rem;background:rgba(0,0,0,0.18);}
 
-  .grade-sidebar{position:relative;}
-  .progress-bar{display:flex;align-items:center;justify-content:space-between;background:#F7F8F4;border-radius:10px;padding:10px 14px;margin-bottom:14px;}
-  .progress-bar .ptext{font-family:'IBM Plex Mono',monospace;font-size:0.78rem;color:var(--ink-soft);}
-  .progress-bar .ptotal{font-weight:600;color:var(--ink);}
-  .student-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;}
-  .student-nav .id{display:flex;align-items:center;gap:10px;}
-  .student-nav .id .nm{font-weight:600;font-size:1.02rem;}
-  .nav-arrow{width:34px;height:34px;border-radius:50%;border:1px solid var(--border);background:#fff;cursor:pointer;font-size:1rem;color:var(--ink-soft);}
-  .nav-arrow:hover{background:#F7F8F4;}
-
-  .feedback-box label.field-label{margin-top:0;}
-  .feedback-box textarea{min-height:80px;margin-bottom:16px;}
-
-  .criterion{border:1px solid var(--border);border-radius:10px;margin-bottom:10px;overflow:hidden;}
-  .criterion-head{display:flex;justify-content:space-between;align-items:center;padding:11px 14px;cursor:pointer;background:#FAFBF8;}
-  .criterion-head .cname{font-weight:600;font-size:0.9rem;}
-  .criterion-head .cpts{font-family:'IBM Plex Mono',monospace;font-size:0.74rem;color:var(--ink-soft);}
-  .criterion-head .ctoggle{font-size:0.85rem;color:var(--ink-soft);}
-  .criterion-body{padding:6px 14px 12px;display:none;}
-  .criterion.open .criterion-body{display:block;}
-  .criterion.open .criterion-head{background:#fff;border-bottom:1px solid var(--border);}
-  .tier-option{display:flex;gap:10px;align-items:flex-start;padding:8px 6px;border-radius:8px;cursor:pointer;}
-  .tier-option:hover{background:#F7F8F4;}
-  .tier-option input{margin-top:3px;}
-  .tier-option .tlabel{font-weight:600;font-size:0.85rem;}
-  .tier-option .tdesc{font-size:0.78rem;color:var(--ink-soft);margin-top:2px;line-height:1.4;}
-  .tier-option .tpts{font-family:'IBM Plex Mono',monospace;font-size:0.72rem;color:var(--gold);margin-top:3px;display:inline-block;}
-  .tier-option.auto-suggested{background:#FBF6E2;}
-  .auto-tag{font-family:'IBM Plex Mono',monospace;font-size:0.62rem;color:var(--gold);text-transform:uppercase;letter-spacing:0.04em;margin-left:6px;}
-
-  .grade-actions{display:flex;gap:10px;margin-top:16px;}
-
-  .toggle-row{display:flex;align-items:center;justify-content:space-between;padding:12px 4px;border-bottom:1px solid var(--border);}
-  .toggle-row:last-child{border-bottom:none;}
-  .toggle-row .tname{font-weight:600;font-size:0.92rem;}
-  .toggle-row .tdesc{font-size:0.8rem;color:var(--ink-soft);margin-top:2px;}
-  .switch{position:relative;width:46px;height:26px;flex-shrink:0;}
-  .switch input{opacity:0;width:0;height:0;}
-  .switch .slider{position:absolute;inset:0;background:var(--border);border-radius:26px;cursor:pointer;transition:background .15s;}
-  .switch .slider::before{content:'';position:absolute;width:20px;height:20px;left:3px;top:3px;background:#fff;border-radius:50%;transition:transform .15s;}
-  .switch input:checked + .slider{background:var(--postal-blue);}
-  .switch input:checked + .slider::before{transform:translateX(20px);}
-
-  table.roster-table{width:100%;border-collapse:collapse;font-size:0.88rem;}
-  table.roster-table th{text-align:left;font-family:'IBM Plex Mono',monospace;font-size:0.68rem;color:var(--ink-soft);text-transform:uppercase;letter-spacing:0.05em;padding:8px 10px;border-bottom:1px solid var(--border);}
-  table.roster-table td{padding:10px;border-bottom:1px solid var(--border);}
-  table.roster-table tr:last-child td{border-bottom:none;}
-
-  .group-pill{display:inline-block;background:#EEF1EC;color:var(--postal-blue);font-family:'IBM Plex Mono',monospace;font-size:0.72rem;padding:3px 9px;border-radius:12px;margin:2px;}
-
-  .week-edit-grid{display:grid;grid-template-columns:1fr;gap:12px;}
-  @media (min-width:700px){ .week-edit-grid{grid-template-columns:1fr 1fr;} }
-
-  /* Rubric editor */
-  .version-pill{display:inline-flex;align-items:center;gap:8px;font-family:'IBM Plex Mono',monospace;font-size:0.78rem;padding:8px 14px;border-radius:10px;border:1px solid var(--border);background:#fff;cursor:pointer;margin:0 8px 8px 0;}
-  .version-pill.active{background:var(--ink);color:#fff;border-color:var(--ink);}
-  .version-pill .vrange{opacity:0.7;}
-  .editor-criterion{border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:12px;background:#FAFBF8;}
-  .editor-criterion-head{display:grid;grid-template-columns:2fr 1fr 1fr auto;gap:8px;align-items:end;margin-bottom:10px;}
-  .editor-tier-row{display:grid;grid-template-columns:1.2fr 2fr 0.7fr auto;gap:8px;align-items:end;margin-bottom:8px;}
-  @media (max-width:700px){ .editor-criterion-head, .editor-tier-row{grid-template-columns:1fr;} }
-  .icon-btn{background:none;border:1px solid var(--border);border-radius:8px;width:34px;height:34px;cursor:pointer;color:var(--stamp-red);flex-shrink:0;}
-  .icon-btn:hover{background:#FBEAE7;}
-  .icon-btn:disabled{opacity:0.3;cursor:not-allowed;}
-  .icon-btn:disabled:hover{background:none;}
-  .editor-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px;}
-  .new-version-row{display:flex;gap:10px;align-items:end;margin-top:18px;border-top:1px solid var(--border);padding-top:16px;}
-  .new-version-row > div{flex:1;}
-  .total-pts-note{font-family:'IBM Plex Mono',monospace;font-size:0.76rem;color:var(--ink-soft);margin-top:10px;}
-
-  /* Modal */
-  .modal-overlay{position:fixed;inset:0;background:rgba(32,38,31,0.55);display:none;align-items:flex-start;justify-content:center;z-index:100;padding:60px 20px;}
-  .modal-overlay.show{display:flex;}
-  .modal-box{background:var(--card);border-radius:16px;padding:20px;max-width:420px;width:100%;box-shadow:0 14px 44px rgba(32,38,31,0.3);max-height:80vh;display:flex;flex-direction:column;}
-  .student-search-list{margin:14px 0;overflow-y:auto;flex:1;min-height:60px;}
-  .search-result-row{display:flex;align-items:center;gap:12px;padding:10px 8px;border-radius:9px;cursor:pointer;}
-  .search-result-row:hover{background:#F7F8F4;}
-  .search-result-row .nm{font-weight:600;font-size:0.92rem;}
-  .search-result-row .st{font-size:0.78rem;color:var(--ink-soft);margin-top:1px;}
-  .search-btn{width:34px;height:34px;border-radius:50%;border:1px solid var(--border);background:#fff;cursor:pointer;font-size:0.95rem;}
-  .search-btn:hover{background:#F7F8F4;}
-
-  .hidden{display:none !important;}
   .toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(10px);background:var(--ink);color:#fff;padding:10px 16px;border-radius:10px;font-size:0.85rem;opacity:0;pointer-events:none;transition:all .25s ease;max-width:90%;text-align:center;z-index:50;}
   .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
-  .mock-banner{font-family:'IBM Plex Mono',monospace;font-size:0.76rem;color:var(--gold);background:#FBF6E2;border:1px solid rgba(201,162,39,0.35);border-radius:10px;padding:10px 14px;margin-bottom:16px;}
-  .version-tag{font-family:'IBM Plex Mono',monospace;font-size:0.68rem;color:var(--ink-soft);opacity:0.7;margin-top:6px;}
-  .loading-overlay{position:fixed;inset:0;background:rgba(239,241,234,0.88);display:none;align-items:center;justify-content:center;flex-direction:column;gap:14px;z-index:200;}
+
+  .modal-overlay{position:fixed;inset:0;background:rgba(32,38,31,0.6);display:none;align-items:center;justify-content:center;z-index:100;padding:20px;}
+  .modal-overlay.show{display:flex;}
+  .modal-box{background:var(--card);border-radius:18px;padding:30px 26px;max-width:380px;width:100%;text-align:center;box-shadow:0 14px 44px rgba(32,38,31,0.35);}
+  .modal-box .modal-icon{font-size:2.4rem;margin-bottom:10px;}
+  .modal-box h3{font-family:'Fraunces',serif;font-weight:600;font-size:1.25rem;margin:0 0 10px;}
+  .modal-box p{font-size:0.92rem;color:var(--ink-soft);line-height:1.55;margin:0 0 22px;}
+
+  .back-link{display:inline-flex;align-items:center;gap:8px;font-family:'IBM Plex Sans',sans-serif;font-weight:600;font-size:0.9rem;color:#fff;cursor:pointer;margin-bottom:18px;background:var(--postal-blue);border:none;border-radius:10px;padding:10px 18px;box-shadow:0 2px 8px rgba(61,90,115,0.3);}
+  .back-link:hover{opacity:0.92;}
+  .back-link:active{transform:scale(0.97);}
+  .post-card{position:relative;}
+  .stamp{position:absolute;top:14px;right:14px;width:54px;height:54px;border-radius:50%;border:2px solid var(--postal-blue);color:var(--postal-blue);display:flex;flex-direction:column;align-items:center;justify-content:center;transform:rotate(7deg);font-family:'IBM Plex Mono',monospace;opacity:0.85;}
+  .stamp .wk{font-size:0.6rem;letter-spacing:0.05em;}
+  .stamp .num{font-size:1.1rem;font-weight:600;line-height:1;}
+  .post-detail-title{font-family:'Fraunces',serif;font-weight:600;font-size:1.3rem;margin:0 60px 10px 0;}
+  .post-head{display:flex;align-items:center;gap:10px;margin-bottom:12px;}
+  .post-head .name{font-weight:600;font-size:0.92rem;}
+  .post-head .when{font-family:'IBM Plex Mono',monospace;font-size:0.7rem;color:var(--ink-soft);}
+  .post-body{line-height:1.65;font-size:0.97rem;margin-bottom:4px;white-space:pre-wrap;}
+  .post-detail-grid{display:grid;grid-template-columns:1fr;gap:18px;align-items:start;margin-top:10px;}
+  @media (min-width:700px){ .post-detail-grid{grid-template-columns:1fr 260px;} }
+  .post-detail-media-col{display:flex;flex-direction:column;gap:10px;}
+  .post-detail-media-col img{width:100%;border-radius:10px;display:block;max-height:320px;object-fit:cover;}
+  .post-detail-media-col .yt-embed{width:100%;height:150px;border-radius:10px;display:block;}
+  .yt-embed{flex:1;position:relative;display:block;max-height:200px;height:160px;background-size:cover;background-position:center;border-radius:10px;overflow:hidden;}
+  .yt-embed::after{content:'▶';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#fff;font-size:2rem;background:rgba(0,0,0,0.2);}
+  .word-count{font-family:'IBM Plex Mono',monospace;font-size:0.72rem;color:var(--ink-soft);margin-top:10px;}
+
+  .comments{margin-top:14px;border-top:1px solid var(--border);padding-top:12px;}
+  .comment{display:flex;gap:10px;margin-bottom:12px;}
+  .comment .avatar{width:28px;height:28px;font-size:0.78rem;}
+  .comment-body{flex:1;background:#F7F8F4;border-radius:10px;padding:10px 12px;}
+  .comment-body .c-name{font-weight:600;font-size:0.84rem;}
+  .comment-body .c-text{font-size:0.88rem;margin-top:2px;line-height:1.5;white-space:pre-wrap;}
+  .reply{margin-left:38px;margin-top:8px;}
+  .reply .comment-body{background:#EEF1EC;}
+  .reply-link{font-family:'IBM Plex Mono',monospace;font-size:0.7rem;color:var(--postal-blue);cursor:pointer;background:none;border:none;padding:0;margin-top:4px;}
+  .reply-box-wrap{margin-top:8px;}
+  .reply-box{display:flex;gap:8px;align-items:flex-end;}
+  .reply-box textarea{flex:1;padding:7px 10px;font-size:0.84rem;min-height:46px;max-height:140px;resize:vertical;line-height:1.5;font-family:'IBM Plex Sans',sans-serif;}
+  .comment-input-row{display:flex;gap:8px;margin-top:12px;align-items:flex-end;}
+  .comment-input-row textarea{flex:1;min-height:52px;max-height:160px;resize:vertical;line-height:1.5;font-family:'IBM Plex Sans',sans-serif;}
+  .closed-note{font-family:'IBM Plex Mono',monospace;font-size:0.76rem;color:var(--ink-soft);background:#F2F0E8;border:1px dashed var(--border);border-radius:10px;padding:10px 12px;margin-top:12px;text-align:center;}
+
+  .week-list-row{display:flex;align-items:center;justify-content:space-between;padding:14px 4px;border-bottom:1px solid var(--border);cursor:pointer;}
+  .week-list-row:last-child{border-bottom:none;}
+  .week-list-row .wtitle{font-weight:600;font-size:0.95rem;}
+  .week-list-row .wsub{font-size:0.78rem;color:var(--ink-soft);margin-top:2px;}
+
+  .grade-week-card .gw-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;}
+  .grade-week-card .gw-title{font-family:'Fraunces',serif;font-weight:600;font-size:1.05rem;}
+  .grade-week-card .gw-total{font-family:'IBM Plex Mono',monospace;font-size:0.85rem;color:var(--gold);font-weight:600;}
+  .grade-row{padding:8px 0;border-bottom:1px solid var(--border);}
+  .grade-row:last-child{border-bottom:none;}
+  .grade-row .gname{font-weight:600;font-size:0.86rem;display:flex;justify-content:space-between;}
+  .grade-row .gtier{font-size:0.8rem;color:var(--ink-soft);margin-top:2px;}
+  .grade-row .gfeedback{font-size:0.82rem;color:var(--postal-blue);margin-top:4px;font-style:italic;}
+
+  .empty-note{text-align:center;color:var(--ink-soft);font-size:0.85rem;padding:30px 10px;border:1px dashed var(--border);border-radius:var(--radius);background:var(--card);}
+  .hidden{display:none !important;}  .loading-overlay{position:fixed;inset:0;background:rgba(239,241,234,0.88);display:none;align-items:center;justify-content:center;flex-direction:column;gap:14px;z-index:200;}
   .loading-overlay.show{display:flex;}
   .spinner{width:40px;height:40px;border:4px solid var(--border);border-top-color:var(--stamp-red);border-radius:50%;animation:spin 0.8s linear infinite;}
   @keyframes spin{to{transform:rotate(360deg);}}
   .loading-overlay .ltext{font-family:'IBM Plex Mono',monospace;font-size:0.85rem;color:var(--ink-soft);}
+  .version-tag{font-family:'IBM Plex Mono',monospace;font-size:0.68rem;color:var(--ink-soft);opacity:0.7;margin-top:6px;}
+  .completion-timeline{display:flex;align-items:flex-start;margin-bottom:18px;padding:0 4px;}
+  .tl-step{flex:1;display:flex;flex-direction:column;align-items:center;position:relative;}
+  .tl-step:not(:last-child)::after{content:'';position:absolute;top:13px;left:50%;width:100%;height:4px;background:var(--border);z-index:0;}
+  .tl-step.done:not(:last-child)::after{background:#2E7D4F;}
+  .tl-step.overdue:not(:last-child)::after{background:var(--stamp-red);}
+  .tl-node{width:28px;height:28px;border-radius:50%;border:3px solid var(--border);background:#fff;z-index:1;display:flex;align-items:center;justify-content:center;font-size:0.85rem;font-weight:700;color:#fff;}
+  .tl-step.done .tl-node{background:#2E7D4F;border-color:#2E7D4F;}
+  .tl-step.overdue .tl-node{background:var(--stamp-red);border-color:var(--stamp-red);width:34px;height:34px;font-size:1.1rem;margin-top:-3px;}
+  .tl-step.pending .tl-node{background:#fff;border-color:var(--border);}
+  .tl-label{margin-top:8px;text-align:center;font-weight:600;font-size:0.78rem;}
+  .tl-sub{font-size:0.66rem;color:var(--ink-soft);margin-top:1px;}
+  .tl-date{font-family:'IBM Plex Mono',monospace;font-size:0.66rem;color:var(--ink-soft);margin-top:4px;}
+  .tl-submitted{font-family:'IBM Plex Mono',monospace;font-size:0.62rem;color:var(--postal-blue);margin-top:2px;}
 </style>
 </head>
 <body>
@@ -194,101 +254,104 @@
   <div class="ltext" id="loadingText">Loading…</div>
 </div>
 
-<div class="modal-overlay" id="studentSearchModal">
+<div class="modal-overlay" id="tabWarningModal">
   <div class="modal-box">
-    <input type="text" id="studentSearchInput" placeholder="Search students..." oninput="filterStudentSearch()">
-    <div id="studentSearchList" class="student-search-list"></div>
-    <button class="btn btn-ghost btn-block" onclick="closeStudentSearch()">Close</button>
-  </div>
-</div>
-
-<div class="modal-overlay" id="confirmModal">
-  <div class="modal-box" style="text-align:center;">
-    <div class="modal-icon" style="font-size:2.2rem;margin-bottom:6px;">⚠️</div>
-    <p id="confirmModalText" style="font-size:0.92rem;color:var(--ink-soft);line-height:1.5;margin:0 0 18px;"></p>
-    <div style="display:flex;gap:10px;">
-      <button class="btn btn-ghost" style="flex:1;" onclick="closeConfirmModal()">Cancel</button>
-      <button class="btn btn-primary" style="flex:1;" id="confirmModalOkBtn">Remove</button>
-    </div>
+    <div class="modal-icon">⚠️</div>
+    <h3 id="tabWarningTitle">Stay on this page</h3>
+    <p id="tabWarningText">You switched away while writing. Please stay on this page — using translation tools or other apps while writing isn't allowed, and this has been logged.</p>
+    <button class="btn btn-primary btn-block" onclick="closeTabWarningModal()">OK</button>
   </div>
 </div>
 
 <div class="app">
 
+  <!-- ===================== LOGIN SCREEN ===================== -->
   <div class="login-screen" id="loginScreen">
-    <div class="brand">Weekly Forum<small>TEACHER CONSOLE</small></div>
+    <div class="brand">Weekly Forum<small>EFL BLOG &amp; DISCUSSION</small></div>
     <div class="login-card">
-      <label class="field-label">Username</label>
-      <input type="text" id="userInput" placeholder="your real username" autocomplete="off">
-      <label class="field-label" style="margin-top:12px;">Password</label>
-      <input type="password" id="pwInput" placeholder="••••••••">
+      <label for="studentNumberInput">Student Number</label>
+      <input type="text" id="studentNumberInput" placeholder="e.g. 2111001" autocomplete="off">
       <button class="btn btn-primary btn-block" style="margin-top:14px;" onclick="login()">Enter</button>
-      <div class="error-msg" id="loginError">Incorrect username or password.</div>
+      <div class="error-msg" id="loginError">Student number not found. Check and try again.</div>
     </div>
-    <div class="version-tag">live-v0.1 — 2026-06-25</div>
+    <div class="version-tag">v0.17 — 2026-06-26</div>
   </div>
 
-  <div class="class-select-screen hidden" id="classSelectScreen">
-    <h2>Select a class</h2>
-    <p>Which class would you like to manage?</p>
-    <div class="class-grid" id="classGrid"></div>
-  </div>
-
+  <!-- ===================== MAIN APP ===================== -->
   <div id="mainApp" class="hidden">
     <header class="topbar">
-      <div class="brand">Weekly Forum<small>TEACHER CONSOLE</small></div>
-      <div class="who-row">
-        <span id="whoName">—</span>
-        <span class="class-pill" id="classPill">—</span>
-        <button class="switch-class-btn" onclick="showClassSelect()">🏫 Switch Class</button>
+      <div class="brand">Weekly Forum<small>EFL BLOG &amp; DISCUSSION</small></div>
+      <div class="who">
+        <button class="home-btn hidden" id="homeBtn" onclick="renderDashboard()">🏠 Dashboard</button>
+        <button class="who-self" onclick="renderProfilePage()">
+          <span id="whoName">—</span>
+          <div class="avatar" id="whoAvatar">?</div>
+        </button>
       </div>
     </header>
-
-    <div class="nav">
-      <button class="nav-btn active" data-tab="grading" onclick="switchTab('grading')">Grading</button>
-      <button class="nav-btn" data-tab="schedule" onclick="switchTab('schedule')">Schedule &amp; Deadlines</button>
-      <button class="nav-btn" data-tab="roster" onclick="switchTab('roster')">Roster &amp; Groups</button>
-      <button class="nav-btn" data-tab="rubric" onclick="switchTab('rubric')">Rubric</button>
-      <button class="nav-btn" data-tab="settings" onclick="switchTab('settings')">Settings</button>
-    </div>
 
     <div id="content"></div>
   </div>
 </div>
 
+<input type="file" id="imageFileInput" accept="image/*" class="hidden" onchange="handleImageFile(event)">
+
 <script>
 /* ====================================================================
-   LIVE TEACHER BACKEND WIRING
-   Replaces the mock CLASSES object with real calls to your Apps Script API.
+   LIVE BACKEND WIRING
+   This file talks to the real Apps Script API instead of mock data.
+   Phase 1 scope: login, New Post (prompt/group/rubric), posting,
+   viewing a post, commenting, replying.
+   NOT yet wired: Previous Entries history list, Grades, real image
+   upload (still a placeholder), profile pictures. Those come in
+   later passes once their backend endpoints exist.
    ==================================================================== */
 
 const API_URL = "https://script.google.com/macros/s/AKfycbyMbuD6_z3PTOt8P_dS8TPTImZB-r1cnraENT82KGxD6eL2EGK0IxSC5spUu38SfFnX/exec";
 
-async function callApi(action, payload){
-  const res = await fetch(API_URL, {
-    method: "POST",
-    headers: { "Content-Type": "text/plain;charset=utf-8" },
-    body: JSON.stringify(Object.assign({ action }, payload || {})),
-  });
-  return res.json();
+// Hardcoded for now since there's only one week of Schedule data in testing.
+// Once there are several weeks, this should become "whichever week's PostOpen<=now<=PostClose,
+// or the most recent one" — a small follow-up, not done yet.
+const CURRENT_WEEK = 1;
+
+async function callApi(action, payload) {
+  try {
+    const res = await fetch(API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" }, // avoids a CORS preflight
+      body: JSON.stringify(Object.assign({ action }, payload || {})),
+    });
+    const json = await res.json();
+    if(typeof json.success === 'undefined'){
+      // Server responded, but not in the expected shape — treat as a failure rather than
+      // letting "undefined" leak into the UI.
+      return { success: false, error: "Got an unexpected response from the server. Please try again." };
+    }
+    return json;
+  } catch (err) {
+    return { success: false, error: "Couldn't reach the server — check your connection and try again." };
+  }
 }
 
-let currentTeacher = null;
-let currentClass = null;
-let classData = null;     // result of getClassData — roster/settings/schedule/groups/rubricVersions
-let realClassNames = [];
-let toastTimer;
+let currentStudent = null;
+let currentClassId = null;
+let currentName = null;
+let activeTab = 'dashboard';
+let currentPostData = null; // cached response from getNewPostData, so we don't refetch on every small render
 
 function initials(name){ return (name||'?').split(' ').map(n=>n[0]).join(''); }
-function wordCount(text){ return (text||'').trim().split(/\s+/).filter(Boolean).length; }
+function avatarInner(name, picURL){ return picURL ? `<img src="${picURL}">` : initials(name); }
+let currentProfilePicURL = '';
 
+let toastTimer;
 function showToast(msg){
   const t = document.getElementById('toast');
   t.textContent = msg;
   t.classList.add('show');
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(()=> t.classList.remove('show'), 2400);
+  toastTimer = setTimeout(()=> t.classList.remove('show'), 2800);
 }
+
 function showLoading(text){
   document.getElementById('loadingText').textContent = text || 'Loading…';
   document.getElementById('loadingOverlay').classList.add('show');
@@ -297,776 +360,773 @@ function hideLoading(){
   document.getElementById('loadingOverlay').classList.remove('show');
 }
 
-/* ====================== AUTH ====================== */
+/* ============ AUTH ============ */
 async function login(){
-  const user = document.getElementById('userInput').value.trim();
-  const pw = document.getElementById('pwInput').value;
+  const val = document.getElementById('studentNumberInput').value.trim();
+  if(!val) return;
   document.getElementById('loginError').style.display = 'none';
   showLoading('Logging in…');
-  const result = await callApi('teacherLogin', { username: user, password: pw });
+  const result = await callApi('studentLogin', { studentNumber: val });
   hideLoading();
   if(result.success){
-    currentTeacher = { displayName: result.displayName };
+    currentStudent = val;
+    currentClassId = result.classId;
+    currentName = result.name;
+    currentProfilePicURL = result.profilePicURL || '';
     document.getElementById('loginScreen').classList.add('hidden');
-    await showClassSelect();
+    document.getElementById('mainApp').classList.remove('hidden');
+    document.getElementById('whoName').textContent = currentName;
+    document.getElementById('whoAvatar').innerHTML = avatarInner(currentName, currentProfilePicURL);
+    renderDashboard();
   } else {
-    document.getElementById('loginError').textContent = result.error || 'Incorrect username or password.';
+    document.getElementById('loginError').textContent = result.error || 'Student number not found.';
     document.getElementById('loginError').style.display = 'block';
   }
 }
 
-async function showClassSelect(){
-  document.getElementById('mainApp').classList.add('hidden');
-  document.getElementById('classSelectScreen').classList.remove('hidden');
-  document.getElementById('classGrid').innerHTML = `<div class="empty-note">Loading classes…</div>`;
-  const result = await callApi('getClassesList');
-  if(!result.success){
-    document.getElementById('classGrid').innerHTML = `<div class="empty-note">${result.error}</div>`;
-    return;
-  }
-  realClassNames = result.classes;
-  document.getElementById('classGrid').innerHTML = realClassNames.map(name=>
-    `<div class="class-card" onclick="enterClass('${name}')">${name}</div>`).join('');
+function updateHomeButton(onDashboard){
+  document.getElementById('homeBtn').classList.toggle('hidden', onDashboard);
 }
 
-async function enterClass(name){
-  currentClass = name;
-  showLoading('Loading class data…');
-  classData = await callApi('getClassData', { classId: name });
-  hideLoading();
-  if(!classData.success){
-    showToast(classData.error || "Couldn't load that class.");
-    return;
-  }
-  document.getElementById('classSelectScreen').classList.add('hidden');
-  document.getElementById('mainApp').classList.remove('hidden');
-  document.getElementById('whoName').textContent = currentTeacher.displayName;
-  document.getElementById('classPill').textContent = name;
-  gradingWeek = null;
-  gradingIdx = 0;
-  switchTab('grading');
-}
-
-function cls(){ return classData; }
-
-/* ====================== NAV ====================== */
-function switchTab(tab){
-  document.querySelectorAll('.nav-btn').forEach(b=> b.classList.toggle('active', b.dataset.tab===tab));
-  if(tab==='grading') renderGrading();
-  if(tab==='schedule') renderSchedule();
-  if(tab==='roster') renderRoster();
-  if(tab==='rubric') renderRubricTab();
-  if(tab==='settings') renderSettings();
-}
-
-/* ====================== RUBRIC VERSION LOOKUP ====================== */
-function getRubricVersionForWeek(week){
-  const versions = classData.rubricVersions;
-  if(!versions.length) return { versionId:null, startWeek:0, criteria:[] };
-  let best = versions[0];
-  versions.forEach(v=>{ if(v.startWeek<=Number(week) && v.startWeek>=best.startWeek) best=v; });
-  return best;
-}
-
-function getGroupmateCount(studentNumber, week){
-  const rows = classData.groups.filter(g=>String(g.Week)===String(week));
-  const mine = rows.find(g=>String(g.StudentNumber)===String(studentNumber));
-  if(!mine) return 0;
-  return rows.filter(g=>g.GroupID===mine.GroupID).length - 1;
-}
-
-function commentsQualify(commentsArr, deadline){
-  if(!deadline) return commentsArr.every(c=>wordCount(c.text)>=30);
-  return commentsArr.every(c=> wordCount(c.text)>=30 && new Date(c.createdAt) <= new Date(deadline));
-}
-
-function autoSelectTier(crit, sub, sn, week, schedule){
-  if(crit.autoType==='WordCount'){
-    const wc = wordCount(sub.text);
-    if(wc===0) return 0;
-    if(wc<40) return 1;
-    if(wc<80) return 2;
-    return 3;
-  }
-  if(crit.autoType==='PictureTimeliness') return sub.image ? 1 : 0;
-  if(crit.autoType==='CommentCompletion'){
-    const required = getGroupmateCount(sn, week);
-    if(required<=0) return null;
-    const ok = sub.commentsMade.length>=required && commentsQualify(sub.commentsMade, schedule && schedule.CommentDeadline);
-    return ok ? 1 : 0;
-  }
-  if(crit.autoType==='ReplyCompletion'){
-    const received = sub.commentsReceived;
-    if(received.length===0) return null;
-    const allReplied = received.every(c=>c.reply);
-    if(!allReplied) return 0;
-    const ok = received.every(c=> wordCount(c.reply.text)>=30 && (!schedule || !schedule.ReplyDeadline || new Date(c.reply.createdAt) <= new Date(schedule.ReplyDeadline)));
-    return ok ? 1 : 0;
-  }
-  return null;
-}
-
-/* ====================== GRADING ====================== */
-let gradingWeek = null;
-let gradingIdx = 0;
-let gradingSubmissionsCache = {}; // week -> {roster, submissions}
-let gradingSelections = {};       // studentNumber -> {criterionId: tierIndex}
-let gradingAutoSelections = {};   // studentNumber -> {criterionId: tierIndex} (for WasOverridden tracking)
-let gradingFeedbackDraft = {};    // studentNumber -> text (local draft before save)
-let gradingSavedSet = {};         // studentNumber -> true once saved this session
-
-async function loadSubmissionsForWeek(week){
-  if(gradingSubmissionsCache[week]) return gradingSubmissionsCache[week];
-  const result = await callApi('getSubmissionsForGrading', { classId: currentClass, week });
-  if(result.success) gradingSubmissionsCache[week] = result;
-  return result;
-}
-
-function getSelections(sn, rubric, sub, week, schedule){
-  if(!gradingSelections[sn]){
-    const sel = {};
-    rubric.forEach(crit=>{
-      const auto = autoSelectTier(crit, sub, sn, week, schedule);
-      if(auto!==null) sel[crit.id] = auto;
-    });
-    gradingSelections[sn] = sel;
-    gradingAutoSelections[sn] = Object.assign({}, sel);
-  }
-  return gradingSelections[sn];
-}
-
-async function renderGrading(){
-  const weekOptions = classData.schedule.sort((a,b)=>b.Week-a.Week)
-    .map(s=>`<option value="${s.Week}">Week ${String(s.Week).padStart(2,'0')}</option>`).join('');
-  if(gradingWeek===null && classData.schedule.length) gradingWeek = classData.schedule[0].Week;
-  if(!classData.schedule.length){
-    document.getElementById('content').innerHTML = `<div class="card empty-note">No weeks set up in Schedule yet — add one in the Schedule tab first.</div>`;
-    return;
-  }
-
-  document.getElementById('content').innerHTML = `<div class="card empty-note">Loading submissions…</div>`;
-  const subResult = await loadSubmissionsForWeek(gradingWeek);
-  if(!subResult.success){
-    document.getElementById('content').innerHTML = `<div class="card empty-note">${subResult.error}</div>`;
-    return;
-  }
-
-  const studentNumbers = subResult.roster.map(r=>r.studentNumber);
-  if(studentNumbers.length===0){
-    document.getElementById('content').innerHTML = `<div class="card empty-note">No active students in this class yet.</div>`;
-    return;
-  }
-  gradingIdx = ((gradingIdx % studentNumbers.length) + studentNumbers.length) % studentNumbers.length;
-  const sn = studentNumbers[gradingIdx];
-  const author = subResult.roster.find(r=>r.studentNumber===sn);
-  const sub = subResult.submissions[sn];
-  const schedule = classData.schedule.find(s=>String(s.Week)===String(gradingWeek));
-  const rubricVersion = getRubricVersionForWeek(gradingWeek);
-  const rubric = rubricVersion.criteria;
-  const sel = getSelections(sn, rubric, sub, gradingWeek, schedule);
-  const gradedCount = studentNumbers.filter(s=>gradingSavedSet[s]).length;
-
-  let bodyHtml;
-  if(!sub.title){
-    bodyHtml = `<div class="card"><div class="empty-note">No submission from this student for this week.</div></div>`;
-  } else {
-    const wc = wordCount(sub.text);
-    const mediaHtml = sub.image ? `<div class="sub-media"><img src="${sub.image}"></div>` : '';
-    const receivedHtml = sub.commentsReceived.length
-      ? sub.commentsReceived.map(c=>{
-          const cAuthor = subResult.roster.find(r=>r.studentNumber===String(c.from));
-          const cwc = wordCount(c.text);
-          return `
-            <div class="sub-comment">
-              <div class="avatar" style="background:var(--postal-blue)">${initials(cAuthor?cAuthor.name:c.from)}</div>
-              <div class="sub-comment-body">
-                <div class="cn">${cAuthor?cAuthor.name:c.from}</div>
-                <div class="ct">${c.text}</div>
-                <div class="cwc">${cwc} words ${c.reply ? '· replied' : '· no reply yet'}</div>
-              </div>
-            </div>`;
-        }).join('')
-      : `<div class="empty-note">No comments received.</div>`;
-    const madeHtml = sub.commentsMade.length
-      ? sub.commentsMade.map(c=>{
-          const cwc = wordCount(c.text);
-          return `
-            <div class="sub-comment">
-              <div class="avatar" style="background:var(--border);color:var(--ink-soft);">→</div>
-              <div class="sub-comment-body">
-                <div class="cn">On: "${c.toPost}"</div>
-                <div class="ct">${c.text}</div>
-                <div class="cwc">${cwc} words</div>
-              </div>
-            </div>`;
-        }).join('')
-      : `<div class="empty-note">No comments made on groupmates.</div>`;
-
-    bodyHtml = `
-      <div class="card submission-card">
-        <div class="sub-title">${sub.title}</div>
-        <div class="sub-meta">
-          <div class="avatar" style="background:var(--postal-blue)">${initials(author.name)}</div>
-          <div><div class="nm">${author.name}</div><div class="wc">${wc} words</div></div>
+/* ============ DASHBOARD ============ */
+function renderDashboard(){
+  activeTab = 'dashboard';
+  updateHomeButton(true);
+  isWritingSomething = false;
+  document.getElementById('content').innerHTML = `
+    <div class="dash-intro">What would you like to do?</div>
+    <div class="dash-grid">
+      <div class="dash-card c-newpost" onclick="enterSection('newpost')">
+        <div class="dash-icon">📝</div>
+        <div class="dash-text">
+          <div class="dash-title">New Post</div>
+          <div class="dash-sub">Write this week's entry, read your group's posts and comment</div>
         </div>
-        <div class="sub-body">${sub.text}</div>
-        ${mediaHtml}
-        <div class="sub-subhead">Comments received (on their post)</div>
-        ${receivedHtml}
-        <div class="sub-subhead">Comments made (on groupmates' posts)</div>
-        ${madeHtml}
+        <div class="dash-chev">›</div>
+      </div>
+      <div class="dash-card c-previous" onclick="enterSection('previous')">
+        <div class="dash-icon">📚</div>
+        <div class="dash-text">
+          <div class="dash-title">Previous Entries / Grades</div>
+          <div class="dash-sub">Not wired up yet — coming in a later phase</div>
+        </div>
+        <div class="dash-chev">›</div>
+      </div>
+    </div>
+  `;
+}
+
+function enterSection(section){
+  activeTab = section;
+  updateHomeButton(false);
+  if(section==='newpost') renderNewPostTab();
+  if(section==='previous') renderPreviousPlaceholder();
+}
+
+function renderPreviousPlaceholder(){
+  isWritingSomething = false;
+  document.getElementById('content').innerHTML = `
+    <div class="card empty-note">
+      Previous Entries &amp; Grades isn't wired up to the real backend yet — that's a later phase
+      (needs a "list past weeks" endpoint and the grading flow to exist first). For now this is
+      only live in the New Post tab.
+    </div>
+  `;
+}
+
+function renderProfilePage(){
+  activeTab = 'profile';
+  updateHomeButton(false);
+  isWritingSomething = false;
+  document.getElementById('content').innerHTML = `
+    <button class="back-link" onclick="renderDashboard()">← Back to dashboard</button>
+    <div class="card" style="text-align:center;">
+      <div class="profile-avatar-big" id="profileAvatarBig">${avatarInner(currentName, currentProfilePicURL)}</div>
+      <div class="profile-name">${currentName}</div>
+      <div class="profile-sn">${currentStudent} · ${currentClassId}</div>
+      <div style="display:flex;gap:10px;justify-content:center;margin-top:16px;flex-wrap:wrap;">
+        <button class="btn btn-primary" onclick="triggerImageUpload('profile', null, 'profileAvatarBig')">Change profile picture</button>
+        ${currentProfilePicURL ? `<button class="btn btn-ghost" onclick="removeProfilePic()">Remove picture</button>` : ''}
+      </div>
+    </div>
+  `;
+}
+
+/* ============ NEW POST TAB ============ */
+async function renderNewPostTab(){
+  isWritingSomething = false;
+  document.getElementById('content').innerHTML = `<div class="card empty-note">Loading…</div>`;
+  const data = await callApi('getNewPostData', { classId: currentClassId, studentNumber: currentStudent, week: CURRENT_WEEK });
+  if(!data.success){
+    document.getElementById('content').innerHTML = `
+      <button class="back-link" onclick="renderDashboard()">← Back to dashboard</button>
+      <div class="card empty-note">${data.error || "Something went wrong loading this page."}</div>`;
+    return;
+  }
+  currentPostData = data;
+  const sched = data.schedule;
+  const now = new Date();
+  const postOpen = now >= new Date(sched.PostOpen) && now <= new Date(sched.PostClose);
+
+  let entryBlockHtml;
+  if(data.myPost){
+    entryBlockHtml = `
+      <div class="card your-entry-row">
+        <div><div class="info">Your entry</div><div class="ttl">${data.myPost.Title}</div></div>
+        <button class="btn btn-ghost" onclick="openPostDetail('${data.myPost.PostID}')">${postOpen ? 'View / Edit' : 'View'}</button>
+      </div>`;
+  } else if(!postOpen){
+    entryBlockHtml = `<div class="card" style="text-align:center;color:var(--ink-soft);">The posting window for this week has closed — no entry was submitted.</div>`;
+  } else {
+    entryBlockHtml = `
+      <div class="card composer-card" id="composerCard">
+        <button class="btn btn-primary" id="startWritingBtn" style="display:block;margin:0 auto;padding:11px 36px;" onclick="openComposer()">Start writing</button>
+        <div class="composer-form hidden" id="composerForm">
+          <input type="text" id="postTitle" placeholder="Give your entry a title...">
+          <textarea id="postText" placeholder="Write about the prompt... (typing only — pasted text is blocked)"></textarea>
+          <div class="meta-row">
+            <span id="wordCountLabel">0 words</span>
+            <span>Min 40 words for full marks</span>
+          </div>
+          ${data.settings.PictureEnabled ? `<div id="composerMediaArea"></div>` : ''}
+          <button class="btn btn-primary" style="display:block;margin:14px auto 0;padding:11px 36px;" onclick="submitPost()">Post entry</button>
+        </div>
       </div>`;
   }
 
-  const criteriaHtml = rubric.map(crit=>{
-    const selIdx = sel[crit.id];
-    const tiersHtml = crit.tiers.map((t,i)=>{
-      const checked = i===selIdx ? 'checked' : '';
-      const autoTag = (i===selIdx && crit.autoType!=='Manual') ? '<span class="auto-tag">Auto-suggested</span>' : '';
+  let membersHtml = '';
+  if(data.settings.GroupsEnabled){
+    membersHtml = data.groupMembers.filter(m=>m.studentNumber!==currentStudent).map(m=>{
+      const isMe = m.studentNumber===currentStudent;
+      if(m.postId){
+        return `
+          <div class="member-row" onclick="openPostDetail('${m.postId}')">
+            <div class="avatar" style="background:var(--postal-blue)">${avatarInner(m.name, m.profilePicURL)}</div>
+            <div class="mtext"><div class="mtitle">${m.title}</div><div class="mauthor">${m.name}${isMe?' (you)':''}</div></div>
+            <div class="chev">›</div>
+          </div>`;
+      }
       return `
-        <label class="tier-option ${i===selIdx && crit.autoType!=='Manual' ? 'auto-suggested' : ''}">
-          <input type="radio" name="${crit.id}-${sn}" value="${i}" ${checked} onchange="selectTier('${sn}','${crit.id}',${i})">
-          <div>
-            <div class="tlabel">${t.label}${autoTag}</div>
-            ${t.desc ? `<div class="tdesc">${t.desc}</div>` : ''}
-            <div class="tpts">${t.points} pts</div>
-          </div>
-        </label>`;
+        <div class="member-row disabled">
+          <div class="avatar" style="background:var(--border);color:var(--ink-soft);">${avatarInner(m.name, m.profilePicURL)}</div>
+          <div class="mtext"><div class="mname">${m.name}${isMe?' (you)':''}</div><div class="mstatus">No posts yet</div></div>
+        </div>`;
     }).join('');
-    return `
-      <div class="criterion open" id="crit-${crit.id}">
-        <div class="criterion-head" onclick="toggleCriterion('${crit.id}')">
-          <div><div class="cname">${crit.num||''} ${crit.name}</div></div>
-          <div style="display:flex;align-items:center;gap:8px;">
-            <span class="cpts">${crit.maxPoints} pts max</span>
-            <span class="ctoggle">▾</span>
-          </div>
-        </div>
-        <div class="criterion-body">${tiersHtml}</div>
-      </div>`;
-  }).join('');
+  }
+
+  const rubricHtml = buildRubricTable(data.rubric);
 
   document.getElementById('content').innerHTML = `
-    <div class="grading-toolbar">
-      <select onchange="gradingWeek=parseInt(this.value); gradingIdx=0; gradingSelections={}; renderGrading();">${weekOptions}</select>
-      <div class="progress-bar" style="flex:1;max-width:240px;">
-        <span class="ptext">Graded</span>
-        <span class="ptext ptotal">${gradedCount} / ${studentNumbers.length}</span>
-      </div>
-      <button class="search-btn" onclick="openStudentSearch()" title="Search students">🔍</button>
-    </div>
-    <div class="total-pts-note" style="margin:-8px 0 14px;">Using rubric version starting Week ${rubricVersion.startWeek} (Rubric tab to manage versions)</div>
-    <div class="grading-layout">
-      <div>${bodyHtml}</div>
-      <div class="grade-sidebar card">
-        <div class="student-nav">
-          <button class="nav-arrow" onclick="navStudent(-1)">‹</button>
-          <div class="id">
-            <div class="avatar" style="background:var(--postal-blue)">${initials(author.name)}</div>
-            <div class="nm">${author.name}</div>
-          </div>
-          <button class="nav-arrow" onclick="navStudent(1)">›</button>
-        </div>
-        <div class="feedback-box">
-          <label class="field-label">Overall feedback (shown to student)</label>
-          <textarea id="feedbackInput" placeholder="Write some overall advice...">${gradingFeedbackDraft[sn] || ''}</textarea>
-        </div>
-        ${criteriaHtml}
-        <div class="grade-actions">
-          <button class="btn btn-ghost" style="flex:1;" onclick="saveGrade(false)">Save</button>
-          <button class="btn btn-primary" style="flex:1;" onclick="saveGrade(true)">Save &amp; Next →</button>
-        </div>
+    <div class="card week-head">
+      <div class="label">Week ${String(sched.Week).padStart(2,'0')} · ${sched.DateRangeLabel}</div>
+      <div class="deadline-pill" style="display:block;text-align:center;margin:10px auto 0;width:fit-content;${postOpen?'':'background:#F2F0E8;color:var(--ink-soft);border-color:var(--border);'}">
+        ${postOpen ? 'Posting window is open' : 'Posting window closed'}
       </div>
     </div>
+    ${buildCompletionTimeline(data)}
+    <div class="card prompt-card">
+      <div class="eyebrow">Prompt</div>
+      <div class="ptext">${sched.Prompt}</div>
+    </div>
+    ${entryBlockHtml}
+    ${data.settings.GroupsEnabled ? `
+    <div class="section-label">Your group this week</div>
+    <div class="card">${membersHtml}</div>` : ''}
+    <div class="section-label">Rubric</div>
+    ${rubricHtml}
   `;
+  wireComposerEvents();
+  currentMediaType = null;
+  currentMediaValue = null;
+  renderComposerMediaArea();
 }
 
-function toggleCriterion(critId){ document.getElementById('crit-'+critId).classList.toggle('open'); }
-function selectTier(sn, critId, idx){
-  if(!gradingSelections[sn]) gradingSelections[sn] = {};
-  gradingSelections[sn][critId] = idx;
-}
-function navStudent(dir){
-  gradingIdx += dir;
-  renderGrading();
+function openComposer(){
+  document.getElementById('startWritingBtn').classList.add('hidden');
+  document.getElementById('composerForm').classList.remove('hidden');
+  isWritingSomething = true;
 }
 
-async function saveGrade(andNext){
-  const subResult = gradingSubmissionsCache[gradingWeek];
-  const studentNumbers = subResult.roster.map(r=>r.studentNumber);
-  const sn = studentNumbers[((gradingIdx % studentNumbers.length)+studentNumbers.length)%studentNumbers.length];
-  gradingFeedbackDraft[sn] = document.getElementById('feedbackInput').value;
-
-  const rubricVersion = getRubricVersionForWeek(gradingWeek);
-  const sel = gradingSelections[sn] || {};
-  const auto = gradingAutoSelections[sn] || {};
-  const grades = rubricVersion.criteria
-    .filter(crit => sel[crit.id] !== undefined)
-    .map(crit => ({
-      criterionId: crit.id,
-      tierOrder: sel[crit.id],
-      wasOverridden: auto[crit.id] !== undefined && auto[crit.id] !== sel[crit.id],
-    }));
-
-  showLoading('Saving grade…');
-  const result = await callApi('saveGrade', {
-    classId: currentClass, studentNumber: sn, week: gradingWeek,
-    grades, overallFeedback: gradingFeedbackDraft[sn], gradedBy: currentTeacher.displayName,
+function wireComposerEvents(){
+  const postTextEl = document.getElementById('postText');
+  if(!postTextEl) return;
+  postTextEl.addEventListener('paste', e=>{ e.preventDefault(); showTabWarningModal("Pasting isn't allowed", "Please type your entry yourself — pasted text isn't accepted here."); });
+  postTextEl.addEventListener('drop', e=>{ e.preventDefault(); showTabWarningModal("Dropping text isn't allowed", "Please type your entry yourself — dropped text isn't accepted here."); });
+  postTextEl.addEventListener('input', ()=>{
+    const words = postTextEl.value.trim().split(/\s+/).filter(Boolean).length;
+    document.getElementById('wordCountLabel').textContent = words + (words===1 ? ' word' : ' words');
   });
-  hideLoading();
+}
 
-  if(result.success){
-    gradingSavedSet[sn] = true;
-    showToast(`Saved grade for ${author_name_lookup(sn)}.`);
-    if(andNext) navStudent(1); else renderGrading();
-  } else {
-    showToast(result.error || "Couldn't save grade.");
+/* ============ MEDIA: real image compression + Drive upload, real YouTube parsing ============ */
+// Photo or video, never both — tracked as one type+value pair rather than two separate slots.
+let currentMediaType = null;  // 'image' | 'youtube' | null
+let currentMediaValue = null; // URL (image) or video ID (youtube)
+let mediaUploadMode = 'compose'; // 'compose' (new post), 'editPost' (existing post), or 'profile'
+let mediaUploadPostId = null;
+let mediaUploadSlotId = 'imageSlot';
+
+function triggerImageUpload(mode, postId, slotId){
+  mediaUploadMode = mode || 'compose';
+  mediaUploadPostId = postId || null;
+  mediaUploadSlotId = slotId || 'imageSlot';
+  const input = document.getElementById('imageFileInput');
+  input.value = ''; // reset so re-selecting the same file still fires 'change'
+  input.click();
+}
+
+function renderComposerMediaArea(){
+  const area = document.getElementById('composerMediaArea');
+  if(!area) return;
+  if(!currentMediaType){
+    area.innerHTML = `
+      <div class="media-row">
+        <div class="media-slot" id="imageSlot" onclick="triggerImageUpload('compose', null, 'imageSlot')"><span>📷</span><span>Add a photo</span></div>
+        <div class="media-slot" id="ytSlot" onclick="openYouTubeInput('ytSlot','compose', null)"><span>▶</span><span>Add YouTube link</span></div>
+      </div>`;
+  } else if(currentMediaType === 'image'){
+    area.innerHTML = `
+      <img src="${currentMediaValue}" style="display:block;margin:0 auto;max-width:320px;max-height:280px;width:auto;height:auto;border-radius:10px;object-fit:contain;">
+      <div class="media-row" style="margin-top:8px;justify-content:center;">
+        <button class="btn btn-ghost btn-sm" onclick="triggerImageUpload('compose', null, 'composerMediaArea')">🔁 Replace photo</button>
+        <button class="btn btn-ghost btn-sm" onclick="removeComposerMedia()">✕ Remove photo</button>
+      </div>`;
+  } else if(currentMediaType === 'youtube'){
+    area.innerHTML = `
+      <div class="yt-thumb" style="margin:0 auto;width:320px;height:180px;border-radius:10px;background-size:cover;background-position:center;background-image:url(https://img.youtube.com/vi/${currentMediaValue}/hqdefault.jpg);"></div>
+      <div class="media-row" style="margin-top:8px;justify-content:center;">
+        <button class="btn btn-ghost btn-sm" onclick="openYouTubeInput('composerMediaArea','compose', null)">🔁 Replace video</button>
+        <button class="btn btn-ghost btn-sm" onclick="removeComposerMedia()">✕ Remove video</button>
+      </div>`;
   }
 }
-function author_name_lookup(sn){
-  const r = gradingSubmissionsCache[gradingWeek].roster.find(r=>r.studentNumber===sn);
-  return r ? r.name : sn;
+
+function removeComposerMedia(){
+  currentMediaType = null;
+  currentMediaValue = null;
+  renderComposerMediaArea();
 }
 
-/* ====================== STUDENT SEARCH MODAL ====================== */
-function openStudentSearch(){
-  document.getElementById('studentSearchModal').classList.add('show');
-  const input = document.getElementById('studentSearchInput');
-  input.value = '';
-  renderStudentSearchList('');
-  input.focus();
-}
-function closeStudentSearch(){ document.getElementById('studentSearchModal').classList.remove('show'); }
-function filterStudentSearch(){ renderStudentSearchList(document.getElementById('studentSearchInput').value.toLowerCase()); }
-function renderStudentSearchList(query){
-  const subResult = gradingSubmissionsCache[gradingWeek];
-  if(!subResult) return;
-  const filtered = subResult.roster.filter(r=>
-    r.name.toLowerCase().includes(query) || r.studentNumber.includes(query));
-  document.getElementById('studentSearchList').innerHTML = filtered.map(r=>{
-    const graded = !!gradingSavedSet[r.studentNumber];
-    return `
-      <div class="search-result-row" onclick="jumpToStudent('${r.studentNumber}')">
-        <div class="avatar" style="background:var(--postal-blue);">${initials(r.name)}</div>
-        <div>
-          <div class="nm">${r.name}</div>
-          <div class="st">${graded ? '✓ Graded' : 'Not graded yet'}</div>
-        </div>
-      </div>`;
-  }).join('') || '<div class="empty-note">No matching students.</div>';
-}
-function jumpToStudent(sn){
-  const subResult = gradingSubmissionsCache[gradingWeek];
-  const studentNumbers = subResult.roster.map(r=>r.studentNumber);
-  gradingIdx = studentNumbers.indexOf(sn);
-  closeStudentSearch();
-  renderGrading();
-}
-
-/* ====================== CONFIRM MODAL ====================== */
-let _confirmCallback = null;
-function showConfirmModal(text, onConfirm){
-  document.getElementById('confirmModalText').textContent = text;
-  _confirmCallback = onConfirm;
-  document.getElementById('confirmModal').classList.add('show');
-}
-function closeConfirmModal(){
-  document.getElementById('confirmModal').classList.remove('show');
-  _confirmCallback = null;
-}
-document.getElementById('confirmModalOkBtn').onclick = function(){
-  const cb = _confirmCallback;
-  closeConfirmModal();
-  if(cb) cb();
-};
-
-/* ====================== SCHEDULE TAB ====================== */
-function renderSchedule(){
-  const weeksHtml = classData.schedule.slice().sort((a,b)=>b.Week-a.Week).map(s=>{
-    const w = s.Week;
-    const toLocal = v => v ? new Date(v).toISOString().slice(0,16) : '';
-    return `
-      <div class="card">
-        <div class="sub-title" style="font-size:1.05rem;">Week ${String(w).padStart(2,'0')}</div>
-        <label class="field-label">Date range label</label>
-        <input type="text" value="${s.DateRangeLabel||''}" onchange="saveScheduleField(${w},'dateRangeLabel',this.value)">
-        <label class="field-label" style="margin-top:10px;">Prompt</label>
-        <input type="text" value="${s.Prompt||''}" onchange="saveScheduleField(${w},'prompt',this.value)">
-        <div class="week-edit-grid" style="margin-top:12px;">
-          <div><label class="field-label">Post opens</label><input type="datetime-local" value="${toLocal(s.PostOpen)}" onchange="saveScheduleField(${w},'postOpen',this.value)"></div>
-          <div><label class="field-label">Post closes</label><input type="datetime-local" value="${toLocal(s.PostClose)}" onchange="saveScheduleField(${w},'postClose',this.value)"></div>
-          <div><label class="field-label">Picture deadline</label><input type="datetime-local" value="${toLocal(s.PictureDeadline)}" onchange="saveScheduleField(${w},'pictureDeadline',this.value)"></div>
-          <div><label class="field-label">Comment deadline</label><input type="datetime-local" value="${toLocal(s.CommentDeadline)}" onchange="saveScheduleField(${w},'commentDeadline',this.value)"></div>
-          <div><label class="field-label">Reply deadline</label><input type="datetime-local" value="${toLocal(s.ReplyDeadline)}" onchange="saveScheduleField(${w},'replyDeadline',this.value)"></div>
-        </div>
-      </div>`;
-  }).join('');
-  document.getElementById('content').innerHTML = `
-    <div class="section-label">Weekly deadlines — ${currentClass}</div>
-    ${weeksHtml || '<div class="card empty-note">No weeks yet.</div>'}
-    <div class="card">
-      <label class="field-label">Add a new week</label>
-      <input type="number" id="newWeekNum" placeholder="Week number" style="margin-bottom:8px;">
-      <button class="btn btn-ghost" onclick="addNewWeek()">+ Add week</button>
-    </div>
-  `;
-}
-
-async function saveScheduleField(week, field, value){
-  const s = classData.schedule.find(s=>s.Week===week);
-  const payload = {
-    classId: currentClass, week,
-    dateRangeLabel: s.DateRangeLabel, prompt: s.Prompt,
-    postOpen: s.PostOpen, postClose: s.PostClose,
-    pictureDeadline: s.PictureDeadline, commentDeadline: s.CommentDeadline, replyDeadline: s.ReplyDeadline,
-  };
-  payload[field] = value;
-  // keep local copy roughly in sync (field names differ in case between client/sheet — map back)
-  const fieldMap = {dateRangeLabel:'DateRangeLabel', prompt:'Prompt', postOpen:'PostOpen', postClose:'PostClose',
-    pictureDeadline:'PictureDeadline', commentDeadline:'CommentDeadline', replyDeadline:'ReplyDeadline'};
-  s[fieldMap[field]] = value;
-
-  showLoading('Saving…');
-  const result = await callApi('saveSchedule', payload);
-  hideLoading();
-  if(result.success) showToast('Saved.');
-  else showToast(result.error || "Couldn't save.");
-}
-
-async function addNewWeek(){
-  const w = parseInt(document.getElementById('newWeekNum').value);
-  if(!w){ showToast('Enter a week number first.'); return; }
-  if(classData.schedule.find(s=>s.Week===w)){ showToast('That week already exists.'); return; }
-
-  // Auto-fill deadlines from the nearest existing week, shifted by however many weeks apart
-  // they are — this keeps the same day-of-week and time-of-day, which covers the normal case
-  // (adding the very next week) as well as adding a week a bit further out or earlier.
-  const priorWeeks = classData.schedule.filter(s=>s.Week < w).sort((a,b)=>b.Week-a.Week);
-  const reference = priorWeeks[0] || classData.schedule.slice().sort((a,b)=>b.Week-a.Week)[0];
-  const weeksApart = reference ? (w - reference.Week) : 0;
-
-  const shiftDate = d => {
-    if(!d) return '';
-    const dt = new Date(d);
-    if(isNaN(dt.getTime())) return '';
-    dt.setDate(dt.getDate() + weeksApart*7);
-    return dt.toISOString();
-  };
-
-  const formatRangeDate = d => {
-    if(!d) return '';
-    const dt = new Date(d);
-    if(isNaN(dt.getTime())) return '';
-    return dt.toLocaleDateString('en-US', {month:'short', day:'numeric'});
-  };
-
-  const postOpen = reference ? shiftDate(reference.PostOpen) : '';
-  const postClose = reference ? shiftDate(reference.PostClose) : '';
-  const pictureDeadline = reference ? shiftDate(reference.PictureDeadline) : '';
-  const commentDeadline = reference ? shiftDate(reference.CommentDeadline) : '';
-  const replyDeadline = reference ? shiftDate(reference.ReplyDeadline) : '';
-
-  // Cosmetic only — blog-open date through reply-close date, e.g. "Jun 8 – Jun 14".
-  const dateRangeLabel = (postOpen && replyDeadline) ? `${formatRangeDate(postOpen)} – ${formatRangeDate(replyDeadline)}` : '';
-  const prompt = '';
-
-  showLoading('Adding week…');
-  const result = await callApi('saveSchedule', {
-    classId: currentClass, week: w, dateRangeLabel, prompt,
-    postOpen, postClose, pictureDeadline, commentDeadline, replyDeadline,
+// Resizes/re-compresses the image in the browser BEFORE it ever leaves the device —
+// this is what keeps a 4-8MB phone photo down to a couple hundred KB.
+function compressImageFile(file, maxDim, quality){
+  maxDim = maxDim || 1280;
+  quality = quality || 0.72;
+  return new Promise((resolve, reject)=>{
+    const reader = new FileReader();
+    reader.onload = e=>{
+      const img = new Image();
+      img.onload = ()=>{
+        let w = img.width, h = img.height;
+        if(w > h && w > maxDim){ h = Math.round(h * maxDim / w); w = maxDim; }
+        else if(h > maxDim){ w = Math.round(w * maxDim / h); h = maxDim; }
+        const canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        resolve(canvas.toDataURL('image/jpeg', quality)); // data:image/jpeg;base64,xxxx
+      };
+      img.onerror = ()=> reject(new Error('Could not read that image.'));
+      img.src = e.target.result;
+    };
+    reader.onerror = ()=> reject(new Error('Could not read that file.'));
+    reader.readAsDataURL(file);
   });
-  hideLoading();
-  if(result.success){
-    classData.schedule.push({Week:w, DateRangeLabel:dateRangeLabel, Prompt:prompt, PostOpen:postOpen, PostClose:postClose, PictureDeadline:pictureDeadline, CommentDeadline:commentDeadline, ReplyDeadline:replyDeadline});
-    renderSchedule();
-    if(reference){
-      showToast(`Week added — deadlines copied from Week ${String(reference.Week).padStart(2,'0')} (shifted ${weeksApart} week${Math.abs(weeksApart)===1?'':'s'}). Double-check, then edit any field if needed.`);
-    } else {
-      showToast('Week added.');
-    }
-  } else showToast(result.error || "Couldn't add week.");
 }
 
-/* ====================== ROSTER & GROUPS TAB ====================== */
-function renderRoster(){
-  const rosterRows = classData.roster.map(m=>`
-    <tr>
-      <td>${m.StudentNumber}</td>
-      <td>${m.Name}</td>
-      <td><label class="switch"><input type="checkbox" ${m.Active?'checked':''} onchange="toggleRosterActive('${m.StudentNumber}', this.checked)"><span class="slider"></span></label></td>
-    </tr>`).join('');
+async function handleImageFile(event){
+  const file = event.target.files[0];
+  if(!file) return;
+  if(!file.type.startsWith('image/')){ showToast('Please choose an image file.'); return; }
 
-  const weekOptions = classData.schedule.map(s=>`<option value="${s.Week}">Week ${String(s.Week).padStart(2,'0')}</option>`).join('');
-  const latestWeek = classData.groups.length ? Math.max(...classData.groups.map(g=>Number(g.Week))) : null;
-  const currentGroupRows = latestWeek!==null ? classData.groups.filter(g=>Number(g.Week)===latestWeek) : [];
-  const groupIds = [...new Set(currentGroupRows.map(g=>g.GroupID))];
-  const groupsHtml = groupIds.map(gid=>{
-    const members = currentGroupRows.filter(g=>g.GroupID===gid).map(g=>{
-      const r = classData.roster.find(r=>String(r.StudentNumber)===String(g.StudentNumber));
-      return r ? r.Name : g.StudentNumber;
-    });
-    return `<div style="margin-bottom:8px;"><span class="group-pill">Group ${gid}</span>
-      ${members.map(n=>`<span class="group-pill" style="background:#fff;border:1px solid var(--border);color:var(--ink);">${n}</span>`).join('')}</div>`;
-  }).join('');
-
-  const activeCount = classData.roster.filter(r=>r.Active).length;
-  const defaultGroups = Math.max(1, Math.round(activeCount/3)); // aims for ~3 per group by default
-
-  document.getElementById('content').innerHTML = `
-    <div class="section-label">Roster — ${currentClass}</div>
-    <div class="card">
-      <table class="roster-table">
-        <thead><tr><th>Student #</th><th>Name</th><th>Active</th></tr></thead>
-        <tbody>${rosterRows || '<tr><td colspan="3" class="empty-note">No students yet — add rows to the Roster tab in the spreadsheet.</td></tr>'}</tbody>
-      </table>
-    </div>
-
-    <div class="section-label">Groups</div>
-    <div class="card">
-      <div class="week-edit-grid" style="margin-bottom:14px;">
-        <div><label class="field-label">Number of groups</label><input type="number" id="numGroupsInput" value="${defaultGroups}" min="1" max="${activeCount||1}"></div>
-        <div><label class="field-label">Generate for</label><select id="groupWeekSelect">${weekOptions}</select></div>
-      </div>
-      <div style="font-size:0.78rem;color:var(--ink-soft);margin-bottom:12px;">${activeCount} active student${activeCount===1?'':'s'} — leftover students get spread across the first groups (e.g. 12 students / 5 groups → two groups of 3, three of 2).</div>
-      <button class="btn btn-primary" onclick="doGenerateGroups()">🎲 Generate fresh groups</button>
-      <div class="sub-subhead" style="margin-top:18px;">Current groups ${latestWeek!==null?`(Week ${String(latestWeek).padStart(2,'0')})`:''}</div>
-      ${groupsHtml || '<div class="empty-note">No groups yet.</div>'}
-    </div>
-  `;
-}
-
-async function toggleRosterActive(sn, active){
-  showLoading('Saving…');
-  const result = await callApi('updateRosterActive', { classId: currentClass, studentNumber: sn, active });
-  hideLoading();
-  if(result.success){
-    const r = classData.roster.find(r=>String(r.StudentNumber)===String(sn));
-    if(r) r.Active = active;
-    showToast('Saved.');
-  } else {
-    showToast(result.error || "Couldn't save.");
-    renderRoster(); // revert the checkbox visually
-  }
-}
-
-async function doGenerateGroups(){
-  const week = parseInt(document.getElementById('groupWeekSelect').value);
-  const numberOfGroups = parseInt(document.getElementById('numGroupsInput').value) || 1;
-  showLoading('Generating groups…');
-  const result = await callApi('generateGroups', { classId: currentClass, week, numberOfGroups });
-  hideLoading();
-  if(result.success){
-    showToast(`Created ${result.groupCount} group(s) for ${result.studentCount} students.`);
-    classData = await callApi('getClassData', { classId: currentClass });
-    renderRoster();
-  } else {
-    showToast(result.error || "Couldn't generate groups.");
-  }
-}
-
-/* ====================== RUBRIC TAB ====================== */
-let rubricEditorVersionIdx = null;
-
-function renderRubricTab(){
-  if(rubricEditorVersionIdx===null) rubricEditorVersionIdx = classData.rubricVersions.length - 1;
-  const sorted = classData.rubricVersions;
-
-  const pillsHtml = sorted.map((v,i)=>{
-    const next = sorted[i+1];
-    const range = next ? `Weeks ${v.startWeek}–${next.startWeek-1}` : `Week ${v.startWeek}+ (current)`;
-    return `<button class="version-pill ${i===rubricEditorVersionIdx?'active':''}" onclick="rubricEditorVersionIdx=${i}; renderRubricTab();">
-      Version ${i+1} <span class="vrange">· ${range}</span>
-    </button>`;
-  }).join('');
-
-  if(!sorted.length){
-    document.getElementById('content').innerHTML = `<div class="card empty-note">No rubric versions yet.</div>`;
+  showLoading('Compressing photo…');
+  let dataUrl;
+  try {
+    dataUrl = await compressImageFile(file);
+  } catch(err){
+    hideLoading();
+    showToast(err.message);
     return;
   }
-  const version = sorted[rubricEditorVersionIdx];
-  const totalPts = version.criteria.reduce((s,cr)=>s+cr.maxPoints,0);
 
-  const criteriaHtml = version.criteria.map((crit, ci)=>{
-    const tiersHtml = crit.tiers.map((t,ti)=>`
-      <div class="editor-tier-row">
-        <input type="text" value="${t.label}" placeholder="Tier label" onchange="updateTier(${ci},${ti},'label',this.value)">
-        <input type="text" value="${t.desc}" placeholder="Description (optional)" onchange="updateTier(${ci},${ti},'desc',this.value)">
-        <input type="number" value="${t.points}" placeholder="Pts" onchange="updateTier(${ci},${ti},'points',parseInt(this.value)||0)">
-        <div style="display:flex;gap:4px;">
-          <button class="icon-btn" style="color:var(--ink-soft);" ${ti===0?'disabled':''} onclick="moveTier(${ci},${ti},-1)" title="Move up">↑</button>
-          <button class="icon-btn" style="color:var(--ink-soft);" ${ti===crit.tiers.length-1?'disabled':''} onclick="moveTier(${ci},${ti},1)" title="Move down">↓</button>
-          <button class="icon-btn" onclick="removeTier(${ci},${ti})" title="Remove tier">✕</button>
-        </div>
-      </div>`).join('');
-    return `
-      <div class="editor-criterion">
-        <div class="editor-criterion-head">
-          <div><label class="field-label">Criterion name</label><input type="text" value="${crit.name}" onchange="updateCriterion(${ci},'name',this.value)"></div>
-          <div><label class="field-label">Max points</label><input type="number" value="${crit.maxPoints}" disabled title="Computed from tier points"></div>
-          <div><label class="field-label">Auto-grade by</label>
-            <select onchange="updateCriterion(${ci},'autoType',this.value)">
-              ${['Manual','WordCount','PictureTimeliness','CommentCompletion','ReplyCompletion'].map(t=>`<option value="${t}" ${crit.autoType===t?'selected':''}>${t}</option>`).join('')}
-            </select>
-          </div>
-          <button class="icon-btn" onclick="removeCriterion(${ci})" title="Remove criterion">✕</button>
-        </div>
-        <label class="field-label">Tiers</label>
-        ${tiersHtml}
-        <button class="btn btn-ghost btn-sm" onclick="addTier(${ci})">+ Add tier</button>
-      </div>`;
-  }).join('');
+  const slot = document.getElementById(mediaUploadSlotId);
+  if(slot) slot.innerHTML = `<img src="${dataUrl}" style="width:100%;border-radius:10px;max-height:220px;object-fit:cover;display:block;">`;
 
-  document.getElementById('content').innerHTML = `
-    <div class="section-label">Rubric versions — ${currentClass}</div>
-    <p style="font-size:0.86rem;color:var(--ink-soft);margin:0 0 14px;">
-      Editing a version changes grading for every week mapped to it — including past weeks. To change the rubric
-      <strong>going forward only</strong>, use "Save as new version" below instead.
-    </p>
-    <div>${pillsHtml}</div>
-    <div class="card" style="margin-top:14px;">
-      <div class="total-pts-note">Total: ${totalPts} points across ${version.criteria.length} criteria</div>
-      ${criteriaHtml}
-      <button class="btn btn-ghost" onclick="addCriterion()">+ Add criterion</button>
-      <div class="editor-actions">
-        <button class="btn btn-primary" onclick="saveCurrentRubricVersion()">Save changes to this version</button>
-      </div>
-      <div class="new-version-row">
-        <div>
-          <label class="field-label">Start a new version from week</label>
-          <input type="number" id="newVersionWeek" min="1" placeholder="e.g. 9">
-        </div>
-        <button class="btn btn-ghost" onclick="saveAsNewVersion()">Save as new version →</button>
-      </div>
-    </div>
-  `;
-}
+  const oldImageURL = mediaUploadMode === 'editPost'
+    ? (currentDetailData && currentDetailData.post ? currentDetailData.post.ImageURL : '')
+    : mediaUploadMode === 'profile'
+      ? currentProfilePicURL
+      : (currentMediaType === 'image' ? currentMediaValue : '');
 
-function updateCriterion(ci, field, value){
-  const crit = classData.rubricVersions[rubricEditorVersionIdx].criteria[ci];
-  crit[field] = value;
-  if(field==='name') renderRubricTab();
-}
-function removeCriterion(ci){
-  const crit = classData.rubricVersions[rubricEditorVersionIdx].criteria[ci];
-  showConfirmModal(
-    `Remove "${crit.name}" completely from this rubric version? This can't be undone, and it affects every week using this version.`,
-    ()=>{
-      classData.rubricVersions[rubricEditorVersionIdx].criteria.splice(ci,1);
-      showToast(`"${crit.name}" removed — click "Save changes to this version" to make it permanent.`);
-      renderRubricTab();
-    }
-  );
-}
-function addCriterion(){
-  classData.rubricVersions[rubricEditorVersionIdx].criteria.push({
-    id:'crit'+Date.now(), name:'New Criterion', order:99, autoType:'Manual', maxPoints:10,
-    tiers:[{label:'No submission', desc:'', points:0}, {label:'Good', desc:'', points:10}]
+  showLoading('Uploading photo…');
+  const base64Data = dataUrl.split(',')[1];
+  const result = await callApi('uploadImage', {
+    classId: currentClassId, studentNumber: currentStudent,
+    base64Data, mimeType: 'image/jpeg', oldImageURL,
   });
-  renderRubricTab();
-}
-function updateTier(ci, ti, field, value){
-  const crit = classData.rubricVersions[rubricEditorVersionIdx].criteria[ci];
-  crit.tiers[ti][field] = value;
-  if(field==='points') crit.maxPoints = Math.max(...crit.tiers.map(t=>t.points));
-}
-function removeTier(ci, ti){
-  const crit = classData.rubricVersions[rubricEditorVersionIdx].criteria[ci];
-  crit.tiers.splice(ti,1);
-  crit.maxPoints = crit.tiers.length ? Math.max(...crit.tiers.map(t=>t.points)) : 0;
-  renderRubricTab();
-}
-function moveTier(ci, ti, dir){
-  const tiers = classData.rubricVersions[rubricEditorVersionIdx].criteria[ci].tiers;
-  const newIdx = ti + dir;
-  if(newIdx < 0 || newIdx >= tiers.length) return;
-  [tiers[ti], tiers[newIdx]] = [tiers[newIdx], tiers[ti]];
-  renderRubricTab();
-}
-function addTier(ci){
-  const crit = classData.rubricVersions[rubricEditorVersionIdx].criteria[ci];
-  crit.tiers.push({label:'New tier', desc:'', points:0});
-  renderRubricTab();
-}
 
-async function saveCurrentRubricVersion(){
-  const version = classData.rubricVersions[rubricEditorVersionIdx];
-  showLoading('Saving rubric…');
-  const result = await callApi('saveRubricVersion', { classId: currentClass, versionId: version.versionId, criteria: version.criteria });
-  hideLoading();
-  if(result.success) showToast('Rubric saved.');
-  else showToast(result.error || "Couldn't save rubric.");
-}
+  if(!result.success){
+    hideLoading();
+    if(mediaUploadMode === 'compose') renderComposerMediaArea();
+    else if(mediaUploadMode === 'profile' && slot) slot.innerHTML = avatarInner(currentName, currentProfilePicURL);
+    showToast(result.error || "Couldn't upload that photo — try again.");
+    return;
+  }
 
-async function saveAsNewVersion(){
-  const wk = parseInt(document.getElementById('newVersionWeek').value);
-  if(!wk || wk<1){ showToast('Enter a valid starting week first.'); return; }
-  const currentVersion = classData.rubricVersions[rubricEditorVersionIdx];
-  const cloned = JSON.parse(JSON.stringify(currentVersion.criteria));
-  showLoading('Creating new version…');
-  const result = await callApi('createRubricVersion', { classId: currentClass, startWeek: wk, criteria: cloned });
-  hideLoading();
-  if(result.success){
-    classData.rubricVersions.push({ versionId: result.versionId, startWeek: wk, criteria: cloned });
-    classData.rubricVersions.sort((a,b)=>a.startWeek-b.startWeek);
-    rubricEditorVersionIdx = classData.rubricVersions.findIndex(v=>v.versionId===result.versionId);
-    showToast(`New rubric version created, effective Week ${wk} onward.`);
-    renderRubricTab();
+  if(mediaUploadMode === 'editPost'){
+    showLoading('Saving photo…');
+    const saveResult = await callApi('updatePost', { classId: currentClassId, studentNumber: currentStudent, postId: mediaUploadPostId, imageURL: result.url });
+    hideLoading();
+    if(saveResult.success){ showToast('Photo updated.'); openPostDetail(mediaUploadPostId); }
+    else showToast(saveResult.error || "Couldn't save that photo.");
+  } else if(mediaUploadMode === 'profile'){
+    showLoading('Saving profile picture…');
+    const saveResult = await callApi('updateProfilePic', { classId: currentClassId, studentNumber: currentStudent, profilePicURL: result.url });
+    hideLoading();
+    if(saveResult.success){
+      currentProfilePicURL = result.url;
+      document.getElementById('whoAvatar').innerHTML = avatarInner(currentName, currentProfilePicURL);
+      const bigSlot = document.getElementById('profileAvatarBig');
+      if(bigSlot) bigSlot.innerHTML = avatarInner(currentName, currentProfilePicURL);
+      showToast('Profile picture updated.');
+      renderProfilePage();
+    } else {
+      showToast(saveResult.error || "Couldn't save that profile picture.");
+    }
   } else {
-    showToast(result.error || "Couldn't create new version.");
+    hideLoading();
+    currentMediaType = 'image';
+    currentMediaValue = result.url;
+    renderComposerMediaArea();
+    showToast('Photo attached.');
   }
 }
 
-/* ====================== SETTINGS TAB ====================== */
-function renderSettings(){
-  const s = classData.settings;
-  document.getElementById('content').innerHTML = `
-    <div class="section-label">Feature toggles — ${currentClass}</div>
-    <div class="card">
-      <div class="toggle-row">
-        <div><div class="tname">Groups</div><div class="tdesc">Randomize students into weekly groups for commenting. Turn off if students discuss on an external forum instead.</div></div>
-        <label class="switch"><input type="checkbox" ${s.GroupsEnabled?'checked':''} onchange="saveSettingsField('groupsEnabled',this.checked)"><span class="slider"></span></label>
-      </div>
-      <div class="toggle-row">
-        <div><div class="tname">Comments</div><div class="tdesc">Allow students to comment on groupmates' posts within this site.</div></div>
-        <label class="switch"><input type="checkbox" ${s.CommentsEnabled?'checked':''} onchange="saveSettingsField('commentsEnabled',this.checked)"><span class="slider"></span></label>
-      </div>
-      <div class="toggle-row">
-        <div><div class="tname">Replies</div><div class="tdesc">Allow students to reply to comments they receive.</div></div>
-        <label class="switch"><input type="checkbox" ${s.RepliesEnabled?'checked':''} onchange="saveSettingsField('repliesEnabled',this.checked)"><span class="slider"></span></label>
-      </div>
-      <div class="toggle-row">
-        <div><div class="tname">Picture / video</div><div class="tdesc">Allow photo uploads and YouTube links on posts.</div></div>
-        <label class="switch"><input type="checkbox" ${s.PictureEnabled?'checked':''} onchange="saveSettingsField('pictureEnabled',this.checked)"><span class="slider"></span></label>
-      </div>
-    </div>
+function extractYouTubeId(url){
+  const m = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([A-Za-z0-9_-]{11})/);
+  return m ? m[1] : null;
+}
 
-    <div class="section-label">Account</div>
-    <div class="card">
-      <label class="field-label">Teacher accounts</label>
-      <div style="font-size:0.88rem;color:var(--ink-soft);padding:8px 0;">
-        Managed directly in your Teacher Credentials Google Sheet (username + password per teacher) — not shown here, since passwords should never be visible in the page itself.
+function openYouTubeInput(slotId, mode, postId){
+  mediaUploadMode = mode || 'compose';
+  mediaUploadPostId = postId || null;
+  const slot = document.getElementById(slotId);
+  if(!slot){ showToast("Couldn't open that — try refreshing the page."); return; }
+  if(document.getElementById('ytInlineInput')) return; // already open
+  slot.innerHTML = `
+    <div style="width:100%;" onclick="event.stopPropagation()">
+      <input type="text" id="ytInlineInput" placeholder="Paste YouTube link..." style="margin-bottom:6px;">
+      <button class="btn btn-ghost btn-sm" style="width:100%;" onclick="confirmYouTubeLink('${slotId}')">Add</button>
+    </div>`;
+  document.getElementById('ytInlineInput').focus();
+}
+
+async function confirmYouTubeLink(slotId){
+  const input = document.getElementById('ytInlineInput');
+  const id = extractYouTubeId(input.value.trim());
+  if(!id){
+    showToast("That doesn't look like a YouTube link — try pasting the full URL.");
+    return;
+  }
+
+  if(mediaUploadMode === 'editPost'){
+    showLoading('Saving video…');
+    const result = await callApi('updatePost', { classId: currentClassId, studentNumber: currentStudent, postId: mediaUploadPostId, youtubeURL: id });
+    hideLoading();
+    if(result.success){ showToast('Video updated.'); openPostDetail(mediaUploadPostId); }
+    else showToast(result.error || "Couldn't save that video.");
+  } else {
+    currentMediaType = 'youtube';
+    currentMediaValue = id;
+    renderComposerMediaArea();
+    showToast('YouTube video attached.');
+  }
+}
+
+// Removing media on an existing (already-posted) entry — calls the server directly,
+// no upload involved, then refreshes from the real data.
+async function removeDetailMedia(postId, type){
+  showLoading('Removing…');
+  const result = await callApi('updatePost', { classId: currentClassId, studentNumber: currentStudent, postId, imageURL: '', youtubeURL: '' });
+  hideLoading();
+  if(result.success){ showToast('Removed.'); openPostDetail(postId); }
+  else showToast(result.error || "Couldn't remove that.");
+}
+
+async function removeProfilePic(){
+  showLoading('Removing…');
+  const result = await callApi('updateProfilePic', { classId: currentClassId, studentNumber: currentStudent, profilePicURL: '' });
+  hideLoading();
+  if(result.success){
+    currentProfilePicURL = '';
+    document.getElementById('whoAvatar').innerHTML = avatarInner(currentName, '');
+    showToast('Profile picture removed.');
+    renderProfilePage();
+  } else {
+    showToast(result.error || "Couldn't remove that.");
+  }
+}
+
+async function submitPost(){
+  const title = document.getElementById('postTitle').value.trim();
+  const text = document.getElementById('postText').value;
+  if(!title){ showToast("Give your entry a title first."); return; }
+  if(!text.trim()){ showToast("Write something before posting."); return; }
+  showLoading('Submitting…');
+  const result = await callApi('createPost', {
+    classId: currentClassId, studentNumber: currentStudent, week: CURRENT_WEEK,
+    title, textContent: text,
+    imageURL: currentMediaType === 'image' ? currentMediaValue : '',
+    youtubeURL: currentMediaType === 'youtube' ? currentMediaValue : '',
+  });
+  hideLoading();
+  if(result.success){
+    currentMediaType = null; currentMediaValue = null;
+    showToast("Entry posted.");
+    renderNewPostTab();
+  } else {
+    showToast(result.error || "Couldn't post — try again.");
+  }
+}
+
+/* ============ POST DETAIL ============ */
+let currentDetailData = null;
+
+async function openPostDetail(postId){
+  document.getElementById('content').innerHTML = `<div class="card empty-note">Loading…</div>`;
+  const data = await callApi('getPostDetail', { classId: currentClassId, postId, studentNumber: currentStudent });
+  if(!data.success){
+    document.getElementById('content').innerHTML = `
+      <button class="back-link" onclick="renderNewPostTab()">← Back</button>
+      <div class="card empty-note">${data.error || "Something went wrong loading this post."}</div>`;
+    return;
+  }
+  currentDetailData = data;
+  const post = data.post;
+  const wc = post.TextContent.trim().split(/\s+/).filter(Boolean).length;
+
+  // Arm writing-protection if there's an actual writing control on this page (a comment box,
+  // or the possibility of a reply box) — not just because the post happens to be open.
+  const hasReplyableComment = data.comments.some(c=>!c.reply);
+  isWritingSomething = (data.commentOpen && !data.isOwnPost) || (data.isOwnPost && data.replyOpen && hasReplyableComment);
+
+  const commentsHtml = data.comments.map(c=>{
+    let replyHtml = '';
+    if(c.reply){
+      replyHtml = `<div class="reply"><div class="comment"><div class="avatar" style="background:var(--postal-blue)">${avatarInner(c.reply.name, c.reply.profilePicURL)}</div><div class="comment-body"><div class="c-name">${c.reply.name}</div><div class="c-text">${c.reply.text}</div></div></div></div>`;
+    } else if(data.replyOpen && data.isOwnPost){
+      replyHtml = `<div class="reply"><button class="reply-link" onclick="showReplyBox('${c.commentId}')">Reply</button>
+        <div class="reply-box-wrap hidden" id="replybox-${c.commentId}">
+          <div class="reply-box">
+            <textarea id="replyinput-${c.commentId}" rows="2" placeholder="Write a reply..."></textarea>
+            <button class="btn btn-ghost" onclick="submitReply('${c.commentId}')">Send</button>
+          </div>
+          <div class="word-count" id="replyinput-wc-${c.commentId}">0 words (30+ needed for credit)</div>
+        </div></div>`;
+    } else if(!c.reply && data.isOwnPost && !data.replyOpen){
+      replyHtml = `<div class="reply"><div class="closed-note" style="margin-top:6px;">Reply period closed.</div></div>`;
+    }
+    return `<div class="comment"><div class="avatar" style="background:var(--postal-blue)">${avatarInner(c.name, c.profilePicURL)}</div><div class="comment-body"><div class="c-name">${c.name}</div><div class="c-text">${c.text}</div></div></div>${replyHtml}`;
+  }).join('');
+
+  const alreadyCommented = data.comments.some(c=>String(c.studentNumber)===String(currentStudent));
+  let commentInputHtml;
+  if(!data.commentOpen){
+    commentInputHtml = `<div class="closed-note">Comment period closed for this week.</div>`;
+  } else if(data.isOwnPost || alreadyCommented){
+    commentInputHtml = '';
+  } else {
+    commentInputHtml = `<div class="comment-input-row"><textarea id="newcomment" rows="2" placeholder="Write a comment..."></textarea><button class="btn btn-primary" onclick="submitComment('${postId}')">Send</button></div>
+       <div class="word-count" id="newcomment-wc">0 words (30+ needed for credit)</div>`;
+  }
+
+  // Photo OR video, never both. Three states: neither set (show both add-options),
+  // photo set (show it + replace/remove), or video set (show it + replace/remove).
+  let mediaColHtml = '';
+  let mediaEditHtml = '';
+  const canEditMedia = data.isOwnPost && data.pictureEditable;
+
+  if(post.ImageURL){
+    mediaColHtml = `<img src="${post.ImageURL}">`;
+    if(canEditMedia){
+      mediaEditHtml = `<div class="media-row" style="margin-top:8px;">
+        <button class="btn btn-ghost btn-sm" onclick="triggerImageUpload('editPost','${postId}','detailMediaArea')">🔁 Replace photo</button>
+        <button class="btn btn-ghost btn-sm" onclick="removeDetailMedia('${postId}','image')">✕ Remove photo</button>
+      </div>`;
+    }
+  } else if(post.YouTubeURL){
+    mediaColHtml = `<a href="https://www.youtube.com/watch?v=${post.YouTubeURL}" target="_blank" style="display:block;position:relative;border-radius:10px;overflow:hidden;">
+      <img src="https://img.youtube.com/vi/${post.YouTubeURL}/hqdefault.jpg" style="width:100%;height:150px;object-fit:cover;display:block;">
+      <span style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#fff;font-size:1.8rem;background:rgba(0,0,0,0.15);">▶</span>
+    </a>`;
+    if(canEditMedia){
+      mediaEditHtml = `<div class="media-row" style="margin-top:8px;">
+        <button class="btn btn-ghost btn-sm" onclick="openYouTubeInput('detailMediaArea','editPost','${postId}')">🔁 Replace video</button>
+        <button class="btn btn-ghost btn-sm" onclick="removeDetailMedia('${postId}','youtube')">✕ Remove video</button>
+      </div>`;
+    }
+  } else if(canEditMedia){
+    mediaEditHtml = `<div class="media-row">
+      <div class="media-slot" id="detailImageSlot" onclick="triggerImageUpload('editPost','${postId}','detailImageSlot')"><span>📷</span><span>Add a photo</span></div>
+      <div class="media-slot" id="detailYtSlot" onclick="openYouTubeInput('detailYtSlot','editPost','${postId}')"><span>▶</span><span>Add YouTube link</span></div>
+    </div>`;
+  }
+
+  const hasMediaCol = !!(mediaColHtml || mediaEditHtml);
+
+  const editButtonHtml = (data.isOwnPost && data.postOpen)
+    ? `<button class="btn btn-ghost btn-sm" style="margin-bottom:12px;" onclick="startEditPost('${postId}')">✏️ Edit entry</button>`
+    : '';
+
+  document.getElementById('content').innerHTML = `
+    <button class="back-link" onclick="renderNewPostTab()">← Back</button>
+    <div class="card post-card">
+      <div class="stamp"><span class="wk">WEEK</span><span class="num">${String(post.Week).padStart(2,'0')}</span></div>
+      <div id="postDetailTitleArea">
+        <div class="post-detail-title">${post.Title}</div>
+        ${editButtonHtml}
       </div>
-      <label class="field-label" style="margin-top:12px;">Drive folder for uploaded images</label>
-      <input type="text" value="${s.DriveImageFolderID||''}" disabled>
+      <div class="post-head">
+        <div class="avatar" style="background:var(--postal-blue)">${avatarInner(data.authorName, data.authorProfilePicURL)}</div>
+        <div><div class="name">${data.authorName}</div><div class="when">${data.scheduleLabel}</div></div>
+      </div>
+      <div class="post-detail-grid">
+        <div id="postDetailBodyArea">
+          <div class="post-body">${post.TextContent}</div>
+          <div class="word-count">${wc} words</div>
+        </div>
+        ${hasMediaCol ? `<div class="post-detail-media-col" id="detailMediaArea">${mediaColHtml}${mediaEditHtml}</div>` : ''}
+      </div>
+      <div class="comments">
+        ${commentsHtml}
+        ${commentInputHtml}
+      </div>
     </div>
+  `;
+
+  if(data.commentOpen && !data.isOwnPost) wireWordCounter('newcomment', 'newcomment-wc');
+  if(data.replyOpen && data.isOwnPost){
+    data.comments.filter(c=>!c.reply).forEach(c=>{
+      wireWordCounter(`replyinput-${c.commentId}`, `replyinput-wc-${c.commentId}`);
+    });
+  }
+}
+
+function startEditPost(postId){
+  isWritingSomething = true;
+  const post = currentDetailData.post;
+  document.getElementById('postDetailTitleArea').innerHTML = `
+    <input type="text" id="editTitleInput" value="${post.Title.replace(/"/g,'&quot;')}" style="font-weight:600;font-size:1.1rem;margin-bottom:10px;">`;
+  document.getElementById('postDetailBodyArea').innerHTML = `
+    <textarea id="editTextInput" style="min-height:200px;line-height:1.6;">${post.TextContent}</textarea>
+    <div class="meta-row"><span id="editWordCountLabel">${wordCountOf(post.TextContent)} words</span><span></span></div>
+    <div class="grade-actions" style="margin-top:10px;">
+      <button class="btn btn-ghost" style="flex:1;" onclick="openPostDetail('${postId}')">Cancel</button>
+      <button class="btn btn-primary" style="flex:1;" onclick="savePostEdit('${postId}')">Save changes</button>
+    </div>`;
+  const ta = document.getElementById('editTextInput');
+  ta.addEventListener('paste', e=>{ e.preventDefault(); showTabWarningModal("Pasting isn't allowed", "Please type your entry yourself — pasted text isn't accepted here."); });
+  ta.addEventListener('input', ()=>{
+    document.getElementById('editWordCountLabel').textContent = wordCountOf(ta.value) + ' words';
+  });
+}
+function wordCountOf(text){ return text.trim().split(/\s+/).filter(Boolean).length; }
+
+async function savePostEdit(postId){
+  const title = document.getElementById('editTitleInput').value.trim();
+  const text = document.getElementById('editTextInput').value;
+  if(!title){ showToast('Title can\'t be empty.'); return; }
+  if(!text.trim()){ showToast("Entry can't be empty."); return; }
+  showLoading('Saving…');
+  const result = await callApi('updatePost', { classId: currentClassId, studentNumber: currentStudent, postId, title, textContent: text });
+  hideLoading();
+  if(result.success){ showToast('Entry updated.'); openPostDetail(postId); }
+  else showToast(result.error || "Couldn't save changes.");
+}
+
+function wireWordCounter(inputId, labelId){
+  const el = document.getElementById(inputId);
+  const label = document.getElementById(labelId);
+  if(!el || !label) return;
+  el.addEventListener('input', ()=>{
+    const words = el.value.trim().split(/\s+/).filter(Boolean).length;
+    label.textContent = words + (words===1 ? ' word' : ' words') + ' (30+ needed for credit)';
+    label.style.color = words>=30 ? 'var(--postal-blue)' : 'var(--ink-soft)';
+  });
+  el.addEventListener('paste', e=>{ e.preventDefault(); showTabWarningModal("Pasting isn't allowed", "Please type your comment or reply yourself — pasted text isn't accepted here."); });
+  el.addEventListener('drop', e=>{ e.preventDefault(); showTabWarningModal("Dropping text isn't allowed", "Please type your comment or reply yourself — dropped text isn't accepted here."); });
+}
+
+function showReplyBox(commentId){
+  document.getElementById(`replybox-${commentId}`).classList.toggle('hidden');
+}
+
+async function submitComment(postId){
+  const input = document.getElementById('newcomment');
+  const text = input.value.trim();
+  if(!text) return;
+  showLoading('Submitting…');
+  const result = await callApi('createComment', { classId: currentClassId, postId, studentNumber: currentStudent, content: text });
+  hideLoading();
+  if(result.success) openPostDetail(postId);
+  else showToast(result.error || "Couldn't post comment.");
+}
+
+async function submitReply(commentId){
+  const input = document.getElementById(`replyinput-${commentId}`);
+  const text = input.value.trim();
+  if(!text) return;
+  showLoading('Submitting…');
+  const result = await callApi('createReply', { classId: currentClassId, commentId, studentNumber: currentStudent, content: text });
+  hideLoading();
+  if(result.success) openPostDetail(currentDetailData.post.PostID);
+  else showToast(result.error || "Couldn't post reply.");
+}
+
+/* ============ RUBRIC TABLE (read-only preview) ============ */
+function qualityClass(label, points, maxPoints){
+  const l = (label||'').toLowerCase();
+  if(l.includes('excellent') || l.includes('good') || l.includes('on time')) return 'qual-green';
+  if(l.includes('average')) return 'qual-yellow';
+  if(l.includes('needs improvement') || l.includes('no submission') || l.includes('late') || l.includes('missing')) return 'qual-red';
+  const ratio = maxPoints>0 ? points/maxPoints : 0;
+  if(ratio>=0.7) return 'qual-green';
+  if(ratio>=0.3) return 'qual-yellow';
+  return 'qual-red';
+}
+
+function formatDeadline(d){
+  if(!d) return '';
+  const dt = new Date(d);
+  return dt.toLocaleString('en-US', {month:'short', day:'numeric', hour:'numeric', minute:'2-digit'});
+}
+
+function buildCompletionTimeline(data){
+  const now = new Date();
+  const sched = data.schedule;
+  const steps = [];
+
+  const postDone = !!data.myPost;
+  steps.push({
+    label: 'Post blog', sub: '', done: postDone, deadline: sched.PostClose,
+    submittedHtml: postDone ? `<div class="tl-submitted">Submitted: ${formatDeadline(data.myPost.CreatedAt)}</div>` : '',
+  });
+
+  if(data.settings.PictureEnabled){
+    const pictureDone = !!(data.myPost && (data.myPost.ImageURL || data.myPost.YouTubeURL));
+    steps.push({
+      label: 'Post picture', sub: '', done: pictureDone, deadline: sched.PictureDeadline,
+      submittedHtml: pictureDone ? `<div class="tl-submitted">Submitted: ${formatDeadline(data.myPost.LastEditedAt)}</div>` : '',
+    });
+  }
+
+  // "Done" requires either real completed work, OR confirmation that nothing was ever
+  // possible (the other side's window closed with zero participation) — not a perpetual
+  // "0 of 0" that would otherwise sit stuck on red forever through no fault of the student.
+  const postClosePassed = now > new Date(sched.PostClose);
+  const commentDeadlinePassed = now > new Date(sched.CommentDeadline);
+
+  const commentDetails = data.commentDetails || [];
+  const commentsDone = (commentDetails.length > 0 && commentDetails.every(c=>c.done))
+    || (commentDetails.length === 0 && postClosePassed); // no groupmate ever posted, and posting's now closed
+  steps.push({
+    label: 'Comments', sub: '(1 per member)', done: commentsDone, deadline: sched.CommentDeadline,
+    submittedHtml: commentDetails.length
+      ? commentDetails.map(c=> `<div class="tl-submitted">${c.name}: ${c.done ? formatDeadline(c.createdAt) : '—'}</div>`).join('')
+      : (postClosePassed ? `<div class="tl-submitted">No groupmates posted — nothing to comment on.</div>` : ''),
+  });
+
+  const replyDetails = data.replyDetails || [];
+  const repliesDone = !!data.myPost && (
+    (replyDetails.length > 0 && replyDetails.every(r=>r.done))
+    || (replyDetails.length === 0 && commentDeadlinePassed) // nobody ever commented, and commenting's now closed
+  );
+  steps.push({
+    label: 'Replies', sub: '(1 per comment received)', done: repliesDone, deadline: sched.ReplyDeadline,
+    submittedHtml: replyDetails.length
+      ? replyDetails.map(r=> `<div class="tl-submitted">${r.name}: ${r.done ? formatDeadline(r.createdAt) : '—'}</div>`).join('')
+      : (data.myPost && commentDeadlinePassed ? `<div class="tl-submitted">No comments received — nothing to reply to.</div>` : ''),
+  });
+
+  const stepsHtml = steps.map((s, i)=>{
+    let status = s.done ? 'done' : (now > new Date(s.deadline) ? 'overdue' : 'pending');
+    // Cascade: missing the blog post entirely makes "Post picture" and "Replies" impossible —
+    // force those to overdue immediately rather than waiting on their own deadlines. Comments
+    // is unaffected since commenting depends on groupmates' posts, not your own.
+    const postStep = steps[0];
+    const postOverdue = !postStep.done && now > new Date(postStep.deadline);
+    if(postOverdue && (s.label === 'Post picture' || s.label === 'Replies')) status = 'overdue';
+    const icon = status === 'done' ? '✓' : (status === 'overdue' ? '✕' : '');
+    return `
+      <div class="tl-step ${status}">
+        <div class="tl-node">${icon}</div>
+        <div class="tl-label">${s.label}</div>
+        ${s.sub ? `<div class="tl-sub">${s.sub}</div>` : ''}
+        <div class="tl-date">Due: ${formatDeadline(s.deadline)}</div>
+        ${s.submittedHtml}
+      </div>`;
+  }).join('');
+
+  return `<div class="card"><div class="completion-timeline">${stepsHtml}</div></div>`;
+}
+
+function buildRubricTable(rubric){
+  if(!rubric || rubric.length===0) return `<div class="card empty-note">No rubric set up yet.</div>`;
+  const maxTiers = Math.max(...rubric.map(c=>c.tiers.length));
+  const rows = rubric.map(crit=>{
+    const maxPoints = Math.max(...crit.tiers.map(t=>Number(t.points)||0));
+    const cells = [];
+    for(let i=0;i<maxTiers;i++){
+      const t = crit.tiers[i];
+      if(!t){ cells.push('<td class="tier-cell empty"></td>'); continue; }
+      const cls = qualityClass(t.label, Number(t.points)||0, maxPoints);
+      cells.push(`
+        <td class="tier-cell ${cls}">
+          <div class="tlabel">${t.label}</div>
+          ${t.desc ? `<div class="tdesc">${t.desc}</div>` : ''}
+          <span class="tpts">${t.points} pts</span>
+        </td>`);
+    }
+    return `<tr><td class="crit-name">${crit.name}<div class="crit-max">${maxPoints} pts max</div></td>${cells.join('')}</tr>`;
+  }).join('');
+  return `
+    <div class="rubric-table-wrap" id="rubricTableWrap">
+      <table class="rubric-table"><tbody>${rows}</tbody></table>
+    </div>
+    <div class="rubric-scroll-hint">Scroll sideways to see all levels →</div>
   `;
 }
 
-async function saveSettingsField(field, value){
-  classData.settings[field.charAt(0).toUpperCase()+field.slice(1)] = value; // rough local mirror
-  showLoading('Saving…');
-  const result = await callApi('saveSettings', {
-    classId: currentClass,
-    groupSize: classData.settings.GroupSize,
-    groupsEnabled: field==='groupsEnabled' ? value : classData.settings.GroupsEnabled,
-    commentsEnabled: field==='commentsEnabled' ? value : classData.settings.CommentsEnabled,
-    repliesEnabled: field==='repliesEnabled' ? value : classData.settings.RepliesEnabled,
-    pictureEnabled: field==='pictureEnabled' ? value : classData.settings.PictureEnabled,
-  });
-  hideLoading();
-  if(result.success) showToast('Saved.');
-  else showToast(result.error || "Couldn't save.");
+/* ============ TAB-SWITCH DETECTION — only while actively writing, not the whole app ============ */
+let tabAwaySince = null;
+let isWritingSomething = false; // set explicitly when a writing UI opens/closes — see openComposer, startEditPost, openPostDetail, etc.
+
+function isWritingFieldId(id){
+  if(!id) return false;
+  return id === 'postText' || id === 'editTextInput' || id === 'newcomment' || id.startsWith('replyinput-');
 }
+function markTabAway(){
+  const active = document.activeElement;
+  if(!active || !isWritingFieldId(active.id)) return; // cursor wasn't actually in a writing field
+  if(tabAwaySince) return;
+  tabAwaySince = Date.now();
+}
+function markTabReturn(){
+  if(!tabAwaySince) return;
+  const awayMs = Date.now() - tabAwaySince;
+  tabAwaySince = null;
+  if(awayMs > 1500 && currentStudent) showTabWarningModal();
+}
+function showTabWarningModal(title, text){
+  document.getElementById('tabWarningTitle').textContent = title || 'Stay on this page';
+  document.getElementById('tabWarningText').textContent = text || "You switched away while writing. Please stay on this page — using translation tools or other apps while writing isn't allowed, and this has been logged.";
+  document.getElementById('tabWarningModal').classList.add('show');
+}
+function closeTabWarningModal(){ document.getElementById('tabWarningModal').classList.remove('show'); }
+window.addEventListener('blur', markTabAway);
+window.addEventListener('focus', markTabReturn);
+document.addEventListener('visibilitychange', ()=>{ if(document.hidden) markTabAway(); else markTabReturn(); });
+window.addEventListener('pagehide', markTabAway);
+window.addEventListener('pageshow', markTabReturn);
 </script>
 
 </body>
