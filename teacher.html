@@ -225,7 +225,7 @@
       <button class="btn btn-primary btn-block" style="margin-top:14px;" onclick="login()">Enter</button>
       <div class="error-msg" id="loginError">Incorrect username or password.</div>
     </div>
-    <div class="version-tag">live-v0.1 — 2026-06-25</div>
+    <div class="version-tag">live-v0.2 — 2026-06-27</div>
   </div>
 
   <div class="class-select-screen hidden" id="classSelectScreen">
@@ -757,7 +757,7 @@ async function addNewWeek(){
     if(!d) return '';
     const dt = new Date(d);
     if(isNaN(dt.getTime())) return '';
-    return dt.toLocaleDateString('en-US', {month:'short', day:'numeric'});
+    return dt.toLocaleDateString('en-US', {weekday:'long', month:'long', day:'numeric'});
   };
 
   const postOpen = reference ? shiftDate(reference.PostOpen) : '';
