@@ -1307,6 +1307,19 @@ window.addEventListener('focus', markTabReturn);
 document.addEventListener('visibilitychange', ()=>{ if(document.hidden) markTabAway(); else markTabReturn(); });
 window.addEventListener('pagehide', markTabAway);
 window.addEventListener('pageshow', markTabReturn);
+
+// ── AUTO-LOGIN FROM DASHBOARD ────────────────────────────────────────────
+(function() {
+  const params = new URLSearchParams(window.location.search);
+  const autoStudent = params.get('student');
+  if (autoStudent) {
+    const input = document.getElementById('studentNumberInput');
+    if (input) {
+      input.value = autoStudent;
+      login();
+    }
+  }
+})();
 </script>
 
 </body>
