@@ -274,7 +274,7 @@
       <button class="btn btn-primary btn-block" style="margin-top:14px;" onclick="login()">Enter</button>
       <div class="error-msg" id="loginError">Student number not found. Check and try again.</div>
     </div>
-    <div class="version-tag">v0.18 — 2026-06-27</div>
+    <div class="version-tag">v0.19 — 2026-06-27</div>
   </div>
 
   <!-- ===================== MAIN APP ===================== -->
@@ -523,11 +523,9 @@ async function renderPreviousWeekDetail(week){
     }).join('');
   }
 
-  const rubricHtml = buildRubricTable(data.rubric);
-
   const gradeSectionHtml = (gradeData.success && gradeData.graded)
     ? buildGradeSection(gradeData)
-    : `<div class="section-label">Grade</div><div class="card empty-note">Not graded yet — check back later.</div>`;
+    : buildUngradedRubricSection(data.rubric);
 
   document.getElementById('content').innerHTML = `
     <button class="back-link" onclick="renderPreviousList()">← Back to previous entries</button>
@@ -543,8 +541,18 @@ async function renderPreviousWeekDetail(week){
     <div class="section-label">Your group that week</div>
     <div class="card">${membersHtml}</div>` : ''}
     ${gradeSectionHtml}
+  `;
+}
+
+// Shown in place of the grade section before the teacher has graded this week — the
+// rubric itself, so the student can still see how it'll be scored, but visually muted
+// so it doesn't read as an actual result.
+function buildUngradedRubricSection(rubric){
+  const rubricHtml = buildRubricTable(rubric);
+  return `
     <div class="section-label">Rubric</div>
-    ${rubricHtml}
+    <div class="card empty-note" style="margin-bottom:10px;">Not graded yet — check back later.</div>
+    <div style="opacity:0.45;pointer-events:none;">${rubricHtml}</div>
   `;
 }
 
