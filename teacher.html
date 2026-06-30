@@ -225,7 +225,7 @@
       <button class="btn btn-primary btn-block" style="margin-top:14px;" onclick="login()">Enter</button>
       <div class="error-msg" id="loginError">Incorrect username or password.</div>
     </div>
-    <div class="version-tag">live-v0.2 — 2026-06-27</div>
+    <div class="version-tag">live-v0.3 — 2026-06-27</div>
   </div>
 
   <div class="class-select-screen hidden" id="classSelectScreen">
@@ -684,7 +684,17 @@ document.getElementById('confirmModalOkBtn').onclick = function(){
 function renderSchedule(){
   const weeksHtml = classData.schedule.slice().sort((a,b)=>b.Week-a.Week).map(s=>{
     const w = s.Week;
-    const toLocal = v => v ? new Date(v).toISOString().slice(0,16) : '';
+    // Previously this did new Date(v).toISOString().slice(0,16) — toISOString() always
+    // returns UTC, so a teacher in JST (UTC+9) would see every deadline shifted 9 hours
+    // earlier than what's actually saved. datetime-local inputs want a wall-clock string
+    // with no timezone info, so we build it from the local getters instead.
+    const toLocal = v => {
+      if(!v) return '';
+      const dt = new Date(v);
+      if(isNaN(dt.getTime())) return '';
+      const pad = n => String(n).padStart(2,'0');
+      return `${dt.getFullYear()}-${pad(dt.getMonth()+1)}-${pad(dt.getDate())}T${pad(dt.getHours())}:${pad(dt.getMinutes())}`;
+    };
     return `
       <div class="card">
         <div class="sub-title" style="font-size:1.05rem;">Week ${String(w).padStart(2,'0')}</div>
