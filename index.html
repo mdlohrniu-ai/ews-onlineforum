@@ -274,7 +274,7 @@
       <button class="btn btn-primary btn-block" style="margin-top:14px;" onclick="login()">Enter</button>
       <div class="error-msg" id="loginError">Student number not found. Check and try again.</div>
     </div>
-    <div class="version-tag">v0.20 — 2026-06-27</div>
+    <div class="version-tag">v0.22 — 2026-06-27</div>
   </div>
 
   <!-- ===================== MAIN APP ===================== -->
@@ -598,6 +598,26 @@ function buildGradeSection(gradeData){
 }
 
 
+/* ============ DRAFT AUTOSAVE (localStorage, survives crashes/closed tabs) ============ */
+// Scoped per class+student+week so switching weeks or students never bleeds drafts together.
+function draftKey(week){
+  return `wf_draft_${currentClassId}_${currentStudent}_${week}`;
+}
+function saveDraft(week, title, text){
+  try{
+    localStorage.setItem(draftKey(week), JSON.stringify({ title, text, savedAt: Date.now() }));
+  }catch(e){ /* storage unavailable (private browsing, full quota) — fail silently, nothing to lose beyond what's already on screen */ }
+}
+function loadDraft(week){
+  try{
+    const raw = localStorage.getItem(draftKey(week));
+    return raw ? JSON.parse(raw) : null;
+  }catch(e){ return null; }
+}
+function clearDraft(week){
+  try{ localStorage.removeItem(draftKey(week)); }catch(e){}
+}
+
 async function renderNewPostTab(){
   isWritingSomething = false;
   document.getElementById('content').innerHTML = `<div class="card empty-note">Loading…</div>`;
@@ -714,15 +734,39 @@ function openComposer(){
   isWritingSomething = true;
 }
 
+// Silently restores an autosaved draft for this week, if one exists — opens the composer
+// already filled in rather than asking the student to confirm first.
+function restoreDraftIfPresent(week){
+  const draft = loadDraft(week);
+  if(!draft || (!draft.title && !draft.text)) return;
+  openComposer();
+  document.getElementById('postTitle').value = draft.title || '';
+  document.getElementById('postText').value = draft.text || '';
+  const postTextEl = document.getElementById('postText');
+  const words = postTextEl.value.trim().split(/\s+/).filter(Boolean).length;
+  document.getElementById('wordCountLabel').textContent = words + (words===1 ? ' word' : ' words');
+}
+
 function wireComposerEvents(){
   const postTextEl = document.getElementById('postText');
+  const postTitleEl = document.getElementById('postTitle');
   if(!postTextEl) return;
   postTextEl.addEventListener('paste', e=>{ e.preventDefault(); showTabWarningModal("Pasting isn't allowed", "Please type your entry yourself — pasted text isn't accepted here."); });
   postTextEl.addEventListener('drop', e=>{ e.preventDefault(); showTabWarningModal("Dropping text isn't allowed", "Please type your entry yourself — dropped text isn't accepted here."); });
+  let draftSaveTimer = null;
+  function scheduleDraftSave(){
+    clearTimeout(draftSaveTimer);
+    draftSaveTimer = setTimeout(()=>{ saveDraft(currentWeek, postTitleEl.value, postTextEl.value); }, 400);
+  }
   postTextEl.addEventListener('input', ()=>{
     const words = postTextEl.value.trim().split(/\s+/).filter(Boolean).length;
     document.getElementById('wordCountLabel').textContent = words + (words===1 ? ' word' : ' words');
+    scheduleDraftSave();
   });
+  postTitleEl.addEventListener('input', scheduleDraftSave);
+  window.addEventListener('pagehide', ()=>{ clearTimeout(draftSaveTimer); saveDraft(currentWeek, postTitleEl.value, postTextEl.value); });
+  window.addEventListener('beforeunload', ()=>{ clearTimeout(draftSaveTimer); saveDraft(currentWeek, postTitleEl.value, postTextEl.value); });
+  restoreDraftIfPresent(currentWeek);
 }
 
 /* ============ MEDIA: real image compression + Drive upload, real YouTube parsing ============ */
@@ -948,6 +992,7 @@ async function submitPost(){
   hideLoading();
   if(result.success){
     currentMediaType = null; currentMediaValue = null;
+    clearDraft(currentWeek);
     showToast("Entry posted.");
     renderNewPostTab();
   } else {
