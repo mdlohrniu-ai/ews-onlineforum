@@ -229,7 +229,7 @@
       <button class="btn btn-primary btn-block" style="margin-top:14px;" onclick="login()">Enter</button>
       <div class="error-msg" id="loginError">Incorrect username or password.</div>
     </div>
-    <div class="version-tag">live-v0.5 — 2026-07-05</div>
+    <div class="version-tag">live-v0.6 — 2026-07-05</div>
   </div>
 
   <div class="class-select-screen hidden" id="classSelectScreen">
@@ -289,7 +289,7 @@ function formatTs(ts){
   if(!ts) return '';
   const d = new Date(ts);
   if(isNaN(d.getTime())) return '';
-  return d.toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'});
+  return d.toLocaleString('en-US',{weekday:'short',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'});
 }
 
 function showToast(msg){
