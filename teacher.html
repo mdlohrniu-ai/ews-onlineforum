@@ -229,7 +229,7 @@
       <button class="btn btn-primary btn-block" style="margin-top:14px;" onclick="login()">Enter</button>
       <div class="error-msg" id="loginError">Incorrect username or password.</div>
     </div>
-    <div class="version-tag">live-v0.7 — 2026-07-05</div>
+    <div class="version-tag">live-v0.8 — 2026-07-09</div>
   </div>
 
   <div class="class-select-screen hidden" id="classSelectScreen">
@@ -393,10 +393,15 @@ function commentsQualify(commentsArr, deadline){
 function autoSelectTier(crit, sub, sn, week, schedule){
   if(crit.autoType==='WordCount'){
     const wc = wordCount(sub.text);
-    if(wc===0) return 0;
-    if(wc<40) return 1;
-    if(wc<80) return 2;
-    return 3;
+    if(wc === 0) return 0;
+    // Use the autoMin values from the actual rubric tiers — iterate from highest down
+    // and return the first tier whose minimum word threshold the student meets.
+    for(let i = crit.tiers.length - 1; i >= 0; i--){
+      const min = (crit.tiers[i].autoMin !== '' && crit.tiers[i].autoMin !== undefined)
+        ? Number(crit.tiers[i].autoMin) : 0;
+      if(wc >= min) return i;
+    }
+    return 0;
   }
   if(crit.autoType==='PictureTimeliness') return sub.image ? 1 : 0;
   if(crit.autoType==='CommentCompletion'){
@@ -449,6 +454,13 @@ function updateGradeTotalDisplay(){
 
 async function loadSubmissionsForWeek(week){
   if(gradingSubmissionsCache[week]) return gradingSubmissionsCache[week];
+  // Fresh load for this week — clear per-student state so saved grades come from the backend
+  gradingSelections = {};
+  gradingAutoSelections = {};
+  gradingFeedbackDraft = {};
+  gradingSavedSet = {};
+  currentGradingRubric = null;
+  currentGradingSn = null;
   const result = await callApi('getSubmissionsForGrading', { classId: currentClass, week });
   if(result.success) gradingSubmissionsCache[week] = result;
   return result;
@@ -457,12 +469,25 @@ async function loadSubmissionsForWeek(week){
 function getSelections(sn, rubric, sub, week, schedule){
   if(!gradingSelections[sn]){
     const sel = {};
-    rubric.forEach(crit=>{
-      const auto = autoSelectTier(crit, sub, sn, week, schedule);
-      if(auto!==null) sel[crit.id] = auto;
-    });
+    if(sub.savedGrades && Object.keys(sub.savedGrades).length > 0){
+      // Restore previously saved grades — these take priority over auto-suggestions
+      rubric.forEach(crit=>{
+        if(sub.savedGrades[crit.id] !== undefined) sel[crit.id] = sub.savedGrades[crit.id];
+      });
+      gradingSavedSet[sn] = true; // mark as already graded so the counter shows correctly
+    } else {
+      // No saved grades yet — seed from auto-grading
+      rubric.forEach(crit=>{
+        const auto = autoSelectTier(crit, sub, sn, week, schedule);
+        if(auto !== null) sel[crit.id] = auto;
+      });
+    }
     gradingSelections[sn] = sel;
     gradingAutoSelections[sn] = Object.assign({}, sel);
+    // Restore saved feedback draft if present and not already locally edited
+    if(sub.savedFeedback && !gradingFeedbackDraft[sn]){
+      gradingFeedbackDraft[sn] = sub.savedFeedback;
+    }
   }
   return gradingSelections[sn];
 }
