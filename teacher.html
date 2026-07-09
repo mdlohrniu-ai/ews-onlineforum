@@ -89,6 +89,10 @@
   .sub-comment-body .cn{font-weight:600;font-size:0.8rem;}
   .sub-comment-body .ct{font-size:0.84rem;margin-top:1px;line-height:1.45;}
   .sub-comment-body .cwc{font-family:'IBM Plex Mono',monospace;font-size:0.66rem;color:var(--ink-soft);margin-top:4px;}
+  .sub-reply{margin-top:7px;padding-top:7px;border-top:1px solid var(--border);}
+  .reply-label{font-size:0.68rem;font-weight:600;color:var(--ink-soft);margin-bottom:2px;letter-spacing:0.02em;}
+  .no-reply-yet{color:#b03030 !important;}
+  .ts{font-family:'IBM Plex Mono',monospace;font-size:0.65rem;color:var(--ink-soft);font-weight:400;margin-left:4px;}
   .empty-note{color:var(--ink-soft);font-size:0.84rem;font-style:italic;}
 
   .grade-sidebar{position:relative;}
@@ -225,7 +229,7 @@
       <button class="btn btn-primary btn-block" style="margin-top:14px;" onclick="login()">Enter</button>
       <div class="error-msg" id="loginError">Incorrect username or password.</div>
     </div>
-    <div class="version-tag">live-v0.3 — 2026-06-27</div>
+    <div class="version-tag">live-v0.5 — 2026-07-05</div>
   </div>
 
   <div class="class-select-screen hidden" id="classSelectScreen">
@@ -281,6 +285,12 @@ let toastTimer;
 
 function initials(name){ return (name||'?').split(' ').map(n=>n[0]).join(''); }
 function wordCount(text){ return (text||'').trim().split(/\s+/).filter(Boolean).length; }
+function formatTs(ts){
+  if(!ts) return '';
+  const d = new Date(ts);
+  if(isNaN(d.getTime())) return '';
+  return d.toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'});
+}
 
 function showToast(msg){
   const t = document.getElementById('toast');
@@ -471,32 +481,60 @@ async function renderGrading(){
     bodyHtml = `<div class="card"><div class="empty-note">No submission from this student for this week.</div></div>`;
   } else {
     const wc = wordCount(sub.text);
-    const mediaHtml = sub.image ? `<div class="sub-media"><img src="${sub.image}"></div>` : '';
+    const postTs = sub.postCreatedAt ? `<span class="ts">${formatTs(sub.postCreatedAt)}</span>` : '';
+    const mediaHtml = sub.image
+      ? `<div class="sub-media"><img src="${sub.image}">${sub.imageCreatedAt ? `<div class="ts" style="text-align:center;margin-top:4px;font-size:0.72rem;">${formatTs(sub.imageCreatedAt)}</div>` : ''}</div>`
+      : '';
+
+    const groupMembersHtml = sub.groupMembers && sub.groupMembers.length
+      ? `<div class="sub-subhead">Group members</div>
+         <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:4px;">
+           ${sub.groupMembers.map(n=>`<span style="background:var(--paper-2);border:1px solid var(--border);border-radius:20px;padding:3px 10px;font-size:0.78rem;">${n}</span>`).join('')}
+         </div>`
+      : '';
+
     const receivedHtml = sub.commentsReceived.length
       ? sub.commentsReceived.map(c=>{
           const cAuthor = subResult.roster.find(r=>r.studentNumber===String(c.from));
           const cwc = wordCount(c.text);
+          const replyHtml = c.reply
+            ? `<div class="sub-reply">
+                 <div class="reply-label">↩ Their reply</div>
+                 <div class="ct">${c.reply.text}</div>
+                 <div class="cwc">${wordCount(c.reply.text)} words · ${formatTs(c.reply.createdAt)}</div>
+               </div>`
+            : `<div class="cwc no-reply-yet">No reply yet</div>`;
           return `
             <div class="sub-comment">
               <div class="avatar" style="background:var(--postal-blue)">${initials(cAuthor?cAuthor.name:c.from)}</div>
               <div class="sub-comment-body">
-                <div class="cn">${cAuthor?cAuthor.name:c.from}</div>
+                <div class="cn">${cAuthor?cAuthor.name:c.from} <span class="ts">${formatTs(c.createdAt)}</span></div>
                 <div class="ct">${c.text}</div>
-                <div class="cwc">${cwc} words ${c.reply ? '· replied' : '· no reply yet'}</div>
+                <div class="cwc">${cwc} words</div>
+                ${replyHtml}
               </div>
             </div>`;
         }).join('')
       : `<div class="empty-note">No comments received.</div>`;
+
     const madeHtml = sub.commentsMade.length
       ? sub.commentsMade.map(c=>{
           const cwc = wordCount(c.text);
+          const replyHtml = c.reply
+            ? `<div class="sub-reply">
+                 <div class="reply-label">↩ Groupmate's reply</div>
+                 <div class="ct">${c.reply.text}</div>
+                 <div class="cwc">${wordCount(c.reply.text)} words · ${formatTs(c.reply.createdAt)}</div>
+               </div>`
+            : '';
           return `
             <div class="sub-comment">
               <div class="avatar" style="background:var(--border);color:var(--ink-soft);">→</div>
               <div class="sub-comment-body">
-                <div class="cn">On: "${c.toPost}"</div>
+                <div class="cn">On: "${c.toPost}" <span class="ts">${formatTs(c.createdAt)}</span></div>
                 <div class="ct">${c.text}</div>
                 <div class="cwc">${cwc} words</div>
+                ${replyHtml}
               </div>
             </div>`;
         }).join('')
@@ -507,10 +545,11 @@ async function renderGrading(){
         <div class="sub-title">${sub.title}</div>
         <div class="sub-meta">
           <div class="avatar" style="background:var(--postal-blue)">${initials(author.name)}</div>
-          <div><div class="nm">${author.name}</div><div class="wc">${wc} words</div></div>
+          <div><div class="nm">${author.name}</div><div class="wc">${wc} words ${postTs}</div></div>
         </div>
         <div class="sub-body">${sub.text}</div>
         ${mediaHtml}
+        ${groupMembersHtml}
         <div class="sub-subhead">Comments received (on their post)</div>
         ${receivedHtml}
         <div class="sub-subhead">Comments made (on groupmates' posts)</div>
@@ -567,11 +606,11 @@ async function renderGrading(){
           </div>
           <button class="nav-arrow" onclick="navStudent(1)">›</button>
         </div>
+        ${criteriaHtml}
         <div class="feedback-box">
           <label class="field-label">Overall feedback (shown to student)</label>
           <textarea id="feedbackInput" placeholder="Write some overall advice...">${gradingFeedbackDraft[sn] || ''}</textarea>
         </div>
-        ${criteriaHtml}
         <div class="grade-actions">
           <button class="btn btn-ghost" style="flex:1;" onclick="saveGrade(false)">Save</button>
           <button class="btn btn-primary" style="flex:1;" onclick="saveGrade(true)">Save &amp; Next →</button>
