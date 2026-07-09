@@ -229,7 +229,7 @@
       <button class="btn btn-primary btn-block" style="margin-top:14px;" onclick="login()">Enter</button>
       <div class="error-msg" id="loginError">Incorrect username or password.</div>
     </div>
-    <div class="version-tag">live-v0.6 — 2026-07-05</div>
+    <div class="version-tag">live-v0.7 — 2026-07-05</div>
   </div>
 
   <div class="class-select-screen hidden" id="classSelectScreen">
@@ -424,6 +424,28 @@ let gradingSelections = {};       // studentNumber -> {criterionId: tierIndex}
 let gradingAutoSelections = {};   // studentNumber -> {criterionId: tierIndex} (for WasOverridden tracking)
 let gradingFeedbackDraft = {};    // studentNumber -> text (local draft before save)
 let gradingSavedSet = {};         // studentNumber -> true once saved this session
+let currentGradingRubric = null;  // rubric array for the current student, used by updateGradeTotalDisplay
+let currentGradingSn = null;      // student number currently being graded
+
+function updateGradeTotalDisplay(){
+  const el = document.getElementById('gradeTotalDisplay');
+  if(!el || !currentGradingRubric || !currentGradingSn) return;
+  const sel  = gradingSelections[currentGradingSn] || {};
+  const auto = gradingAutoSelections[currentGradingSn] || {};
+  let total=0, max=0, allSelected=true;
+  currentGradingRubric.forEach(crit=>{
+    const tierIdx = sel[crit.id] !== undefined ? sel[crit.id] : auto[crit.id];
+    const critMax = crit.tiers.length ? Math.max(...crit.tiers.map(t=>Number(t.points)||0)) : 0;
+    max += critMax;
+    if(tierIdx !== undefined && tierIdx !== null && crit.tiers[tierIdx]){
+      total += Number(crit.tiers[tierIdx].points) || 0;
+    } else {
+      allSelected = false;
+    }
+  });
+  el.textContent = `${total} / ${max} pts`;
+  el.style.color = allSelected ? 'var(--postal-blue)' : 'var(--ink-soft)';
+}
 
 async function loadSubmissionsForWeek(week){
   if(gradingSubmissionsCache[week]) return gradingSubmissionsCache[week];
@@ -475,6 +497,8 @@ async function renderGrading(){
   const rubric = rubricVersion.criteria;
   const sel = getSelections(sn, rubric, sub, gradingWeek, schedule);
   const gradedCount = studentNumbers.filter(s=>gradingSavedSet[s]).length;
+  currentGradingRubric = rubric;
+  currentGradingSn = sn;
 
   let bodyHtml;
   if(!sub.title){
@@ -606,6 +630,9 @@ async function renderGrading(){
           </div>
           <button class="nav-arrow" onclick="navStudent(1)">›</button>
         </div>
+        <div style="text-align:center;padding:8px 0 4px;">
+          <span id="gradeTotalDisplay" style="font-family:'IBM Plex Mono',monospace;font-size:1.1rem;font-weight:600;color:var(--ink-soft);"></span>
+        </div>
         ${criteriaHtml}
         <div class="feedback-box">
           <label class="field-label">Overall feedback (shown to student)</label>
@@ -618,12 +645,14 @@ async function renderGrading(){
       </div>
     </div>
   `;
+  updateGradeTotalDisplay();
 }
 
 function toggleCriterion(critId){ document.getElementById('crit-'+critId).classList.toggle('open'); }
 function selectTier(sn, critId, idx){
   if(!gradingSelections[sn]) gradingSelections[sn] = {};
   gradingSelections[sn][critId] = idx;
+  updateGradeTotalDisplay();
 }
 function navStudent(dir){
   gradingIdx += dir;
