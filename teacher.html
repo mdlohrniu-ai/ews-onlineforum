@@ -229,7 +229,7 @@
       <button class="btn btn-primary btn-block" style="margin-top:14px;" onclick="login()">Enter</button>
       <div class="error-msg" id="loginError">Incorrect username or password.</div>
     </div>
-    <div class="version-tag">live-v0.8 — 2026-07-09</div>
+    <div class="version-tag">live-v0.9 — 2026-07-09</div>
   </div>
 
   <div class="class-select-screen hidden" id="classSelectScreen">
@@ -405,14 +405,26 @@ function autoSelectTier(crit, sub, sn, week, schedule){
   }
   if(crit.autoType==='PictureTimeliness') return sub.image ? 1 : 0;
   if(crit.autoType==='CommentCompletion'){
-    const required = getGroupmateCount(sn, week);
-    if(required<=0) return null;
-    const ok = sub.commentsMade.length>=required && commentsQualify(sub.commentsMade, schedule && schedule.CommentDeadline);
+    // Use groupmatesWithPosts (groupmates who actually submitted) rather than total
+    // group size — a student shouldn't be penalised for not commenting on a post
+    // that doesn't exist.
+    const required = sub.groupmatesWithPosts !== undefined
+      ? sub.groupmatesWithPosts
+      : getGroupmateCount(sn, week);
+    if(required <= 0) return null;
+    const ok = sub.commentsMade.length >= required && commentsQualify(sub.commentsMade, schedule && schedule.CommentDeadline);
     return ok ? 1 : 0;
   }
   if(crit.autoType==='ReplyCompletion'){
     const received = sub.commentsReceived;
-    if(received.length===0) return null;
+    // If no comments were received, check whether anyone could have commented.
+    // If groupmatesWithPosts is 0, nobody could have commented — treat as N/A.
+    if(received.length === 0){
+      const couldHaveReceived = sub.groupmatesWithPosts !== undefined
+        ? sub.groupmatesWithPosts > 0
+        : getGroupmateCount(sn, week) > 0;
+      return couldHaveReceived ? 0 : null;
+    }
     const allReplied = received.every(c=>c.reply);
     if(!allReplied) return 0;
     const ok = received.every(c=> wordCount(c.reply.text)>=30 && (!schedule || !schedule.ReplyDeadline || new Date(c.reply.createdAt) <= new Date(schedule.ReplyDeadline)));
