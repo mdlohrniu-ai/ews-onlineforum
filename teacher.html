@@ -188,6 +188,8 @@
   @keyframes spin{to{transform:rotate(360deg);}}
   .loading-overlay .ltext{font-family:'IBM Plex Mono',monospace;font-size:0.85rem;color:var(--ink-soft);}
 </style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 </head>
 <body>
 
@@ -229,7 +231,7 @@
       <button class="btn btn-primary btn-block" style="margin-top:14px;" onclick="login()">Enter</button>
       <div class="error-msg" id="loginError">Incorrect username or password.</div>
     </div>
-    <div class="version-tag">live-v0.9 — 2026-07-09</div>
+    <div class="version-tag">live-v1.0 — 2026-07-09</div>
   </div>
 
   <div class="class-select-screen hidden" id="classSelectScreen">
@@ -254,6 +256,7 @@
       <button class="nav-btn" data-tab="roster" onclick="switchTab('roster')">Roster &amp; Groups</button>
       <button class="nav-btn" data-tab="rubric" onclick="switchTab('rubric')">Rubric</button>
       <button class="nav-btn" data-tab="settings" onclick="switchTab('settings')">Settings</button>
+      <button class="nav-btn" data-tab="reflections" onclick="switchTab('reflections')">Reflections</button>
     </div>
 
     <div id="content"></div>
@@ -367,6 +370,7 @@ function switchTab(tab){
   if(tab==='roster') renderRoster();
   if(tab==='rubric') renderRubricTab();
   if(tab==='settings') renderSettings();
+  if(tab==='reflections') renderReflections();
 }
 
 /* ====================== RUBRIC VERSION LOOKUP ====================== */
@@ -1181,6 +1185,218 @@ async function saveSettingsField(field, value){
   hideLoading();
   if(result.success) showToast('Saved.');
   else showToast(result.error || "Couldn't save.");
+}
+
+/* ====================== REFLECTIONS ====================== */
+let reflectionsWeek = null;
+let reflectionsData = null;
+
+async function renderReflections(){
+  if(!classData.schedule.length){
+    document.getElementById('content').innerHTML = `<div class="card empty-note">No weeks set up yet — add one in the Schedule tab first.</div>`;
+    return;
+  }
+  if(reflectionsWeek === null) reflectionsWeek = classData.schedule.slice().sort((a,b)=>b.Week-a.Week)[0].Week;
+
+  const weekOptions = classData.schedule.slice().sort((a,b)=>b.Week-a.Week)
+    .map(s=>`<option value="${s.Week}" ${s.Week===reflectionsWeek?'selected':''}>${String(s.Week).padStart(2,'0')} · ${s.DateRangeLabel}</option>`).join('');
+
+  document.getElementById('content').innerHTML = `
+    <div class="card" style="margin-bottom:14px;">
+      <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
+        <div>
+          <label class="field-label" style="margin-bottom:6px;">Week</label>
+          <select class="week-select" id="reflWeekSelect" onchange="reflectionsWeek=parseInt(this.value);loadReflectionsData()">
+            ${weekOptions}
+          </select>
+        </div>
+        <div style="margin-left:auto;display:flex;gap:10px;flex-wrap:wrap;">
+          <button class="btn btn-ghost" id="reflZipBtn" onclick="downloadReflectionZip()" disabled>⬇ Individual PDFs (ZIP)</button>
+          <button class="btn btn-primary" id="reflMergedBtn" onclick="downloadReflectionMerged()" disabled>⬇ All-in-one PDF</button>
+        </div>
+      </div>
+    </div>
+    <div id="reflStudentList"><div class="card empty-note">Loading…</div></div>
+  `;
+  loadReflectionsData();
+}
+
+async function loadReflectionsData(){
+  document.getElementById('reflStudentList').innerHTML = `<div class="card empty-note">Loading…</div>`;
+  document.getElementById('reflZipBtn').disabled = true;
+  document.getElementById('reflMergedBtn').disabled = true;
+
+  // Reuse grading cache if already loaded for this week, otherwise fetch
+  let subResult = gradingSubmissionsCache[reflectionsWeek];
+  if(!subResult){
+    const res = await callApi('getSubmissionsForGrading',{classId:currentClass, week:reflectionsWeek});
+    if(!res.success){
+      document.getElementById('reflStudentList').innerHTML = `<div class="card empty-note">Couldn't load submissions for this week.</div>`;
+      return;
+    }
+    gradingSubmissionsCache[reflectionsWeek] = res;
+    subResult = res;
+  }
+  reflectionsData = subResult;
+
+  const sched = classData.schedule.find(s=>s.Week===reflectionsWeek) || {};
+  const rows = subResult.roster.map(r=>{
+    const sub = subResult.submissions[r.studentNumber] || {};
+    const hasPost = !!sub.title;
+    const wc = hasPost ? wordCount(sub.text) : 0;
+    return `
+      <div style="display:flex;align-items:center;gap:12px;padding:10px 14px;border-bottom:1px solid var(--border-color);">
+        <div class="avatar" style="background:var(--postal-blue);width:30px;height:30px;font-size:0.75rem;">${initials(r.name)}</div>
+        <div style="flex:1;">
+          <div style="font-weight:600;font-size:0.88rem;">${r.name}</div>
+          <div style="font-size:0.76rem;color:var(--ink-soft);">${hasPost ? `"${sub.title}" · ${wc} words` : 'No submission'}</div>
+        </div>
+        <div style="font-size:0.76rem;font-family:'IBM Plex Mono',monospace;color:${hasPost?'var(--postal-blue)':'var(--ink-soft)'};">${hasPost?'✓ Has entry':'—'}</div>
+      </div>`;
+  }).join('');
+
+  const withPosts = subResult.roster.filter(r=>subResult.submissions[r.studentNumber]&&subResult.submissions[r.studentNumber].title).length;
+
+  document.getElementById('reflStudentList').innerHTML = `
+    <div class="card" style="padding:0;overflow:hidden;">
+      <div style="padding:12px 16px;background:var(--paper-2);border-bottom:1px solid var(--border-color);font-size:0.8rem;color:var(--ink-soft);">
+        ${subResult.roster.length} students · ${withPosts} with entries
+      </div>
+      ${rows}
+    </div>`;
+
+  if(withPosts > 0){
+    document.getElementById('reflZipBtn').disabled = false;
+    document.getElementById('reflMergedBtn').disabled = false;
+  }
+}
+
+// ── Shared: build one student's reflection page in a jsPDF doc ──────────────
+function addReflectionPage(doc, studentName, classId, week, sched, sub, isFirst){
+  const {jsPDF} = window.jspdf;
+  const M=18, W=210-M*2;
+  const LINE_H=5, LABEL_H=5, ITALIC_H=4.5, GAP=5;
+  const SPELL_LINES=6, REFLECT_LINES=6, QUEST_LINES=5;
+
+  if(!isFirst) doc.addPage();
+
+  const rawText = sub && sub.text ? sub.text : '';
+
+  // Adaptive font size so everything fits one page
+  const AFTER_FIXED = 4+5+16+5+(LABEL_H+ITALIC_H+SPELL_LINES*LINE_H+GAP)+(LABEL_H+ITALIC_H+REFLECT_LINES*LINE_H+GAP)+(LABEL_H+ITALIC_H+QUEST_LINES*LINE_H)+12;
+  const BLOG_AVAILABLE = 285-54-AFTER_FIXED;
+  let blogFontSize = 10;
+  if(rawText){
+    for(let fs=10;fs>=6;fs-=0.5){
+      doc.setFontSize(fs);
+      const lines=doc.splitTextToSize(rawText,W);
+      if(lines.length*(fs*0.352778*1.65)<=BLOG_AVAILABLE){blogFontSize=fs;break;}
+      blogFontSize=6;
+    }
+  }
+
+  let y=20;
+  // Header
+  doc.setFillColor(32,38,31); doc.rect(0,0,210,20,'F');
+  doc.setFontSize(12); doc.setFont('helvetica','bold'); doc.setTextColor(255,255,255);
+  doc.text('Blog Reflection Worksheet',M,13);
+  doc.setFontSize(8); doc.setFont('helvetica','normal'); doc.setTextColor(160,165,150);
+  doc.text(`${classId}  ·  Week ${String(week).padStart(2,'0')}  ·  ${sched.DateRangeLabel||''}`,210-M,13,{align:'right'});
+  y=28;
+
+  // Student info
+  doc.setFontSize(11); doc.setFont('helvetica','bold'); doc.setTextColor(32,38,31);
+  doc.text(studentName,M,y); y+=6;
+  if(sub && sub.postCreatedAt){
+    doc.setFontSize(8); doc.setFont('helvetica','normal'); doc.setTextColor(91,99,88);
+    doc.text(`Submitted: ${formatTs(sub.postCreatedAt)}  ·  ${wordCount(sub.text)} words`,M,y); y+=5;
+  } else { y+=3; }
+  doc.setDrawColor(215,218,206); doc.setLineWidth(0.25); doc.line(M,y,210-M,y); y+=7;
+
+  // Blog text
+  if(sub && sub.title){
+    doc.setFontSize(11); doc.setFont('helvetica','bold'); doc.setTextColor(32,38,31);
+    doc.text(sub.title,M,y); y+=8;
+    if(rawText){
+      doc.setFontSize(blogFontSize); doc.setFont('helvetica','normal'); doc.setTextColor(40,40,40);
+      const bLines=doc.splitTextToSize(rawText,W);
+      const bH=blogFontSize*0.352778*1.65;
+      bLines.forEach(l=>{ doc.text(l,M,y); y+=bH; });
+    }
+  } else {
+    doc.setFontSize(9); doc.setFont('helvetica','italic'); doc.setTextColor(150,155,145);
+    doc.text('No entry was submitted this week.',M,y); y+=8;
+  }
+  y+=4;
+
+  doc.setDrawColor(215,218,206); doc.line(M,y,210-M,y); y+=5;
+  // Bonus note
+  doc.setFillColor(253,246,227); doc.setDrawColor(232,217,160); doc.setLineWidth(0.3);
+  doc.rect(M,y-2,W,13,'FD');
+  doc.setFontSize(8); doc.setFont('helvetica','bold'); doc.setTextColor(107,87,0);
+  doc.text('Optional bonus assignment',M+3,y+3);
+  doc.setFont('helvetica','normal');
+  doc.text('Complete the sections below and submit this worksheet for bonus points.',M+3,y+8);
+  y+=16;
+  doc.setDrawColor(215,218,206); doc.setLineWidth(0.25); doc.line(M,y,210-M,y); y+=5;
+
+  function section(label,italic,nLines,gap){
+    doc.setFontSize(8); doc.setFont('helvetica','bold'); doc.setTextColor(91,99,88);
+    doc.text(label,M,y); y+=LABEL_H;
+    doc.setFontSize(8); doc.setFont('helvetica','italic'); doc.setTextColor(150,155,145);
+    doc.text(italic,M,y); y+=ITALIC_H;
+    for(let i=0;i<nLines;i++){ doc.setDrawColor(200,205,195); doc.setLineWidth(0.2); doc.line(M,y,210-M,y); y+=LINE_H; }
+    if(gap) y+=GAP;
+  }
+  section('SPELLING / GRAMMAR MISTAKES','Find mistakes in your entry. Write the mistake and the correct version.',SPELL_LINES,true);
+  section('REFLECTION','What advice would you give yourself to improve your next blog entry?',REFLECT_LINES,true);
+  section('QUESTIONS FOR INSTRUCTORS','Write any questions you have for your teacher about this entry.',QUEST_LINES,false);
+
+  // Footer
+  doc.setFontSize(7.5); doc.setFont('helvetica','normal'); doc.setTextColor(170,175,165);
+  doc.text(`${classId}  ·  Week ${String(week).padStart(2,'0')}  ·  ${studentName}`,M,287);
+  doc.text(new Date().toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}),210-M,287,{align:'right'});
+}
+
+// ── Option 1: All students in one PDF ──────────────────────────────────────
+function downloadReflectionMerged(){
+  if(!window.jspdf){ showToast('PDF library loading — try again in a moment.'); return; }
+  const {jsPDF}=window.jspdf;
+  const sched = classData.schedule.find(s=>s.Week===reflectionsWeek)||{};
+  const doc = new jsPDF({unit:'mm',format:'a4'});
+  let first = true;
+  reflectionsData.roster.forEach(r=>{
+    const sub = reflectionsData.submissions[r.studentNumber]||{};
+    addReflectionPage(doc,r.name,currentClass,reflectionsWeek,sched,sub,first);
+    first=false;
+  });
+  doc.save(`${currentClass}_Week${String(reflectionsWeek).padStart(2,'0')}_Reflections_All.pdf`);
+}
+
+// ── Option 2: One PDF per student, bundled as a ZIP ───────────────────────
+async function downloadReflectionZip(){
+  if(!window.jspdf||!window.JSZip){ showToast('Libraries loading — try again in a moment.'); return; }
+  const {jsPDF}=window.jspdf;
+  const sched = classData.schedule.find(s=>s.Week===reflectionsWeek)||{};
+  const zip = new JSZip();
+  const folder = zip.folder(`${currentClass}_Week${String(reflectionsWeek).padStart(2,'0')}_Reflections`);
+
+  showToast('Building ZIP…');
+  reflectionsData.roster.forEach(r=>{
+    const sub = reflectionsData.submissions[r.studentNumber]||{};
+    const doc = new jsPDF({unit:'mm',format:'a4'});
+    addReflectionPage(doc,r.name,currentClass,reflectionsWeek,sched,sub,true);
+    const safeName = r.name.replace(/[^a-zA-Z0-9_\- ]/g,'').trim().replace(/\s+/g,'_');
+    folder.file(`${safeName}_Reflection.pdf`, doc.output('arraybuffer'));
+  });
+
+  const blob = await zip.generateAsync({type:'blob'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href=url; a.download=`${currentClass}_Week${String(reflectionsWeek).padStart(2,'0')}_Reflections.zip`;
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('ZIP downloaded.');
 }
 </script>
 
