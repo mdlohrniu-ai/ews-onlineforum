@@ -231,7 +231,7 @@
       <button class="btn btn-primary btn-block" style="margin-top:14px;" onclick="login()">Enter</button>
       <div class="error-msg" id="loginError">Incorrect username or password.</div>
     </div>
-    <div class="version-tag">live-v1.2 — 2026-07-09</div>
+    <div class="version-tag">live-v1.3 — 2026-07-09</div>
   </div>
 
   <div class="class-select-screen hidden" id="classSelectScreen">
@@ -510,7 +510,7 @@ function downloadMoodleReport(){
       return `${crit.name}: <span style='color:${color}'>${crit.tiers[tierIdx].label} = ${pts} points</span>`;
     }).join('<br>');
 
-    const totalColor = total>0 ? 'green' : 'red';
+    const totalColor = total>=60 ? 'green' : 'red';
     const html = `<p><b>Student:</b> ${r.name} (${sn})<br><b>Assignment Breakdown:</b><br>${criterionLines}<br><b>Total: </b><span style='color:${totalColor}'>${total} / ${max} points</span></p>`;
     return `${total}\t${html}`;
   }).join('\n');
