@@ -231,7 +231,7 @@
       <button class="btn btn-primary btn-block" style="margin-top:14px;" onclick="login()">Enter</button>
       <div class="error-msg" id="loginError">Incorrect username or password.</div>
     </div>
-    <div class="version-tag">live-v1.0 — 2026-07-09</div>
+    <div class="version-tag">live-v1.2 — 2026-07-09</div>
   </div>
 
   <div class="class-select-screen hidden" id="classSelectScreen">
@@ -482,6 +482,47 @@ async function loadSubmissionsForWeek(week){
   return result;
 }
 
+function downloadMoodleReport(){
+  const subResult = gradingSubmissionsCache[gradingWeek];
+  if(!subResult){ showToast('Load the grading tab for this week first.'); return; }
+  const rubric = getRubricVersionForWeek(gradingWeek).criteria;
+
+  const lines = subResult.roster.map(r=>{
+    const sn = r.studentNumber;
+    const sub = subResult.submissions[sn]||{};
+    // Prefer grades saved to the sheet; fall back to current session selections
+    const saved = sub.savedGrades||{};
+    const session = gradingSelections[sn]||{};
+
+    let total=0, max=0;
+    const criterionLines = rubric.map(crit=>{
+      const critMax = crit.tiers.length ? Math.max(...crit.tiers.map(t=>Number(t.points)||0)) : 0;
+      max += critMax;
+      const tierIdx = saved[crit.id]!==undefined ? saved[crit.id]
+                    : session[crit.id]!==undefined ? session[crit.id]
+                    : null;
+      if(tierIdx===null||tierIdx===undefined||!crit.tiers[tierIdx]){
+        return `${crit.name}: <span style='color:gray'>Not graded</span>`;
+      }
+      const pts = Number(crit.tiers[tierIdx].points)||0;
+      total += pts;
+      const color = pts>0 ? 'green' : 'red';
+      return `${crit.name}: <span style='color:${color}'>${crit.tiers[tierIdx].label} = ${pts} points</span>`;
+    }).join('<br>');
+
+    const totalColor = total>0 ? 'green' : 'red';
+    const html = `<p><b>Student:</b> ${r.name} (${sn})<br><b>Assignment Breakdown:</b><br>${criterionLines}<br><b>Total: </b><span style='color:${totalColor}'>${total} / ${max} points</span></p>`;
+    return `${total}\t${html}`;
+  }).join('\n');
+
+  const blob = new Blob([lines],{type:'text/plain;charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href=url; a.download=`${currentClass}_Week${String(gradingWeek).padStart(2,'0')}_Moodle_Grades.txt`;
+  a.click(); URL.revokeObjectURL(url);
+  showToast('Moodle report downloaded.');
+}
+
 function getSelections(sn, rubric, sub, week, schedule){
   if(!gradingSelections[sn]){
     const sel = {};
@@ -657,6 +698,7 @@ async function renderGrading(){
         <span class="ptext">Graded</span>
         <span class="ptext ptotal">${gradedCount} / ${studentNumbers.length}</span>
       </div>
+      <button class="btn btn-ghost" style="font-size:0.8rem;padding:6px 14px;" onclick="downloadMoodleReport()" title="Download grade list for Moodle">⬇ Moodle Report</button>
       <button class="search-btn" onclick="openStudentSearch()" title="Search students">🔍</button>
     </div>
     <div class="total-pts-note" style="margin:-8px 0 14px;">Using rubric version starting Week ${rubricVersion.startWeek} (Rubric tab to manage versions)</div>
@@ -1283,7 +1325,7 @@ function addReflectionPage(doc, studentName, classId, week, sched, sub, isFirst)
   const rawText = sub && sub.text ? sub.text : '';
 
   // Adaptive font size so everything fits one page
-  const AFTER_FIXED = 4+5+16+5+(LABEL_H+ITALIC_H+SPELL_LINES*LINE_H+GAP)+(LABEL_H+ITALIC_H+REFLECT_LINES*LINE_H+GAP)+(LABEL_H+ITALIC_H+QUEST_LINES*LINE_H)+12;
+  const AFTER_FIXED = 4+5+(LABEL_H+ITALIC_H+SPELL_LINES*LINE_H+GAP)+(LABEL_H+ITALIC_H+REFLECT_LINES*LINE_H+GAP)+(LABEL_H+ITALIC_H+QUEST_LINES*LINE_H)+12;
   const BLOG_AVAILABLE = 285-54-AFTER_FIXED;
   let blogFontSize = 10;
   if(rawText){
@@ -1330,15 +1372,6 @@ function addReflectionPage(doc, studentName, classId, week, sched, sub, isFirst)
   y+=4;
 
   doc.setDrawColor(215,218,206); doc.line(M,y,210-M,y); y+=5;
-  // Bonus note
-  doc.setFillColor(253,246,227); doc.setDrawColor(232,217,160); doc.setLineWidth(0.3);
-  doc.rect(M,y-2,W,13,'FD');
-  doc.setFontSize(8); doc.setFont('helvetica','bold'); doc.setTextColor(107,87,0);
-  doc.text('Optional bonus assignment',M+3,y+3);
-  doc.setFont('helvetica','normal');
-  doc.text('Complete the sections below and submit this worksheet for bonus points.',M+3,y+8);
-  y+=16;
-  doc.setDrawColor(215,218,206); doc.setLineWidth(0.25); doc.line(M,y,210-M,y); y+=5;
 
   function section(label,italic,nLines,gap){
     doc.setFontSize(8); doc.setFont('helvetica','bold'); doc.setTextColor(91,99,88);

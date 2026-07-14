@@ -243,7 +243,57 @@
   .tl-sub{font-size:0.66rem;color:var(--ink-soft);margin-top:1px;}
   .tl-date{font-family:'IBM Plex Mono',monospace;font-size:0.66rem;color:var(--ink-soft);margin-top:4px;}
   .tl-submitted{font-family:'IBM Plex Mono',monospace;font-size:0.62rem;color:var(--postal-blue);margin-top:2px;}
+
+  /* ── Grammar feedback screen ── */
+  .grade-row{display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border-radius:10px;border:1px solid var(--border);margin-bottom:7px;background:#FAFBF8;}
+  .grade-row .gr-crit{flex:1;min-width:0;}
+  .grade-row .gr-name{font-weight:600;font-size:0.88rem;margin-bottom:3px;}
+  .grade-row .gr-desc{font-size:0.76rem;color:var(--ink-soft);line-height:1.45;}
+  .grade-row .gr-score{text-align:right;flex-shrink:0;}
+  .grade-row .gr-tier{font-size:0.8rem;font-weight:600;color:#2E7D4F;white-space:nowrap;display:block;}
+  .grade-row .gr-pts{font-family:'IBM Plex Mono',monospace;font-size:0.72rem;color:var(--ink-soft);display:block;margin-top:2px;white-space:nowrap;}
+  .grammar-disclaimer{background:#fdf6e3;border:1px solid #e8d9a0;border-radius:10px;padding:13px 16px;margin-bottom:14px;font-size:0.76rem;line-height:1.65;color:#6b5700;}
+  .grammar-disclaimer p+p{margin-top:4px;font-size:0.7rem;color:#7a6510;}
+  .annotated-blog{font-size:0.88rem;line-height:1.9;white-space:pre-wrap;word-break:break-word;}
+  .err-span{background:#fdf0db;border-bottom:2px solid #c47a1e;border-radius:3px;padding:1px 2px;cursor:help;position:relative;display:inline;transition:background .15s;}
+  .err-span:hover{background:#fce4b0;}
+  .err-ins{background:#ddf2e8;border-bottom:2px solid #2a7a4e;font-style:italic;}
+  .err-ins:hover{background:#b8e8cf;}
+  .err-del{background:#fce8e8;border-bottom:2px solid #b03030;text-decoration:line-through;text-decoration-color:#b03030;}
+  .err-del:hover{background:#f5c0c0;}
+  .err-tt{display:none;position:absolute;bottom:calc(100% + 8px);left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;border-radius:10px;padding:11px 14px;min-width:220px;max-width:280px;font-size:0.72rem;line-height:1.5;z-index:100;pointer-events:none;box-shadow:0 8px 24px rgba(0,0,0,0.25);white-space:normal;text-align:left;font-family:'IBM Plex Sans',sans-serif;}
+  .err-tt::after{content:'';position:absolute;top:100%;left:50%;transform:translateX(-50%);border:6px solid transparent;border-top-color:var(--ink);}
+  .err-span:hover .err-tt,.err-ins:hover .err-tt,.err-del:hover .err-tt{display:block;}
+  .tt-corr{font-family:'IBM Plex Mono',monospace;font-size:0.76rem;color:#7dd3a8;margin-bottom:4px;}
+  .tt-code{font-size:0.65rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:rgba(255,255,255,0.5);margin-bottom:5px;}
+  .tt-unit{background:rgba(255,255,255,0.1);border-radius:6px;padding:6px 9px;margin-top:4px;}
+  .tt-num{font-family:'IBM Plex Mono',monospace;font-size:0.68rem;color:#93c5fd;display:block;margin-bottom:2px;}
+  .tt-title{font-size:0.72rem;color:rgba(255,255,255,0.85);}
+  .unit-selection-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:14px;}
+  .unit-sel-title{font-family:'Fraunces',serif;font-weight:600;font-size:1rem;margin-bottom:4px;}
+  .unit-sel-desc{font-size:0.8rem;color:var(--ink-soft);margin-bottom:16px;line-height:1.5;}
+  .reason-opt{display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border:1.5px solid var(--border);border-radius:10px;margin-bottom:8px;cursor:pointer;transition:border-color .15s,background .15s;}
+  .reason-opt:has(input:checked){border-color:var(--postal-blue);background:#EEF3F7;}
+  .reason-opt.disabled-opt{opacity:0.4;pointer-events:none;}
+  .reason-opt input[type=radio]{margin-top:2px;flex-shrink:0;accent-color:var(--postal-blue);}
+  .reason-opt .ro-strong{display:block;font-weight:600;font-size:0.86rem;margin-bottom:1px;}
+  .reason-opt .ro-soft{font-size:0.74rem;color:var(--ink-soft);}
+  .other-reason-wrap{display:none;margin-bottom:14px;}
+  .other-reason-wrap.show{display:block;}
+  .unit-inputs-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:14px 0 18px;}
+  .unit-input-grp label{display:block;font-family:'IBM Plex Mono',monospace;font-size:0.64rem;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px;}
+  .unit-num-inp{width:100%;height:48px;font-family:'IBM Plex Mono',monospace;font-size:1.15rem;font-weight:500;padding:0 12px;border:1.5px solid var(--border);border-radius:10px;background:var(--paper);color:var(--ink);outline:none;transition:border-color .2s,box-shadow .2s;}
+  .unit-num-inp:focus{border-color:var(--postal-blue);box-shadow:0 0 0 3px rgba(61,90,115,0.12);}
+  .grammar-submit-success{background:#ddf2e8;border:1px solid #2a7a4e;border-radius:10px;padding:12px 16px;font-size:0.84rem;color:#2a7a4e;font-weight:500;display:none;margin-top:12px;}
+  .grammar-submit-success.show{display:block;}
+  .pdf-download-row{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;}
+  .pdf-download-row .info .ttl{font-weight:600;font-size:0.92rem;margin-bottom:3px;}
+  .pdf-download-row .info .sub{font-size:0.78rem;color:var(--ink-soft);}
+  .btn-pdf{background:transparent;color:var(--ink);border:1.5px solid var(--border);border-radius:10px;padding:10px 18px;font-family:'IBM Plex Sans',sans-serif;font-weight:500;font-size:0.86rem;cursor:pointer;transition:border-color .2s;}
+  .btn-pdf:hover{border-color:var(--ink-soft);}
+  .btn-pdf:disabled{opacity:0.4;cursor:default;}
 </style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
 <body>
 
@@ -274,7 +324,7 @@
       <button class="btn btn-primary btn-block" style="margin-top:14px;" onclick="login()">Enter</button>
       <div class="error-msg" id="loginError">Student number not found. Check and try again.</div>
     </div>
-    <div class="version-tag">v0.22 — 2026-06-27</div>
+    <div class="version-tag">v0.25 — 2026-07-09</div>
   </div>
 
   <!-- ===================== MAIN APP ===================== -->
@@ -310,6 +360,11 @@
 
 const API_URL = "https://script.google.com/macros/s/AKfycbyMbuD6_z3PTOt8P_dS8TPTImZB-r1cnraENT82KGxD6eL2EGK0IxSC5spUu38SfFnX/exec";
 
+// Grammar Analysis backend — serves annotated blog data per student/week
+const GRAMMAR_API_URL = "https://script.google.com/macros/s/AKfycbzFVsdjF9uSk81PmluGbROuCdYx4RTvB9OEKxwKjA5EJrJCy8zH7XfHVVhmihIdLfgv/exec";
+// Master Login URL — used to submit grammar unit selection (same as student dashboard)
+const GRAMMAR_SUBMIT_URL = "https://script.google.com/macros/s/AKfycbys09mRRw7bocSfAmEk1D7U7o9JQ1XJxGWk_NyOBEq62HKyQ6jspO_uTKbNt9lHMcsEgQ/exec";
+
 // The week shown in the Current Post tab is resolved dynamically via getCurrentWeekInfo
 // (the earliest week whose ReplyDeadline hasn't passed yet) — set once renderNewPostTab
 // loads, and reused by submitPost(). Starts null until that lookup resolves.
@@ -335,6 +390,8 @@ async function callApi(action, payload) {
 }
 
 let currentStudent = null;
+let currentStudentName = null; // full name string e.g. "Rei YAMAGUCHI", set at login
+let gotoDestination = null;    // set from ?goto= URL param, consumed once after login
 let currentClassId = null;
 let currentName = null;
 let activeTab = 'dashboard';
@@ -373,6 +430,7 @@ async function login(){
     currentStudent = val;
     currentClassId = result.classId;
     currentName = result.name;
+    currentStudentName = result.name;
     currentProfilePicURL = result.profilePicURL || '';
     document.getElementById('loginScreen').classList.add('hidden');
     document.getElementById('mainApp').classList.remove('hidden');
@@ -391,6 +449,20 @@ function updateHomeButton(onDashboard){
 
 /* ============ DASHBOARD ============ */
 function renderDashboard(){
+  // Handle ?goto=grammar deep link from the all-in-one dashboard.
+  // Consumed exactly once — cleared immediately so back-button returns to dashboard normally.
+  if(gotoDestination === 'grammar'){
+    gotoDestination = null;
+    (async()=>{
+      const info = await callApi('getCurrentWeekInfo', { classId: currentClassId });
+      if(info.success && info.status === 'active'){
+        renderGrammarFeedback(info.week);
+      } else {
+        renderDashboard(); // no active week — fall back to dashboard
+      }
+    })();
+    return;
+  }
   activeTab = 'dashboard';
   updateHomeButton(true);
   isWritingSomething = false;
@@ -523,6 +595,7 @@ async function renderPreviousWeekDetail(week){
     }).join('');
   }
 
+  const hasEntry = !!data.myPost;
   const gradeSectionHtml = (gradeData.success && gradeData.graded)
     ? buildGradeSection(gradeData)
     : buildUngradedRubricSection(data.rubric);
@@ -542,6 +615,9 @@ async function renderPreviousWeekDetail(week){
     <div class="section-label">Your group that week</div>
     <div class="card">${membersHtml}</div>` : ''}
     ${gradeSectionHtml}
+    ${(gradeData.success && gradeData.graded) ? `
+    <button class="btn btn-primary btn-block" style="margin-top:6px;" onclick="renderGrammarFeedback(${week})">View grammar feedback →</button>
+    ` : ''}
   `;
 }
 
@@ -557,28 +633,28 @@ function buildUngradedRubricSection(rubric){
   `;
 }
 
-// Same look as the read-only rubric preview, but with the teacher's chosen tier per
-// criterion highlighted (dims the rest) and an overall-points + feedback card on top.
+// Graded rubric — one card-row per criterion showing the awarded tier label,
+// its description, and the awarded/max points. Replaces the scrollable table.
 function buildGradeSection(gradeData){
   const criteria = gradeData.criteria;
   if(!criteria.length) return `<div class="section-label">Grade</div><div class="card empty-note">No rubric to show.</div>`;
-  const maxTiers = Math.max(...criteria.map(c=>c.tiers.length));
+
   const rows = criteria.map(crit=>{
-    const cells = [];
-    for(let i=0;i<maxTiers;i++){
-      const t = crit.tiers[i];
-      if(!t){ cells.push('<td class="tier-cell empty"></td>'); continue; }
-      const cls = qualityClass(t.label, Number(t.points)||0, crit.maxPoints);
-      const isSelected = crit.selectedTierOrder === i;
-      cells.push(`
-        <td class="tier-cell ${cls} ${isSelected?'selected':'dimmed'}">
-          ${isSelected ? `<div class="sel-check">✓ Selected</div>` : ''}
-          <div class="tlabel">${t.label}</div>
-          ${t.desc ? `<div class="tdesc">${t.desc}</div>` : ''}
-          <span class="tpts">${t.points} pts</span>
-        </td>`);
-    }
-    return `<tr><td class="crit-name">${crit.name}<div class="crit-max">${crit.maxPoints} pts max</div></td>${cells.join('')}</tr>`;
+    const tier = crit.selectedTierOrder !== null ? crit.tiers[crit.selectedTierOrder] : null;
+    const tierLabel = tier ? tier.label : 'No submission';
+    const tierDesc  = tier ? (tier.desc || '') : '';
+    const awarded   = tier ? (Number(tier.points)||0) : 0;
+    return `
+      <div class="grade-row">
+        <div class="gr-crit">
+          <div class="gr-name">${crit.name}</div>
+          ${tierDesc ? `<div class="gr-desc">${tierDesc}</div>` : ''}
+        </div>
+        <div class="gr-score">
+          <span class="gr-tier">${tierLabel}</span>
+          <span class="gr-pts">${awarded} / ${crit.maxPoints} pts</span>
+        </div>
+      </div>`;
   }).join('');
 
   const feedbackHtml = gradeData.overallFeedback ? `
@@ -589,16 +665,300 @@ function buildGradeSection(gradeData){
 
   return `
     <div class="section-label">Grade — ${gradeData.totalPoints} / ${gradeData.maxPoints} pts</div>
-    <div class="rubric-table-wrap">
-      <table class="rubric-table"><tbody>${rows}</tbody></table>
-    </div>
-    <div class="rubric-scroll-hint">Scroll sideways to see all levels →</div>
+    <div class="card" style="padding:12px 14px;">${rows}</div>
     ${feedbackHtml}
   `;
 }
 
 
-/* ============ DRAFT AUTOSAVE (localStorage, survives crashes/closed tabs) ============ */
+/* ============ GRAMMAR FEEDBACK SCREEN ============ */
+
+// Fetches annotation data from the grammar analysis API and renders the full
+// grammar feedback screen — annotated blog, unit selection, PDF download.
+// `week` is the week number; called from the "View grammar feedback →" button
+// on the graded rubric screen. Back button returns to that rubric screen.
+async function renderGrammarFeedback(week){
+  isWritingSomething = false;
+  document.getElementById('content').innerHTML = `<div class="card empty-note">Loading grammar feedback…</div>`;
+
+  // Fetch annotation data and grammar window status in parallel
+  const [annotationResult, windowResult] = await Promise.allSettled([
+    fetch(`${GRAMMAR_API_URL}?action=getWeek&id=${encodeURIComponent(currentStudent)}&week=${week}`,{redirect:'follow',credentials:'omit',cache:'no-cache'})
+      .then(r=>r.text()).then(t=>JSON.parse(t.replace(/[\x00-\x08\x0b\x0c\x0e-\x1f\x7f-\x9f]/g,'?'))),
+    fetch(`${GRAMMAR_SUBMIT_URL}?${new URLSearchParams({action:'getGrammarSubmission',studentNumber:currentStudent,className:currentClassId})}`)
+      .then(r=>r.json()),
+  ]);
+
+  const annotation = (annotationResult.status==='fulfilled' && !annotationResult.value.error) ? annotationResult.value : null;
+  const winData   = (windowResult.status==='fulfilled') ? windowResult.value : null;
+
+  const hasAnnotation = annotation && annotation.annotatedText;
+  const errors = hasAnnotation ? (annotation.errors || []) : [];
+
+  // Grammar window state
+  const win = winData ? winData.grammarWindow : null;
+  const windowOpen = !win || win.isOpen;  // null = no schedule set = always open
+  const alreadySubmitted = winData && winData.submittedAt;
+  const existingMain  = winData ? (winData.mainUnit  || '') : '';
+  const existingBonus = winData ? (winData.bonusUnit || '') : '';
+  const submittedAt   = winData ? (winData.submittedAt || '') : '';
+
+  // Annotated text block
+  const annotationBlockHtml = hasAnnotation
+    ? `<div class="section-label">Your entry with feedback</div>
+       <div class="card"><div class="annotated-blog">${buildAnnotatedHtml(annotation.annotatedText, errors)}</div></div>
+       <div style="text-align:center;font-size:0.72rem;color:var(--ink-soft);margin:-6px 0 14px;">Tap any highlighted word to see the correction</div>`
+    : `<div class="card empty-note" style="margin-bottom:14px;">
+         No analysis available for this week.<br>
+         <span style="font-size:0.8rem;">No blog entry was submitted, so there is no grammar feedback.</span>
+       </div>`;
+
+  const mistakeOptDisabled = !hasAnnotation ? 'disabled-opt' : '';
+  const mistakeOptHint = !hasAnnotation
+    ? 'Not available — no entry was submitted this week.'
+    : 'Choose a unit that matches one of the errors above.';
+
+  // Unit section — three states: window closed, window open + already submitted, window open fresh
+  let unitSectionHtml;
+  if(!windowOpen){
+    const closedNote = `Submission is closed. Opens again ${win.openDay} ${win.openTime}.`;
+    const previousHtml = alreadySubmitted
+      ? `<div style="background:var(--paper);border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-top:12px;">
+           <div style="font-size:0.76rem;color:var(--ink-soft);margin-bottom:6px;font-family:'IBM Plex Mono',monospace;text-transform:uppercase;letter-spacing:.06em;">Your submission</div>
+           <div style="font-size:0.9rem;font-weight:600;">Unit B${existingMain}${existingBonus ? ` &nbsp;·&nbsp; Bonus B${existingBonus}` : ''}</div>
+           <div style="font-size:0.76rem;color:var(--ink-soft);margin-top:3px;">Submitted ${submittedAt}</div>
+         </div>`
+      : `<div style="font-size:0.82rem;color:var(--ink-soft);margin-top:10px;">No unit was submitted for this week.</div>`;
+    unitSectionHtml = `
+      <div class="section-label">Grammar unit</div>
+      <div class="unit-selection-card">
+        <div class="unit-sel-title">Unit submission closed</div>
+        <div class="unit-sel-desc">${closedNote}</div>
+        ${previousHtml}
+      </div>`;
+  } else {
+    const btnLabel = alreadySubmitted ? 'Update submission →' : 'Submit unit →';
+    const alreadyNote = alreadySubmitted
+      ? `<div style="font-size:0.76rem;color:var(--ink-soft);margin-bottom:14px;">You submitted Unit B${existingMain} on ${submittedAt} — submitting again will update your choice.</div>`
+      : '';
+    unitSectionHtml = `
+      <div class="section-label">Choose your grammar unit</div>
+      <div class="unit-selection-card">
+        <div class="unit-sel-title">Which unit do you want to study?</div>
+        <div class="unit-sel-desc">Look at the feedback above. Choose a grammar unit and tell your teacher why you chose it.</div>
+        ${alreadyNote}
+        <label class="reason-opt ${mistakeOptDisabled}">
+          <input type="radio" name="grammar-reason" value="mistake" ${!hasAnnotation?'disabled':''} onchange="handleGrammarReason(this)">
+          <div>
+            <span class="ro-strong">A mistake in my blog entry</span>
+            <span class="ro-soft">${mistakeOptHint}</span>
+          </div>
+        </label>
+        <label class="reason-opt">
+          <input type="radio" name="grammar-reason" value="other" onchange="handleGrammarReason(this)">
+          <div>
+            <span class="ro-strong">Other reason</span>
+            <span class="ro-soft">You will need to explain your reason.</span>
+          </div>
+        </label>
+        <div class="other-reason-wrap" id="otherReasonWrap">
+          <label style="display:block;font-family:'IBM Plex Mono',monospace;font-size:0.64rem;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px;">Explain your reason</label>
+          <textarea id="otherReasonInput" style="width:100%;min-height:70px;font-family:'IBM Plex Sans',sans-serif;font-size:0.88rem;padding:10px 12px;border:1.5px solid var(--border);border-radius:10px;background:var(--paper);color:var(--ink);resize:vertical;outline:none;" placeholder="Why are you choosing this unit?"></textarea>
+        </div>
+        <div class="unit-inputs-row">
+          <div class="unit-input-grp">
+            <label for="grammarMainUnit">Main unit <span style="color:var(--stamp-red)">*</span></label>
+            <input class="unit-num-inp" type="text" id="grammarMainUnit" inputmode="numeric" placeholder="e.g. 11" autocomplete="off" value="${existingMain}">
+          </div>
+          <div class="unit-input-grp">
+            <label for="grammarBonusUnit">Bonus unit <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:0.64rem;color:var(--ink-soft)">(optional)</span></label>
+            <input class="unit-num-inp" type="text" id="grammarBonusUnit" inputmode="numeric" placeholder="optional" autocomplete="off" value="${existingBonus}">
+          </div>
+        </div>
+        <button class="btn btn-primary btn-block" id="grammarSubmitBtn" onclick="submitGrammarUnit(${week})">${btnLabel}</button>
+        <div class="grammar-submit-success" id="grammarSubmitSuccess"></div>
+      </div>`;
+  }
+
+  document.getElementById('content').innerHTML = `
+    <button class="back-link" onclick="renderPreviousWeekDetail(${week})">← Back to rubric</button>
+    <div class="card week-head">
+      <div class="label">Week ${String(week).padStart(2,'0')}</div>
+    </div>
+    <div class="grammar-disclaimer">
+      <p>Grammar feedback on this page is generated by AI. Corrections and unit suggestions are not always accurate — if something doesn't seem right, ask your teacher.</p>
+      <p>このページの文法フィードバックはAIによって生成されています。修正内容や参照ユニットは必ずしも正確ではありません。疑問に思ったことは先生に相談してください。</p>
+    </div>
+    ${annotationBlockHtml}
+    ${unitSectionHtml}
+    <div class="section-label">Reflection worksheet</div>
+    <div class="card pdf-download-row">
+      <div class="info">
+        <div class="ttl">Download reflection worksheet</div>
+        <div class="sub">Download a reflection worksheet for this week's entry.</div>
+      </div>
+      <button class="btn-pdf" ${!hasAnnotation?'disabled title="No entry was submitted this week."':''} onclick="downloadReflectionPDF(${week}, ${JSON.stringify(annotation||{}).replace(/"/g,'&quot;')})">📄 Download PDF</button>
+    </div>
+  `;
+}
+
+
+function handleGrammarReason(radio){
+  document.getElementById('otherReasonWrap').classList.toggle('show', radio.value === 'other');
+}
+
+async function submitGrammarUnit(week){
+  const reason = document.querySelector('input[name="grammar-reason"]:checked');
+  const mainUnit = document.getElementById('grammarMainUnit').value.trim();
+  const bonusUnit = document.getElementById('grammarBonusUnit').value.trim();
+  const otherText = document.getElementById('otherReasonInput').value.trim();
+
+  if(!reason){ showToast('Please choose a reason.'); return; }
+  if(!mainUnit){ showToast('Please enter a unit number.'); return; }
+  if(reason.value === 'other' && !otherText){ showToast('Please explain your reason.'); return; }
+
+  const btn = document.getElementById('grammarSubmitBtn');
+  btn.disabled = true;
+  btn.textContent = 'Submitting…';
+
+  const reasonText = reason.value === 'mistake' ? 'A mistake in my blog entry' : `Other: ${otherText}`;
+
+  try{
+    const params = new URLSearchParams({
+      action: 'submitGrammarUnit',
+      studentNumber: currentStudent,
+      studentName: currentStudentName || currentStudent,
+      className: currentClassId,
+      mainUnit,
+      bonusUnit,
+      reason: reasonText,
+      week: String(week),
+    });
+    const res = await fetch(`${GRAMMAR_SUBMIT_URL}?${params}`);
+    const data = await res.json();
+    if(data.ok || data.success){
+      btn.textContent = '✓ Submitted';
+      const el = document.getElementById('grammarSubmitSuccess');
+      el.textContent = `Unit B${mainUnit} submitted — your teacher can see your choice.`;
+      el.classList.add('show');
+    } else {
+      btn.disabled = false;
+      btn.textContent = 'Submit unit →';
+      showToast(data.error || "Couldn't submit. Try again.");
+    }
+  }catch(e){
+    btn.disabled = false;
+    btn.textContent = 'Submit unit →';
+    showToast('Connection error — please try again.');
+  }
+}
+
+/* ── Annotation renderer — parses [error→correction | CODE | B##] tags ── */
+function buildAnnotatedHtml(text, errors){
+  function esc(s){ return s ? String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') : ''; }
+  const CODE_LABELS={VT:'Verb Tense',SVA:'Subject-Verb Agreement',ART:'Articles',PREP:'Prepositions',WF:'Word Form',SP:'Singular / Plural',WO:'Word Order',MOD:'Modal Verbs',CL:'Clause-level Error',ME:'Missing / Extra Words',SC:'Spelling & Capitalisation',PU:'Punctuation'};
+  const map={};
+  (errors||[]).forEach(e=>{ const k=(e.original+'|'+e.code).toLowerCase(); if(!map[k]) map[k]=e; });
+  const re=/\[([^\]\u2192>]*)(?:\u2192|->)([^\]|]*?)\s*\|\s*([A-Z]+)(?:\s*\|\s*([BI]\d+(?:\/[BI]\d+)*))?\]/g;
+  let out='', last=0, m;
+  while((m=re.exec(text))!==null){
+    out += esc(text.slice(last, m.index));
+    const orig=m[1].trim(), corr=m[2].trim(), code=m[3].trim(), unit=m[4]?m[4].trim():'';
+    const e = map[(orig+'|'+code).toLowerCase()]||{};
+    let display, cls;
+    if(orig===''&&corr!==''){display='[+'+corr+']'; cls='err-span err-ins';}
+    else if(orig!==''&&corr===''){display=orig; cls='err-span err-del';}
+    else{display=orig; cls='err-span';}
+    const od=orig||'∅', cd=corr||'∅';
+    let tip=`<div class="tt-corr">${esc(od)} → ${esc(cd)}</div><div class="tt-code">${esc(CODE_LABELS[code]||code)}</div>`;
+    if(unit) tip+=`<div class="tt-unit"><span class="tt-num">${esc(unit)}</span><span class="tt-title">${esc(e.unitTitleJpn||e.unitTitle||'')}</span></div>`;
+    out+=`<span class="${cls}">${esc(display)}<span class="err-tt">${tip}</span></span>`;
+    last = m.index+m[0].length;
+  }
+  out += esc(text.slice(last));
+  return out.replace(/\n/g,'<br>');
+}
+
+/* ── Single-page adaptive PDF ── */
+function downloadReflectionPDF(week, annotation){
+  if(!window.jspdf){ showToast('PDF generator loading — try again in a moment.'); return; }
+  const {jsPDF}=window.jspdf;
+  const M=18, W=210-M*2;
+  const LINE_H=5, LABEL_H=5, ITALIC_H=4.5, GAP=5;
+  const SPELL_LINES=6, REFLECT_LINES=6, QUEST_LINES=5;
+
+  const AFTER_FIXED =
+    4+5+
+    (LABEL_H+ITALIC_H+SPELL_LINES*LINE_H+GAP)+
+    (LABEL_H+ITALIC_H+REFLECT_LINES*LINE_H+GAP)+
+    (LABEL_H+ITALIC_H+QUEST_LINES*LINE_H)+12;
+  const BLOG_AVAILABLE = 285-54-AFTER_FIXED;
+
+  const rawText = annotation && annotation.annotatedText
+    ? annotation.annotatedText.replace(/\[([^\]\u2192>]*)(?:\u2192|->)[^\]|]*\|[^\]]*\]/g,'$1').trim()
+    : '';
+
+  const tempDoc=new jsPDF({unit:'mm',format:'a4'});
+  let blogFontSize=10;
+  if(rawText){
+    for(let fs=10;fs>=6;fs-=0.5){
+      tempDoc.setFontSize(fs);
+      const lines=tempDoc.splitTextToSize(rawText,W);
+      if(lines.length*(fs*0.352778*1.65)<=BLOG_AVAILABLE){blogFontSize=fs;break;}
+      blogFontSize=6;
+    }
+  }
+
+  const doc=new jsPDF({unit:'mm',format:'a4'});
+  let y=20;
+
+  doc.setFillColor(32,38,31); doc.rect(0,0,210,20,'F');
+  doc.setFontSize(12); doc.setFont('helvetica','bold'); doc.setTextColor(255,255,255);
+  doc.text('Blog Reflection Worksheet',M,13);
+  doc.setFontSize(8); doc.setFont('helvetica','normal'); doc.setTextColor(160,165,150);
+  doc.text('EWS Weekly Forum  ·  Grammar Feedback',210-M,13,{align:'right'});
+  y=28;
+
+  doc.setFontSize(11); doc.setFont('helvetica','bold'); doc.setTextColor(32,38,31);
+  doc.text(currentStudentName||currentStudent,M,y); y+=6;
+  doc.setFontSize(8); doc.setFont('helvetica','normal'); doc.setTextColor(91,99,88);
+  doc.text(`${currentClassId}  ·  Week ${week}`,M,y); y+=5;
+  doc.setDrawColor(215,218,206); doc.setLineWidth(0.25); doc.line(M,y,210-M,y); y+=7;
+
+  if(rawText){
+    doc.setFontSize(blogFontSize); doc.setFont('helvetica','normal'); doc.setTextColor(40,40,40);
+    const bLines=doc.splitTextToSize(rawText,W);
+    const bH=blogFontSize*0.352778*1.65;
+    bLines.forEach(l=>{ doc.text(l,M,y); y+=bH; });
+    y+=4;
+  } else {
+    doc.setFontSize(9); doc.setFont('helvetica','italic'); doc.setTextColor(150,155,145);
+    doc.text('No entry was submitted this week.',M,y); y+=10;
+  }
+
+  doc.setDrawColor(215,218,206); doc.line(M,y,210-M,y); y+=5;
+
+  function section(label,italic,nLines,gap){
+    doc.setFontSize(8); doc.setFont('helvetica','bold'); doc.setTextColor(91,99,88);
+    doc.text(label,M,y); y+=LABEL_H;
+    doc.setFontSize(8); doc.setFont('helvetica','italic'); doc.setTextColor(150,155,145);
+    doc.text(italic,M,y); y+=ITALIC_H;
+    for(let i=0;i<nLines;i++){ doc.setDrawColor(200,205,195); doc.setLineWidth(0.2); doc.line(M,y,210-M,y); y+=LINE_H; }
+    if(gap) y+=GAP;
+  }
+  section('SPELLING / GRAMMAR MISTAKES','Find mistakes in your entry. Write the mistake and the correct version.',SPELL_LINES,true);
+  section('REFLECTION','What advice would you give yourself to improve your next blog entry?',REFLECT_LINES,true);
+  section('QUESTIONS FOR INSTRUCTORS','Write any questions you have for your teacher about this entry or the feedback.',QUEST_LINES,false);
+
+  doc.setFontSize(7.5); doc.setFont('helvetica','normal'); doc.setTextColor(170,175,165);
+  doc.text(`EWS Weekly Forum  ·  ${currentClassId}  ·  Week ${week}`,M,287);
+  doc.text(new Date().toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}),210-M,287,{align:'right'});
+
+  const safeName=(currentStudentName||currentStudent).replace(/\s+/g,'_');
+  doc.save(`EWS_Week${week}_Reflection_${safeName}.pdf`);
+}
+
+
 // Scoped per class+student+week so switching weeks or students never bleeds drafts together.
 function draftKey(week){
   return `wf_draft_${currentClassId}_${currentStudent}_${week}`;
@@ -1357,6 +1717,8 @@ window.addEventListener('pageshow', markTabReturn);
 (function() {
   const params = new URLSearchParams(window.location.search);
   const autoStudent = params.get('student');
+  const goto = params.get('goto');
+  if (goto) gotoDestination = goto;
   if (autoStudent) {
     const input = document.getElementById('studentNumberInput');
     if (input) {
