@@ -324,7 +324,7 @@
       <button class="btn btn-primary btn-block" style="margin-top:14px;" onclick="login()">Enter</button>
       <div class="error-msg" id="loginError">Student number not found. Check and try again.</div>
     </div>
-    <div class="version-tag">v1.4 — 2026-07-21</div>
+    <div class="version-tag">v1.5 — 2026-07-21</div>
   </div>
 
   <!-- ===================== MAIN APP ===================== -->
@@ -362,6 +362,11 @@ const API_URL = "https://script.google.com/macros/s/AKfycbyMbuD6_z3PTOt8P_dS8TPT
 
 // Master Login URL — used to submit grammar unit selection (same as student dashboard)
 const GRAMMAR_SUBMIT_URL = "https://script.google.com/macros/s/AKfycbys09mRRw7bocSfAmEk1D7U7o9JQ1XJxGWk_NyOBEq62HKyQ6jspO_uTKbNt9lHMcsEgQ/exec";
+// MasterLogin.gs's GRAMMAR_SHEET_IDS/isToolEnabledForClass expect no-space class
+// IDs ("EWSII"), but the Forum's own registry (and therefore currentClassId)
+// uses spaced IDs ("EWS II"). Sending currentClassId to GRAMMAR_SUBMIT_URL
+// as-is silently fails there — always strip spaces before that specific call.
+function toMasterLoginClassId(classId){ return String(classId||'').replace(/\s+/g,''); }
 
 // The week shown in the Current Post tab is resolved dynamically via getCurrentWeekInfo
 // (the earliest week whose ReplyDeadline hasn't passed yet) — set once renderNewPostTab
@@ -679,17 +684,19 @@ async function renderGrammarFeedback(week){
   isWritingSomething = false;
   document.getElementById('content').innerHTML = `<div class="card empty-note">Loading grammar feedback…</div>`;
 
-  // Fetch annotation data and grammar window status in parallel.
-  // Annotation now comes from the Forum's own backend (getAnnotationForWeek,
-  // reading the Annotations tab) instead of the old external GRAMMAR_API_URL.
-  const [annotationResult, windowResult] = await Promise.allSettled([
+  // Fetch annotation data, this week's colour snapshot, and grammar window
+  // status in parallel. Annotation and colour both come from the Forum's
+  // own backend now.
+  const [annotationResult, colourResult, windowResult] = await Promise.allSettled([
     callApi('getAnnotationForWeek', { classId: currentClassId, studentNumber: currentStudent, week }),
-    fetch(`${GRAMMAR_SUBMIT_URL}?${new URLSearchParams({action:'getGrammarSubmission',studentNumber:currentStudent,className:currentClassId})}`)
+    callApi('getColourStateForWeek', { classId: currentClassId, studentNumber: currentStudent, week }),
+    fetch(`${GRAMMAR_SUBMIT_URL}?${new URLSearchParams({action:'getGrammarSubmission',studentNumber:currentStudent,className:toMasterLoginClassId(currentClassId)})}`)
       .then(r=>r.json()),
   ]);
 
   const annotationData = (annotationResult.status==='fulfilled' && annotationResult.value && annotationResult.value.success) ? annotationResult.value : null;
   const annotation = (annotationData && annotationData.found) ? annotationData : null;
+  const colourMap = (colourResult.status==='fulfilled' && colourResult.value && colourResult.value.success) ? colourResult.value.colours : {};
   const winData   = (windowResult.status==='fulfilled') ? windowResult.value : null;
 
   const hasAnnotation = annotation && annotation.annotatedText;
@@ -704,7 +711,7 @@ async function renderGrammarFeedback(week){
   // Annotated text block
   const annotationBlockHtml = hasAnnotation
     ? `<div class="section-label">Your entry with feedback</div>
-       <div class="card"><div class="annotated-blog">${buildAnnotatedHtml(annotation.annotatedText)}</div></div>
+       <div class="card"><div class="annotated-blog">${buildAnnotatedHtml(annotation.annotatedText, colourMap)}</div></div>
        <div style="text-align:center;font-size:0.72rem;color:var(--ink-soft);margin:-6px 0 14px;">Tap any highlighted word to see the error type and unit</div>`
     : `<div class="card empty-note" style="margin-bottom:14px;">
          No analysis available for this week.<br>
@@ -789,7 +796,7 @@ async function renderGrammarFeedback(week){
         <div class="ttl">Download Blog Entry Grammar Reflection Sheet</div>
         <div class="sub">Download the reflection worksheet for this week's entry.</div>
       </div>
-      <button class="btn-pdf" ${!hasAnnotation?'disabled title="No entry was submitted this week."':''} onclick="downloadCCFReflectionSheet(${week}, ${JSON.stringify(annotation||{}).replace(/"/g,'&quot;')}, ${JSON.stringify(existingMain||'')})">📄 Download CCF Sheet</button>
+      <button class="btn-pdf" ${!hasAnnotation?'disabled title="No entry was submitted this week."':''} onclick="downloadCCFReflectionSheet(${week}, ${JSON.stringify(Object.assign({}, annotation||{}, {colourMap})).replace(/"/g,'&quot;')}, ${JSON.stringify(existingMain||'')})">📄 Download CCF Sheet</button>
     </div>
   `;
 }
@@ -819,7 +826,7 @@ async function submitGrammarUnit(week){
       action: 'submitGrammarUnit',
       studentNumber: currentStudent,
       studentName: currentStudentName || currentStudent,
-      className: currentClassId,
+      className: toMasterLoginClassId(currentClassId),
       mainUnit,
       reason: reasonText,
       week: String(week),
@@ -856,9 +863,9 @@ const UNIT_TITLES = {B1:{jp:"am/is/are (be 動詞の肯定文、否定文)",en:n
    are always reading the exact same tags the same way. Never shows the
    correction — only the error span/caret, the code, and the unit. ── */
 const CCF_CODE_LABELS={VT:'Verb Tense',SVA:'Subject-Verb Agreement',ART:'Articles',PREP:'Prepositions',WF:'Word Form',SP:'Singular / Plural',WO:'Word Order',MOD:'Modal Verbs',CL:'Clause-level Error',ME:'Missing / Extra Words',SC:'Spelling & Capitalisation',PU:'Punctuation',COL:'Collocation',WC:'Word Choice',IDM:'Idiom',AWK:'Awkward Phrasing'};
-function buildAnnotatedHtml(text){
+function buildAnnotatedHtml(text, colourMap){
   function esc(s){ return s ? String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') : ''; }
-  const tokens = ccfTokenize(text);
+  const tokens = ccfTokenize(text, colourMap);
   const parts = tokens.map(t=>{
     if(t.break) return '<br><br>';
     if(!t.style) return esc(t.text);
@@ -914,11 +921,16 @@ const CCF_COLORS = {
   purple: {fill:[230,222,247], text:[74,42,128]},
   grey:   {fill:[230,230,228], text:[90,90,86]},
 };
-function ccfUnitState(code){
+// colourMap is {unit: 'yellow'|'orange'|'red'} for THIS WEEK specifically —
+// fetched via getColourStateForWeek, one frozen snapshot per week. A unit
+// absent from the map (never studied, or studied but this is its first
+// post-study occurrence) correctly defaults to green.
+function ccfUnitState(code, unit, colourMap){
   if(!code) return null;
   if(code==='SC'||code==='PU') return 'purple';
   if(code==='COL'||code==='WC'||code==='IDM'||code==='AWK') return 'grey';
-  return 'green'; // STUB — see comment above
+  if(unit && colourMap && colourMap[unit]) return colourMap[unit];
+  return 'green';
 }
 function ccfTagFor(style){
   const noUnit = style.state==='purple' || style.state==='grey';
@@ -929,7 +941,8 @@ function ccfTagFor(style){
 // Tag shapes: {span|CODE|UNIT}, {span|CODE|UNIT1/UNIT2} (dual-unit,
 // slash-separated), {^|CODE|UNIT} (omission, caret only — never the
 // missing word), {span|CODE} (no unit — SC/PU/COL/WC/IDM/AWK).
-function ccfTokenize(text){
+// colourMap: this week's frozen {unit: colour} snapshot — see ccfUnitState.
+function ccfTokenize(text, colourMap){
   const re=/\{(\^|[^{}|]*)\|([A-Z]+)(?:\|([BI]\d+(?:\/[BI]\d+)?))?\}/g;
   const tokens=[]; let last=0, m;
   function pushWords(str, style){
@@ -946,7 +959,7 @@ function ccfTokenize(text){
     const span=m[1], code=m[2].trim();
     const unitRaw=m[3]?m[3].trim():'';
     const [primaryUnit, secondaryUnit] = unitRaw ? unitRaw.split('/') : [null,null];
-    const state=ccfUnitState(code);
+    const state=ccfUnitState(code, primaryUnit, colourMap);
     const noUnit = state==='purple' || state==='grey';
     const style = state ? {code, primaryUnit: noUnit?null:primaryUnit, secondaryUnit: noUnit?null:secondaryUnit, state, border:false} : null;
     if(span==='^'){
@@ -1150,7 +1163,7 @@ function downloadCCFReflectionSheet(week, annotation, newUnit){
   let chosenFont = FONT_MIN, chosenLines = null, tokens = null;
 
   if(hasAnnotation){
-    tokens = ccfTokenize(annotation.annotatedText);
+    tokens = ccfTokenize(annotation.annotatedText, annotation.colourMap);
     for(let fs=FONT_MAX; fs>=FONT_MIN; fs-=0.25){
       const testLines = ccfLayoutAnnotated(doc, tokens, fs, CCF_W-8);
       const lineH = fs*0.352778*1.42;
