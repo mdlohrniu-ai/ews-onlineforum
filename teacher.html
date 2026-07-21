@@ -231,7 +231,7 @@
       <button class="btn btn-primary btn-block" style="margin-top:14px;" onclick="login()">Enter</button>
       <div class="error-msg" id="loginError">Incorrect username or password.</div>
     </div>
-    <div class="version-tag">live-v1.5 — 2026-07-21</div>
+    <div class="version-tag">live-v1.6 — 2026-07-21</div>
   </div>
 
   <div class="class-select-screen hidden" id="classSelectScreen">
@@ -1596,24 +1596,35 @@ function addCCFReflectionPage(doc, studentName, classId, studentNumber, week, an
   y = ccfDrawPostBlogSection(doc, y, '');
 }
 
+// A single hung request must never block the whole batch forever — races
+// each call against a timeout so a stuck one resolves to "not found" rather
+// than stalling everything behind it.
+function withTimeout(promise, ms){
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => setTimeout(() => reject(new Error('Timed out after ' + ms + 'ms')), ms)),
+  ]);
+}
+
 // Fetches each roster student's annotation in small batches (not all at once)
 // to avoid overloading the Apps Script deployment with a burst of simultaneous
-// calls — this is a once-per-week bulk job, not a live interaction, so a few
-// seconds of extra wait is a non-issue. One student's fetch failing (network
-// hiccup, no annotation yet) never blocks the rest — it just falls back to
-// the "no entry" state for that student's page.
-async function fetchAnnotationsForRoster(classId, roster, week){
+// calls. One student's fetch failing or timing out never blocks the rest —
+// it just falls back to the "no entry" state for that student's page.
+// onProgress(done, total), if given, is called after each batch completes.
+async function fetchAnnotationsForRoster(classId, roster, week, onProgress){
   const BATCH_SIZE = 5;
+  const TIMEOUT_MS = 15000;
   const results = {};
   for(let i=0; i<roster.length; i+=BATCH_SIZE){
     const batch = roster.slice(i, i+BATCH_SIZE);
     const settled = await Promise.allSettled(
-      batch.map(r => callApi('getAnnotationForWeek', {classId, studentNumber:r.studentNumber, week}))
+      batch.map(r => withTimeout(callApi('getAnnotationForWeek', {classId, studentNumber:r.studentNumber, week}), TIMEOUT_MS))
     );
     batch.forEach((r, idx) => {
       const res = settled[idx];
       results[r.studentNumber] = (res.status==='fulfilled' && res.value && res.value.success && res.value.found) ? res.value : null;
     });
+    if(onProgress) onProgress(Math.min(i+BATCH_SIZE, roster.length), roster.length);
   }
   return results;
 }
@@ -1622,8 +1633,16 @@ async function fetchAnnotationsForRoster(classId, roster, week){
 async function downloadReflectionMerged(){
   if(!window.jspdf){ showToast('PDF library loading — try again in a moment.'); return; }
   const {jsPDF}=window.jspdf;
-  showToast('Fetching annotations…');
-  const annotations = await fetchAnnotationsForRoster(currentClass, reflectionsData.roster, reflectionsWeek);
+  const mergedBtn = document.getElementById('reflMergedBtn');
+  const zipBtn = document.getElementById('reflZipBtn');
+  const origLabel = mergedBtn.textContent;
+  mergedBtn.disabled = true; zipBtn.disabled = true;
+
+  mergedBtn.textContent = `Fetching 0/${reflectionsData.roster.length}…`;
+  const annotations = await fetchAnnotationsForRoster(currentClass, reflectionsData.roster, reflectionsWeek,
+    (done, total) => { mergedBtn.textContent = `Fetching ${done}/${total}…`; });
+
+  mergedBtn.textContent = 'Building PDF…';
   const doc = new jsPDF({unit:'mm',format:'a4'});
   let first = true;
   reflectionsData.roster.forEach(r=>{
@@ -1631,6 +1650,9 @@ async function downloadReflectionMerged(){
     first=false;
   });
   doc.save(`${currentClass}_Week${String(reflectionsWeek).padStart(2,'0')}_CCF-Reflections_All.pdf`);
+
+  mergedBtn.disabled = false; zipBtn.disabled = false;
+  mergedBtn.textContent = origLabel;
   showToast('Downloaded.');
 }
 
@@ -1638,13 +1660,19 @@ async function downloadReflectionMerged(){
 async function downloadReflectionZip(){
   if(!window.jspdf||!window.JSZip){ showToast('Libraries loading — try again in a moment.'); return; }
   const {jsPDF}=window.jspdf;
+  const zipBtn = document.getElementById('reflZipBtn');
+  const mergedBtn = document.getElementById('reflMergedBtn');
+  const origLabel = zipBtn.textContent;
+  zipBtn.disabled = true; mergedBtn.disabled = true;
+
   const zip = new JSZip();
   const folder = zip.folder(`${currentClass}_Week${String(reflectionsWeek).padStart(2,'0')}_CCF-Reflections`);
 
-  showToast('Fetching annotations…');
-  const annotations = await fetchAnnotationsForRoster(currentClass, reflectionsData.roster, reflectionsWeek);
+  zipBtn.textContent = `Fetching 0/${reflectionsData.roster.length}…`;
+  const annotations = await fetchAnnotationsForRoster(currentClass, reflectionsData.roster, reflectionsWeek,
+    (done, total) => { zipBtn.textContent = `Fetching ${done}/${total}…`; });
 
-  showToast('Building ZIP…');
+  zipBtn.textContent = 'Building ZIP…';
   reflectionsData.roster.forEach(r=>{
     const doc = new jsPDF({unit:'mm',format:'a4'});
     addCCFReflectionPage(doc, r.name, currentClass, r.studentNumber, reflectionsWeek, annotations[r.studentNumber], true);
@@ -1658,6 +1686,9 @@ async function downloadReflectionZip(){
   a.href=url; a.download=`${currentClass}_Week${String(reflectionsWeek).padStart(2,'0')}_CCF-Reflections.zip`;
   a.click();
   URL.revokeObjectURL(url);
+
+  zipBtn.disabled = false; mergedBtn.disabled = false;
+  zipBtn.textContent = origLabel;
   showToast('ZIP downloaded.');
 }
 
