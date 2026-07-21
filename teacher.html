@@ -231,7 +231,7 @@
       <button class="btn btn-primary btn-block" style="margin-top:14px;" onclick="login()">Enter</button>
       <div class="error-msg" id="loginError">Incorrect username or password.</div>
     </div>
-    <div class="version-tag">live-v1.6 — 2026-07-21</div>
+    <div class="version-tag">live-v1.7 — 2026-07-21</div>
   </div>
 
   <div class="class-select-screen hidden" id="classSelectScreen">
@@ -1539,6 +1539,7 @@ function ccfDrawPostBlogSection(doc, yStart, newUnit){
 
 // ── Builds one student's CCF reflection page in a jsPDF doc (bulk/multi-page use) ──
 function addCCFReflectionPage(doc, studentName, classId, studentNumber, week, annotation, isFirst){
+  const {jsPDF} = window.jspdf;
   if(!isFirst) doc.addPage();
 
   const hasAnnotation = annotation && annotation.annotatedText;
@@ -1638,22 +1639,41 @@ async function downloadReflectionMerged(){
   const origLabel = mergedBtn.textContent;
   mergedBtn.disabled = true; zipBtn.disabled = true;
 
-  mergedBtn.textContent = `Fetching 0/${reflectionsData.roster.length}…`;
-  const annotations = await fetchAnnotationsForRoster(currentClass, reflectionsData.roster, reflectionsWeek,
-    (done, total) => { mergedBtn.textContent = `Fetching ${done}/${total}…`; });
+  try{
+    mergedBtn.textContent = `Fetching 0/${reflectionsData.roster.length}…`;
+    const annotations = await fetchAnnotationsForRoster(currentClass, reflectionsData.roster, reflectionsWeek,
+      (done, total) => { mergedBtn.textContent = `Fetching ${done}/${total}…`; });
 
-  mergedBtn.textContent = 'Building PDF…';
-  const doc = new jsPDF({unit:'mm',format:'a4'});
-  let first = true;
-  reflectionsData.roster.forEach(r=>{
-    addCCFReflectionPage(doc, r.name, currentClass, r.studentNumber, reflectionsWeek, annotations[r.studentNumber], first);
-    first=false;
-  });
-  doc.save(`${currentClass}_Week${String(reflectionsWeek).padStart(2,'0')}_CCF-Reflections_All.pdf`);
+    mergedBtn.textContent = 'Building PDF…';
+    const doc = new jsPDF({unit:'mm',format:'a4'});
+    let first = true;
+    const failed = [];
+    reflectionsData.roster.forEach(r=>{
+      // One student's page throwing (unusual content, a jsPDF edge case, anything)
+      // must never take down the whole batch — catch it, note it, keep going.
+      try{
+        addCCFReflectionPage(doc, r.name, currentClass, r.studentNumber, reflectionsWeek, annotations[r.studentNumber], first);
+      }catch(pageErr){
+        console.error('Failed to build reflection page for', r.name, r.studentNumber, pageErr);
+        if(!first) doc.addPage();
+        doc.setFontSize(11); doc.setFont('helvetica','bold'); doc.setTextColor(32,38,31);
+        doc.text(r.name, 12, 20);
+        doc.setFontSize(9); doc.setFont('helvetica','italic'); doc.setTextColor(150,60,60);
+        doc.text('Could not build this page — see browser console for details.', 12, 28);
+        failed.push(r.name);
+      }
+      first=false;
+    });
+    doc.save(`${currentClass}_Week${String(reflectionsWeek).padStart(2,'0')}_CCF-Reflections_All.pdf`);
 
-  mergedBtn.disabled = false; zipBtn.disabled = false;
-  mergedBtn.textContent = origLabel;
-  showToast('Downloaded.');
+    showToast(failed.length ? `Downloaded — ${failed.length} page(s) had errors: ${failed.join(', ')}` : 'Downloaded.');
+  }catch(err){
+    console.error('downloadReflectionMerged failed:', err);
+    showToast('Something went wrong — see browser console for details.');
+  }finally{
+    mergedBtn.disabled = false; zipBtn.disabled = false;
+    mergedBtn.textContent = origLabel;
+  }
 }
 
 // ── Option 2: One PDF per student, bundled as a ZIP ───────────────────────
@@ -1665,31 +1685,43 @@ async function downloadReflectionZip(){
   const origLabel = zipBtn.textContent;
   zipBtn.disabled = true; mergedBtn.disabled = true;
 
-  const zip = new JSZip();
-  const folder = zip.folder(`${currentClass}_Week${String(reflectionsWeek).padStart(2,'0')}_CCF-Reflections`);
+  try{
+    const zip = new JSZip();
+    const folder = zip.folder(`${currentClass}_Week${String(reflectionsWeek).padStart(2,'0')}_CCF-Reflections`);
 
-  zipBtn.textContent = `Fetching 0/${reflectionsData.roster.length}…`;
-  const annotations = await fetchAnnotationsForRoster(currentClass, reflectionsData.roster, reflectionsWeek,
-    (done, total) => { zipBtn.textContent = `Fetching ${done}/${total}…`; });
+    zipBtn.textContent = `Fetching 0/${reflectionsData.roster.length}…`;
+    const annotations = await fetchAnnotationsForRoster(currentClass, reflectionsData.roster, reflectionsWeek,
+      (done, total) => { zipBtn.textContent = `Fetching ${done}/${total}…`; });
 
-  zipBtn.textContent = 'Building ZIP…';
-  reflectionsData.roster.forEach(r=>{
-    const doc = new jsPDF({unit:'mm',format:'a4'});
-    addCCFReflectionPage(doc, r.name, currentClass, r.studentNumber, reflectionsWeek, annotations[r.studentNumber], true);
-    const safeName = r.name.replace(/[^a-zA-Z0-9_\- ]/g,'').trim().replace(/\s+/g,'_');
-    folder.file(`${safeName}_CCF-Reflection.pdf`, doc.output('arraybuffer'));
-  });
+    zipBtn.textContent = 'Building ZIP…';
+    const failed = [];
+    reflectionsData.roster.forEach(r=>{
+      const safeName = r.name.replace(/[^a-zA-Z0-9_\- ]/g,'').trim().replace(/\s+/g,'_');
+      try{
+        const doc = new jsPDF({unit:'mm',format:'a4'});
+        addCCFReflectionPage(doc, r.name, currentClass, r.studentNumber, reflectionsWeek, annotations[r.studentNumber], true);
+        folder.file(`${safeName}_CCF-Reflection.pdf`, doc.output('arraybuffer'));
+      }catch(pageErr){
+        console.error('Failed to build reflection page for', r.name, r.studentNumber, pageErr);
+        failed.push(r.name);
+      }
+    });
 
-  const blob = await zip.generateAsync({type:'blob'});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href=url; a.download=`${currentClass}_Week${String(reflectionsWeek).padStart(2,'0')}_CCF-Reflections.zip`;
-  a.click();
-  URL.revokeObjectURL(url);
+    const blob = await zip.generateAsync({type:'blob'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href=url; a.download=`${currentClass}_Week${String(reflectionsWeek).padStart(2,'0')}_CCF-Reflections.zip`;
+    a.click();
+    URL.revokeObjectURL(url);
 
-  zipBtn.disabled = false; mergedBtn.disabled = false;
-  zipBtn.textContent = origLabel;
-  showToast('ZIP downloaded.');
+    showToast(failed.length ? `ZIP downloaded — ${failed.length} student(s) skipped due to errors: ${failed.join(', ')}` : 'ZIP downloaded.');
+  }catch(err){
+    console.error('downloadReflectionZip failed:', err);
+    showToast('Something went wrong — see browser console for details.');
+  }finally{
+    zipBtn.disabled = false; mergedBtn.disabled = false;
+    zipBtn.textContent = origLabel;
+  }
 }
 
 /* ════════════════════════════════════════════════════════════════════
