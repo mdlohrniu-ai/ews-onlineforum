@@ -231,7 +231,7 @@
       <button class="btn btn-primary btn-block" style="margin-top:14px;" onclick="login()">Enter</button>
       <div class="error-msg" id="loginError">Incorrect username or password.</div>
     </div>
-    <div class="version-tag">live-v1.3 — 2026-07-09</div>
+    <div class="version-tag">live-v1.4 — 2026-07-21</div>
   </div>
 
   <div class="class-select-screen hidden" id="classSelectScreen">
@@ -257,6 +257,7 @@
       <button class="nav-btn" data-tab="rubric" onclick="switchTab('rubric')">Rubric</button>
       <button class="nav-btn" data-tab="settings" onclick="switchTab('settings')">Settings</button>
       <button class="nav-btn" data-tab="reflections" onclick="switchTab('reflections')">Reflections</button>
+      <button class="nav-btn" data-tab="grammar" onclick="switchTab('grammar')">Grammar Analysis</button>
     </div>
 
     <div id="content"></div>
@@ -371,6 +372,7 @@ function switchTab(tab){
   if(tab==='rubric') renderRubricTab();
   if(tab==='settings') renderSettings();
   if(tab==='reflections') renderReflections();
+  if(tab==='grammar') renderGrammarAnalysis();
 }
 
 /* ====================== RUBRIC VERSION LOOKUP ====================== */
@@ -1431,7 +1433,120 @@ async function downloadReflectionZip(){
   URL.revokeObjectURL(url);
   showToast('ZIP downloaded.');
 }
+
+/* ════════════════════════════════════════════════════════════════════
+   GRAMMAR ANALYSIS — export raw entries + Stage 1 prompt for Claude,
+   import Stage 2's verified JSON back in. See CCF_handover.md and the
+   Stage 1/Stage 2 prompt files for the full design.
+   ════════════════════════════════════════════════════════════════════ */
+let grammarWeek = null;
+
+function renderGrammarAnalysis(){
+  if(!classData.schedule.length){
+    document.getElementById('content').innerHTML = `<div class="card empty-note">No weeks set up yet — add one in the Schedule tab first.</div>`;
+    return;
+  }
+  if(grammarWeek === null) grammarWeek = classData.schedule.slice().sort((a,b)=>b.Week-a.Week)[0].Week;
+
+  const weekOptions = classData.schedule.slice().sort((a,b)=>b.Week-a.Week)
+    .map(s=>`<option value="${s.Week}" ${s.Week===grammarWeek?'selected':''}>${String(s.Week).padStart(2,'0')} · ${s.DateRangeLabel}</option>`).join('');
+
+  document.getElementById('content').innerHTML = `
+    <div class="card" style="margin-bottom:14px;">
+      <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
+        <div>
+          <label class="field-label" style="margin-bottom:6px;">Week</label>
+          <select class="week-select" id="grammarWeekSelect" onchange="grammarWeek=parseInt(this.value)">
+            ${weekOptions}
+          </select>
+        </div>
+        <div style="margin-left:auto;">
+          <button class="btn btn-primary" id="grammarExportBtn" onclick="doExportGrammarFeed()">Export for Claude →</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-label">Step 1 — copy this into a new Claude chat (Stage 1)</div>
+    <div class="card" id="grammarExportCard">
+      <div class="empty-note">Pick a week and click Export to generate the feed.</div>
+    </div>
+
+    <div class="section-label">Step 2 — after Stage 1 and Stage 2 verification, paste the final JSON here</div>
+    <div class="card">
+      <label class="field-label" style="margin-bottom:6px;">Verified JSON (Stage 2 output)</label>
+      <textarea id="grammarImportInput" rows="8" placeholder='{"cycle": 4, "students": [...]}' style="font-family:'IBM Plex Mono',monospace;font-size:0.8rem;"></textarea>
+      <button class="btn btn-primary" style="margin-top:10px;" onclick="doImportAnnotations()">Import annotations →</button>
+      <div id="grammarImportResult" style="margin-top:12px;"></div>
+    </div>
+  `;
+}
+
+async function doExportGrammarFeed(){
+  const btn = document.getElementById('grammarExportBtn');
+  btn.disabled = true; btn.textContent = 'Exporting…';
+  const result = await callApi('exportGrammarFeed', { classId: currentClass, week: grammarWeek });
+  btn.disabled = false; btn.textContent = 'Export for Claude →';
+
+  const card = document.getElementById('grammarExportCard');
+  if(!result.success){
+    card.innerHTML = `<div class="empty-note">${result.error}</div>`;
+    return;
+  }
+
+  const warningsHtml = result.warnings && result.warnings.length
+    ? `<div style="background:#FBF6E2;border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:0.82rem;color:#6b5700;">
+         ${result.warnings.map(w=>`⚠ ${w}`).join('<br>')}
+       </div>`
+    : '';
+
+  card.innerHTML = `
+    ${warningsHtml}
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+      <span style="font-size:0.84rem;color:var(--ink-soft);">${result.entryCount} ${result.entryCount===1?'entry':'entries'} for Week ${grammarWeek}</span>
+      <button class="btn btn-ghost btn-sm" onclick="copyGrammarFeed()">📋 Copy to clipboard</button>
+    </div>
+    <textarea id="grammarFeedText" rows="12" readonly style="font-family:'IBM Plex Mono',monospace;font-size:0.76rem;">${result.feed}</textarea>
+  `;
+}
+
+async function copyGrammarFeed(){
+  const text = document.getElementById('grammarFeedText').value;
+  try{
+    await navigator.clipboard.writeText(text);
+    showToast('Copied — paste into a new Claude chat.');
+  }catch(e){
+    // Clipboard API can fail without a secure context/user gesture in some browsers —
+    // fall back to select-all so the teacher can still Ctrl/Cmd+C manually.
+    const ta = document.getElementById('grammarFeedText');
+    ta.focus(); ta.select();
+    showToast('Press Ctrl/Cmd+C to copy.');
+  }
+}
+
+async function doImportAnnotations(){
+  const raw = document.getElementById('grammarImportInput').value.trim();
+  const resultDiv = document.getElementById('grammarImportResult');
+  if(!raw){ showToast('Paste the verified JSON first.'); return; }
+
+  resultDiv.innerHTML = `<div class="empty-note">Importing…</div>`;
+  const result = await callApi('importAnnotations', { classId: currentClass, payload: raw });
+
+  if(!result.success){
+    resultDiv.innerHTML = `<div style="color:var(--stamp-red);font-size:0.84rem;">${result.error}</div>`;
+    return;
+  }
+
+  const notFoundHtml = result.notFound && result.notFound.length
+    ? `<div style="color:var(--stamp-red);font-size:0.82rem;margin-top:6px;">Not matched to a student in Roster: ${result.notFound.join(', ')}</div>`
+    : '';
+
+  resultDiv.innerHTML = `
+    <div style="color:#2a7a4e;font-weight:600;font-size:0.88rem;">✓ Imported ${result.imported} ${result.imported===1?'entry':'entries'} for Week ${result.week}.</div>
+    ${notFoundHtml}
+  `;
+}
 </script>
+
 
 </body>
 </html>

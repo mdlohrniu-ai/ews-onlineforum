@@ -255,16 +255,17 @@
   .grammar-disclaimer{background:#fdf6e3;border:1px solid #e8d9a0;border-radius:10px;padding:13px 16px;margin-bottom:14px;font-size:0.76rem;line-height:1.65;color:#6b5700;}
   .grammar-disclaimer p+p{margin-top:4px;font-size:0.7rem;color:#7a6510;}
   .annotated-blog{font-size:0.88rem;line-height:1.9;white-space:pre-wrap;word-break:break-word;}
-  .err-span{background:#fdf0db;border-bottom:2px solid #c47a1e;border-radius:3px;padding:1px 2px;cursor:help;position:relative;display:inline;transition:background .15s;}
-  .err-span:hover{background:#fce4b0;}
-  .err-ins{background:#ddf2e8;border-bottom:2px solid #2a7a4e;font-style:italic;}
-  .err-ins:hover{background:#b8e8cf;}
-  .err-del{background:#fce8e8;border-bottom:2px solid #b03030;text-decoration:line-through;text-decoration-color:#b03030;}
-  .err-del:hover{background:#f5c0c0;}
+  .ccf-tag{border-radius:3px;padding:1px 3px;cursor:help;position:relative;display:inline;font-weight:600;transition:filter .15s;}
+  .ccf-tag:hover{filter:brightness(0.94);}
+  .ccf-green{background:#DBF2E5;color:#1A3A2A;}
+  .ccf-yellow{background:#FDF4CD;color:#664F08;}
+  .ccf-orange{background:#FDE1C4;color:#783A0A;}
+  .ccf-red{background:#FCDCDC;color:#6E1C1C;}
+  .ccf-purple{background:#E6DEF7;color:#4A2A80;}
+  .ccf-grey{background:#E6E6E4;color:#5A5A56;}
   .err-tt{display:none;position:absolute;bottom:calc(100% + 8px);left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;border-radius:10px;padding:11px 14px;min-width:220px;max-width:280px;font-size:0.72rem;line-height:1.5;z-index:100;pointer-events:none;box-shadow:0 8px 24px rgba(0,0,0,0.25);white-space:normal;text-align:left;font-family:'IBM Plex Sans',sans-serif;}
   .err-tt::after{content:'';position:absolute;top:100%;left:50%;transform:translateX(-50%);border:6px solid transparent;border-top-color:var(--ink);}
-  .err-span:hover .err-tt,.err-ins:hover .err-tt,.err-del:hover .err-tt{display:block;}
-  .tt-corr{font-family:'IBM Plex Mono',monospace;font-size:0.76rem;color:#7dd3a8;margin-bottom:4px;}
+  .ccf-tag:hover .err-tt{display:block;}
   .tt-code{font-size:0.65rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:rgba(255,255,255,0.5);margin-bottom:5px;}
   .tt-unit{background:rgba(255,255,255,0.1);border-radius:6px;padding:6px 9px;margin-top:4px;}
   .tt-num{font-family:'IBM Plex Mono',monospace;font-size:0.68rem;color:#93c5fd;display:block;margin-bottom:2px;}
@@ -324,7 +325,7 @@
       <button class="btn btn-primary btn-block" style="margin-top:14px;" onclick="login()">Enter</button>
       <div class="error-msg" id="loginError">Student number not found. Check and try again.</div>
     </div>
-    <div class="version-tag">v0.25 — 2026-07-09</div>
+    <div class="version-tag">v1.1 — 2026-07-21</div>
   </div>
 
   <!-- ===================== MAIN APP ===================== -->
@@ -360,8 +361,6 @@
 
 const API_URL = "https://script.google.com/macros/s/AKfycbyMbuD6_z3PTOt8P_dS8TPTImZB-r1cnraENT82KGxD6eL2EGK0IxSC5spUu38SfFnX/exec";
 
-// Grammar Analysis backend — serves annotated blog data per student/week
-const GRAMMAR_API_URL = "https://script.google.com/macros/s/AKfycbzFVsdjF9uSk81PmluGbROuCdYx4RTvB9OEKxwKjA5EJrJCy8zH7XfHVVhmihIdLfgv/exec";
 // Master Login URL — used to submit grammar unit selection (same as student dashboard)
 const GRAMMAR_SUBMIT_URL = "https://script.google.com/macros/s/AKfycbys09mRRw7bocSfAmEk1D7U7o9JQ1XJxGWk_NyOBEq62HKyQ6jspO_uTKbNt9lHMcsEgQ/exec";
 
@@ -681,19 +680,20 @@ async function renderGrammarFeedback(week){
   isWritingSomething = false;
   document.getElementById('content').innerHTML = `<div class="card empty-note">Loading grammar feedback…</div>`;
 
-  // Fetch annotation data and grammar window status in parallel
+  // Fetch annotation data and grammar window status in parallel.
+  // Annotation now comes from the Forum's own backend (getAnnotationForWeek,
+  // reading the Annotations tab) instead of the old external GRAMMAR_API_URL.
   const [annotationResult, windowResult] = await Promise.allSettled([
-    fetch(`${GRAMMAR_API_URL}?action=getWeek&id=${encodeURIComponent(currentStudent)}&week=${week}`,{redirect:'follow',credentials:'omit',cache:'no-cache'})
-      .then(r=>r.text()).then(t=>JSON.parse(t.replace(/[\x00-\x08\x0b\x0c\x0e-\x1f\x7f-\x9f]/g,'?'))),
+    callApi('getAnnotationForWeek', { classId: currentClassId, studentNumber: currentStudent, week }),
     fetch(`${GRAMMAR_SUBMIT_URL}?${new URLSearchParams({action:'getGrammarSubmission',studentNumber:currentStudent,className:currentClassId})}`)
       .then(r=>r.json()),
   ]);
 
-  const annotation = (annotationResult.status==='fulfilled' && !annotationResult.value.error) ? annotationResult.value : null;
+  const annotationData = (annotationResult.status==='fulfilled' && annotationResult.value && annotationResult.value.success) ? annotationResult.value : null;
+  const annotation = (annotationData && annotationData.found) ? annotationData : null;
   const winData   = (windowResult.status==='fulfilled') ? windowResult.value : null;
 
   const hasAnnotation = annotation && annotation.annotatedText;
-  const errors = hasAnnotation ? (annotation.errors || []) : [];
 
   // Grammar window state
   const win = winData ? winData.grammarWindow : null;
@@ -706,8 +706,8 @@ async function renderGrammarFeedback(week){
   // Annotated text block
   const annotationBlockHtml = hasAnnotation
     ? `<div class="section-label">Your entry with feedback</div>
-       <div class="card"><div class="annotated-blog">${buildAnnotatedHtml(annotation.annotatedText, errors)}</div></div>
-       <div style="text-align:center;font-size:0.72rem;color:var(--ink-soft);margin:-6px 0 14px;">Tap any highlighted word to see the correction</div>`
+       <div class="card"><div class="annotated-blog">${buildAnnotatedHtml(annotation.annotatedText)}</div></div>
+       <div style="text-align:center;font-size:0.72rem;color:var(--ink-soft);margin:-6px 0 14px;">Tap any highlighted word to see the error type and unit</div>`
     : `<div class="card empty-note" style="margin-bottom:14px;">
          No analysis available for this week.<br>
          <span style="font-size:0.8rem;">No blog entry was submitted, so there is no grammar feedback.</span>
@@ -786,8 +786,8 @@ async function renderGrammarFeedback(week){
       <div class="label">Week ${String(week).padStart(2,'0')}</div>
     </div>
     <div class="grammar-disclaimer">
-      <p>Grammar feedback on this page is generated by AI. Corrections and unit suggestions are not always accurate — if something doesn't seem right, ask your teacher.</p>
-      <p>このページの文法フィードバックはAIによって生成されています。修正内容や参照ユニットは必ずしも正確ではありません。疑問に思ったことは先生に相談してください。</p>
+      <p>Grammar feedback on this page is generated by AI. Highlighted words show where a mistake might be — tap to see the type and unit. It doesn't catch everything, and unit suggestions aren't always exact — ask your teacher if something seems off.</p>
+      <p>このページの文法フィードバックはAIによって生成されています。ハイライトされた単語は間違いの可能性がある箇所を示しています。タップすると種類とユニット番号が表示されます。すべての間違いを検出できるわけではなく、ユニットの提案も必ずしも正確ではありません。疑問に思ったことは先生に相談してください。</p>
     </div>
     ${annotationBlockHtml}
     ${unitSectionHtml}
@@ -798,6 +798,13 @@ async function renderGrammarFeedback(week){
         <div class="sub">Download a reflection worksheet for this week's entry.</div>
       </div>
       <button class="btn-pdf" ${!hasAnnotation?'disabled title="No entry was submitted this week."':''} onclick="downloadReflectionPDF(${week}, ${JSON.stringify(annotation||{}).replace(/"/g,'&quot;')})">📄 Download PDF</button>
+    </div>
+    <div class="card pdf-download-row" style="margin-top:10px;">
+      <div class="info">
+        <div class="ttl">Download CCF reflection sheet</div>
+        <div class="sub">The structured sentence-correction sheet — bring this to class printed, or fill it in from this download.</div>
+      </div>
+      <button class="btn-pdf" ${!hasAnnotation?'disabled title="No entry was submitted this week."':''} onclick="downloadCCFReflectionSheet(${week}, ${JSON.stringify(annotation||{}).replace(/"/g,'&quot;')}, ${JSON.stringify(existingMain||'')})">📄 Download CCF Sheet</button>
     </div>
   `;
 }
@@ -853,30 +860,39 @@ async function submitGrammarUnit(week){
   }
 }
 
-/* ── Annotation renderer — parses [error→correction | CODE | B##] tags ── */
-function buildAnnotatedHtml(text, errors){
+/* ── Annotation renderer — CCF format. Uses ccfTokenize (also used by
+   downloadCCFReflectionSheet) so the on-screen view and the printed sheet
+   are always reading the exact same tags the same way. Never shows the
+   correction — only the error span/caret, the code, and the unit. ── */
+const CCF_CODE_LABELS={VT:'Verb Tense',SVA:'Subject-Verb Agreement',ART:'Articles',PREP:'Prepositions',WF:'Word Form',SP:'Singular / Plural',WO:'Word Order',MOD:'Modal Verbs',CL:'Clause-level Error',ME:'Missing / Extra Words',SC:'Spelling & Capitalisation',PU:'Punctuation',COL:'Collocation',WC:'Word Choice',IDM:'Idiom',AWK:'Awkward Phrasing'};
+function buildAnnotatedHtml(text){
   function esc(s){ return s ? String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') : ''; }
-  const CODE_LABELS={VT:'Verb Tense',SVA:'Subject-Verb Agreement',ART:'Articles',PREP:'Prepositions',WF:'Word Form',SP:'Singular / Plural',WO:'Word Order',MOD:'Modal Verbs',CL:'Clause-level Error',ME:'Missing / Extra Words',SC:'Spelling & Capitalisation',PU:'Punctuation'};
-  const map={};
-  (errors||[]).forEach(e=>{ const k=(e.original+'|'+e.code).toLowerCase(); if(!map[k]) map[k]=e; });
-  const re=/\[([^\]\u2192>]*)(?:\u2192|->)([^\]|]*?)\s*\|\s*([A-Z]+)(?:\s*\|\s*([BI]\d+(?:\/[BI]\d+)*))?\]/g;
-  let out='', last=0, m;
-  while((m=re.exec(text))!==null){
-    out += esc(text.slice(last, m.index));
-    const orig=m[1].trim(), corr=m[2].trim(), code=m[3].trim(), unit=m[4]?m[4].trim():'';
-    const e = map[(orig+'|'+code).toLowerCase()]||{};
-    let display, cls;
-    if(orig===''&&corr!==''){display='[+'+corr+']'; cls='err-span err-ins';}
-    else if(orig!==''&&corr===''){display=orig; cls='err-span err-del';}
-    else{display=orig; cls='err-span';}
-    const od=orig||'∅', cd=corr||'∅';
-    let tip=`<div class="tt-corr">${esc(od)} → ${esc(cd)}</div><div class="tt-code">${esc(CODE_LABELS[code]||code)}</div>`;
-    if(unit) tip+=`<div class="tt-unit"><span class="tt-num">${esc(unit)}</span><span class="tt-title">${esc(e.unitTitleJpn||e.unitTitle||'')}</span></div>`;
-    out+=`<span class="${cls}">${esc(display)}<span class="err-tt">${tip}</span></span>`;
-    last = m.index+m[0].length;
+  const tokens = ccfTokenize(text);
+  const parts = tokens.map(t=>{
+    if(t.break) return '<br><br>';
+    if(!t.style) return esc(t.text);
+    const noUnit = t.style.state==='purple' || t.style.state==='grey';
+    let tip = `<div class="tt-code">${esc(CCF_CODE_LABELS[t.style.code]||t.style.code)}</div>`;
+    if(!noUnit && t.style.primaryUnit){
+      tip += `<div class="tt-unit"><span class="tt-num">${esc(t.style.primaryUnit)}</span></div>`;
+      if(t.style.secondaryUnit) tip += `<div class="tt-title">also see ${esc(t.style.secondaryUnit)}</div>`;
+    }
+    return `<span class="ccf-tag ccf-${t.style.state}">${esc(t.text)}<span class="err-tt">${tip}</span></span>`;
+  });
+  let html='';
+  for(let i=0;i<parts.length;i++){
+    if(i>0 && parts[i]!=='<br><br>' && parts[i-1]!=='<br><br>') html+=' ';
+    html+=parts[i];
   }
-  out += esc(text.slice(last));
-  return out.replace(/\n/g,'<br>');
+  return html;
+}
+
+// Strips CCF tags down to plain text for contexts that don't render colour
+// (e.g. the generic worksheet PDF below) — omissions (^) vanish entirely
+// since there's no word to show; everything else keeps just the span text.
+function ccfStripTags(text){
+  return String(text||'').replace(/\{(\^|[^{}|]*)\|[A-Z]+(?:\|[BI]\d+(?:\/[BI]\d+)?)?\}/g,
+    (m, span) => span==='^' ? '' : span).replace(/[ \t]{2,}/g,' ');
 }
 
 /* ── Single-page adaptive PDF ── */
@@ -895,7 +911,7 @@ function downloadReflectionPDF(week, annotation){
   const BLOG_AVAILABLE = 285-54-AFTER_FIXED;
 
   const rawText = annotation && annotation.annotatedText
-    ? annotation.annotatedText.replace(/\[([^\]\u2192>]*)(?:\u2192|->)[^\]|]*\|[^\]]*\]/g,'$1').trim()
+    ? ccfStripTags(annotation.annotatedText).trim()
     : '';
 
   const tempDoc=new jsPDF({unit:'mm',format:'a4'});
@@ -956,6 +972,313 @@ function downloadReflectionPDF(week, annotation){
 
   const safeName=(currentStudentName||currentStudent).replace(/\s+/g,'_');
   doc.save(`EWS_Week${week}_Reflection_${safeName}.pdf`);
+}
+
+
+/* ══════════════════════════════════════════════════════════════════════
+   CCF REFLECTION SHEET — see CCF_handover.md §7
+   One page: blog entry (colour + code + unit, NEVER the correction, once
+   real annotation data exists — falls back to plain text otherwise) + New
+   Unit box + Teacher Check (in-class / homework) + Sentence 1 (new unit)
+   + Sentence 2 (recurring). No Analysis field, no checkboxes (Decision
+   #12). Sentence-finding is the student's job (Decision #11).
+   Validated through many rounds of layout iteration in a standalone test
+   script before being ported here — see conversation history if the
+   reasoning behind a specific spacing/colour choice needs revisiting.
+   ══════════════════════════════════════════════════════════════════════ */
+
+const CCF_M = 12, CCF_W = 210 - CCF_M*2;
+
+// ── Colour/recurrence engine STUB ───────────────────────────────────────
+// The real engine (StudiedSet + per-semester recurrence counts, CCF §4) is
+// not built yet, so every treatable error defaults to green (Decision #4:
+// no study history recorded = "not yet studied," never higher). Purple is
+// real, not a stub (SC/PU never carry a unit or history — that's a fact
+// about the code). Grey is also real: COL/WC/IDM/AWK (untreatable errors)
+// are never colour-coded to a unit and never selectable as a study unit,
+// but they're never silently dropped either — a class-wide toggle for
+// whether grey actually renders to students doesn't exist yet (would need
+// a new Settings field); for now grey always renders.
+const CCF_COLORS = {
+  green:  {fill:[219,242,229], text:[26,58,42]},
+  yellow: {fill:[253,244,205], text:[102,79,8]},
+  orange: {fill:[253,225,196], text:[120,58,10]},
+  red:    {fill:[252,220,220], text:[110,28,28]},
+  purple: {fill:[230,222,247], text:[74,42,128]},
+  grey:   {fill:[230,230,228], text:[90,90,86]},
+};
+function ccfUnitState(code){
+  if(!code) return null;
+  if(code==='SC'||code==='PU') return 'purple';
+  if(code==='COL'||code==='WC'||code==='IDM'||code==='AWK') return 'grey';
+  return 'green'; // STUB — see comment above
+}
+function ccfTagFor(style){
+  const noUnit = style.state==='purple' || style.state==='grey';
+  return noUnit ? style.code : style.code + (style.primaryUnit ? '\u00b7'+style.primaryUnit : '');
+}
+
+// ── Tokenize the CCF tag format into word-level tokens ──────────────────
+// Tag shapes: {span|CODE|UNIT}, {span|CODE|UNIT1/UNIT2} (dual-unit,
+// slash-separated), {^|CODE|UNIT} (omission, caret only — never the
+// missing word), {span|CODE} (no unit — SC/PU/COL/WC/IDM/AWK).
+function ccfTokenize(text){
+  const re=/\{(\^|[^{}|]*)\|([A-Z]+)(?:\|([BI]\d+(?:\/[BI]\d+)?))?\}/g;
+  const tokens=[]; let last=0, m;
+  function pushWords(str, style){
+    // Splits on blank-line paragraph breaks into {break:true} markers, then
+    // on whitespace into individual word tokens — no separate space
+    // tokens; spacing between words is handled uniformly at render time.
+    String(str).split(/\n\s*\n/).forEach((para, i, arr)=>{
+      para.split(/\s+/).filter(Boolean).forEach(w=> tokens.push({text:w, style}));
+      if(i < arr.length-1) tokens.push({break:true});
+    });
+  }
+  while((m=re.exec(text))!==null){
+    pushWords(text.slice(last, m.index), null);
+    const span=m[1], code=m[2].trim();
+    const unitRaw=m[3]?m[3].trim():'';
+    const [primaryUnit, secondaryUnit] = unitRaw ? unitRaw.split('/') : [null,null];
+    const state=ccfUnitState(code);
+    const noUnit = state==='purple' || state==='grey';
+    const style = state ? {code, primaryUnit: noUnit?null:primaryUnit, secondaryUnit: noUnit?null:secondaryUnit, state, border:false} : null;
+    if(span==='^'){
+      tokens.push({text:'^', style});
+    } else {
+      span.trim().split(/\s+/).filter(Boolean).forEach(w=> tokens.push({text:w, style}));
+    }
+    last = m.index+m[0].length;
+  }
+  pushWords(text.slice(last), null);
+  return tokens;
+}
+
+// ── Word-wrap that treats each styled word + its inline [CODE·UNIT] tag
+// as one atomic unit (so a tag never gets orphaned onto the next line) ──
+function ccfLayoutAnnotated(doc, tokens, fontSize, maxWidth){
+  const tagFontSize = fontSize*0.62;
+  doc.setFont('helvetica','normal'); doc.setFontSize(fontSize);
+  const spaceW = doc.getTextWidth(' ');
+  const widths = tokens.map(t=>{
+    if(t.break) return 0;
+    doc.setFont('helvetica', t.style?'bold':'normal'); doc.setFontSize(fontSize);
+    let w = doc.getTextWidth(t.text);
+    if(t.style){
+      doc.setFont('helvetica','normal'); doc.setFontSize(tagFontSize);
+      w += doc.getTextWidth(' ['+ccfTagFor(t.style)+']');
+    }
+    return w;
+  });
+  doc.setFont('helvetica','normal'); doc.setFontSize(fontSize); // leave doc state clean for the next caller
+  const lines=[]; let cur=[]; let curW=0;
+  tokens.forEach((t,i)=>{
+    if(t.break){ if(cur.length){lines.push(cur); cur=[]; curW=0;} lines.push([]); return; }
+    const w=widths[i];
+    const add = cur.length? spaceW+w : w;
+    if(curW+add>maxWidth && cur.length){ lines.push(cur); cur=[]; curW=0; }
+    cur.push(t); curW += (cur.length>1?spaceW:0)+w;
+  });
+  if(cur.length) lines.push(cur);
+  return lines;
+}
+function ccfDrawAnnotated(doc, tokens, x0, y0, fontSize, lineHeight, maxWidth){
+  const lines = ccfLayoutAnnotated(doc, tokens, fontSize, maxWidth);
+  doc.setFont('helvetica','normal'); doc.setFontSize(fontSize);
+  const spaceW = doc.getTextWidth(' ');
+  const tagFontSize = fontSize*0.62;
+  let y=y0;
+  lines.forEach(line=>{
+    let x=x0;
+    line.forEach(t=>{
+      doc.setFont('helvetica', t.style?'bold':'normal'); doc.setFontSize(fontSize);
+      let w = doc.getTextWidth(t.text);
+      let tagStr = null, tagW=0;
+      if(t.style){
+        tagStr = ' ['+ccfTagFor(t.style)+']';
+        doc.setFont('helvetica','normal'); doc.setFontSize(tagFontSize);
+        tagW = doc.getTextWidth(tagStr);
+      }
+      if(t.style){
+        const c = CCF_COLORS[t.style.state];
+        doc.setFillColor(...c.fill);
+        doc.roundedRect(x-0.6, y-fontSize*0.34, w+tagW+1.2, fontSize*0.48, 0.5, 0.5, 'F');
+        doc.setTextColor(...c.text);
+      } else {
+        doc.setTextColor(40,40,40);
+      }
+      doc.setFont('helvetica', t.style?'bold':'normal'); doc.setFontSize(fontSize);
+      doc.text(t.text, x, y);
+      x += w;
+      if(tagStr){
+        doc.setFont('helvetica','normal'); doc.setFontSize(tagFontSize);
+        doc.text(tagStr, x, y);
+        x += tagW;
+      }
+      x += spaceW;
+    });
+    y += lineHeight;
+  });
+  return y;
+}
+
+// ── Layout helpers (all take `doc` explicitly, so a scratch doc can be
+// used to MEASURE the fixed-height section below without drawing on the
+// real page — see ccfDrawPostBlogSection) ──────────────────────────────
+function ccfRuled(doc, y, n, gap){
+  for(let i=0;i<n;i++){ doc.setDrawColor(61,90,115); doc.setLineWidth(0.35); doc.line(CCF_M,y,210-CCF_M,y); y+=gap; }
+  return y;
+}
+function ccfFieldLabel(doc, y, text){
+  doc.setFontSize(7.5); doc.setFont('helvetica','bold'); doc.setTextColor(91,99,88);
+  doc.text(text.toUpperCase(), CCF_M+4, y);
+  return y + 4.2;
+}
+function ccfFieldLabelTag(doc, y, text, fill, textColor){
+  const lbl = text.toUpperCase();
+  doc.setFontSize(7.5); doc.setFont('helvetica','bold');
+  const tw = doc.getTextWidth(lbl);
+  doc.setFillColor(...fill);
+  doc.roundedRect(CCF_M+2.5, y-3.6, tw+7, 5.2, 1, 1, 'F');
+  doc.setTextColor(...textColor);
+  doc.text(lbl, CCF_M+6, y);
+  return y + 5.2;
+}
+function ccfBoxAround(doc, yStart, yEnd){
+  doc.setDrawColor(91,99,88); doc.setLineWidth(0.45);
+  doc.roundedRect(CCF_M, yStart, CCF_W, yEnd-yStart, 2, 2, 'S');
+}
+function ccfSentenceBox(doc, y, labelText, fill, textColor){
+  const boxStart = y;
+  y += 3;
+  y = fill
+    ? ccfFieldLabelTag(doc, y, labelText, fill, textColor) + 3.5
+    : ccfFieldLabel(doc, y, labelText) + 3.5;
+  y = ccfRuled(doc, y, 2, 6.5) + 2.5;
+  y = ccfFieldLabel(doc, y, 'Correction attempt') + 3.5;
+  y = ccfRuled(doc, y, 2, 6.5) + 2.5;
+  y = ccfFieldLabel(doc, y, 'AI check / original sentence (homework)') + 3.5;
+  y = ccfRuled(doc, y, 2, 6.5) + 1.5;
+  ccfBoxAround(doc, boxStart, y);
+  return y;
+}
+
+// Everything from the divider through Sentence 2's box — same function used
+// both to MEASURE (on a disposable scratch doc, so we know exactly how much
+// room to leave for the blog entry) and to actually DRAW (on the real doc).
+// Because it's the same code path, the measurement can never drift out of
+// sync with the real layout, even as spacing keeps changing.
+function ccfDrawPostBlogSection(doc, yStart, newUnit){
+  let y = yStart;
+  y += 5;
+  doc.setDrawColor(215,218,206); doc.line(CCF_M,y,210-CCF_M,y); y += 7;
+
+  doc.setFontSize(7.5); doc.setFont('helvetica','bold'); doc.setTextColor(91,99,88);
+  const newUnitLabel = 'NEW UNIT';
+  doc.text(newUnitLabel, CCF_M+4, y);
+  const labelW = doc.getTextWidth(newUnitLabel);
+  doc.setDrawColor(42,122,78); doc.setLineWidth(0.4);
+  doc.roundedRect(CCF_M+4+labelW+4, y-4.2, 20, 6.5, 1, 1, 'S');
+
+  // Teacher check — same row as New Unit, top right. Two boxes, same size
+  // as the New Unit box, each with its label outside/left of it.
+  const tcW = 20, tcH = 6.5, tcGap = 8;
+  const checks = ['In-class completion', 'Homework completion'];
+  let cursorRight = CCF_M + CCF_W - 4;
+  const placed = [];
+  for(let i = checks.length - 1; i >= 0; i--){
+    doc.setFontSize(7.5); doc.setFont('helvetica','bold');
+    const labelText = checks[i].toUpperCase();
+    const labelWidth = doc.getTextWidth(labelText);
+    const boxRight = cursorRight;
+    const boxLeft = boxRight - tcW;
+    const labelEndX = boxLeft - 3;
+    placed[i] = { labelText, labelEndX, boxLeft };
+    cursorRight = labelEndX - labelWidth - tcGap;
+  }
+  placed.forEach(p => {
+    doc.setFontSize(7.5); doc.setFont('helvetica','bold'); doc.setTextColor(91,99,88);
+    doc.text(p.labelText, p.labelEndX, y, {align:'right'});
+    doc.setDrawColor(61,90,115); doc.setLineWidth(0.4);
+    doc.roundedRect(p.boxLeft, y-4.2, tcW, tcH, 1, 1, 'S');
+  });
+
+  y += 10;
+
+  y = ccfSentenceBox(doc, y, 'Sentence 1 — new unit', [219,242,229], [26,58,42]); y += 4;
+  y = ccfSentenceBox(doc, y, 'Sentence 2 — recurring', [253,244,205], [102,79,8]);
+  return y;
+}
+
+function downloadCCFReflectionSheet(week, annotation, newUnit){
+  if(!window.jspdf){ showToast('PDF generator loading — try again in a moment.'); return; }
+  const {jsPDF}=window.jspdf;
+  const doc=new jsPDF({unit:'mm',format:'a4'});
+
+  const hasAnnotation = annotation && annotation.annotatedText;
+  const blogTitle = (annotation && annotation.title) ? annotation.title : `Week ${week} entry`;
+
+  doc.setFontSize(14); doc.setFont('helvetica','bold'); doc.setTextColor(32,38,31);
+  doc.text('Blog Entry Grammar Reflection', CCF_M, 12);
+  doc.setFontSize(8); doc.setFont('helvetica','normal'); doc.setTextColor(91,99,88);
+  doc.text(`${currentClassId}  \u00b7  Week ${week}  \u00b7  ${currentStudentName||currentStudent}`, 210-CCF_M, 12, {align:'right'});
+  doc.setDrawColor(61,90,115); doc.setLineWidth(0.8);
+  doc.line(CCF_M, 16, 210-CCF_M, 16);
+
+  let y = 24;
+  doc.setFontSize(11); doc.setFont('helvetica','bold'); doc.setTextColor(32,38,31);
+  doc.text(blogTitle, CCF_M, y);
+  y += 6;
+  doc.setDrawColor(215,218,206); doc.setLineWidth(0.25); doc.line(CCF_M,y,210-CCF_M,y); y += 6;
+
+  const blogStartY = y;
+
+  // Measure the fixed-height section on a throwaway doc first, so
+  // AFTER_FIXED is always exactly what the real drawing code will use.
+  const scratch = new jsPDF({unit:'mm',format:'a4'});
+  const AFTER_FIXED = ccfDrawPostBlogSection(scratch, 0, newUnit);
+  const MAX_Y = 292;
+  const BLOG_AVAILABLE = MAX_Y - blogStartY - AFTER_FIXED;
+  const FONT_MIN = 5.5, FONT_MAX = 11.5;
+
+  let chosenFont = FONT_MIN, chosenLines = null, tokens = null;
+
+  if(hasAnnotation){
+    tokens = ccfTokenize(annotation.annotatedText);
+    for(let fs=FONT_MAX; fs>=FONT_MIN; fs-=0.25){
+      const testLines = ccfLayoutAnnotated(doc, tokens, fs, CCF_W-8);
+      const lineH = fs*0.352778*1.42;
+      if(testLines.length*lineH <= BLOG_AVAILABLE){ chosenFont=fs; chosenLines=testLines; break; }
+      chosenLines=testLines;
+    }
+  } else {
+    const plainText = 'No entry was submitted this week.';
+    for(let fs=FONT_MAX; fs>=FONT_MIN; fs-=0.25){
+      doc.setFontSize(fs);
+      const testLines = doc.splitTextToSize(plainText, CCF_W-8);
+      const lineH = fs*0.352778*1.42;
+      if(testLines.length*lineH <= BLOG_AVAILABLE){ chosenFont=fs; chosenLines=testLines; break; }
+      chosenLines=testLines;
+    }
+  }
+  if(chosenFont === FONT_MIN){
+    const lineH = FONT_MIN*0.352778*1.42;
+    if(chosenLines.length*lineH > BLOG_AVAILABLE){
+      console.warn('CCF reflection sheet: entry is too long to fit even at ' + FONT_MIN + 'pt — genuinely needs a second page.');
+    }
+  }
+
+  const lineH = chosenFont*0.352778*1.42;
+  if(hasAnnotation){
+    y = ccfDrawAnnotated(doc, tokens, CCF_M+4, y, chosenFont, lineH, CCF_W-8);
+  } else {
+    doc.setFontSize(chosenFont); doc.setFont('helvetica','italic'); doc.setTextColor(150,155,145);
+    chosenLines.forEach(l => { doc.text(l, CCF_M+4, y); y += lineH; });
+  }
+
+  y = ccfDrawPostBlogSection(doc, y, newUnit);
+
+  const safeName=(currentStudentName||currentStudent).replace(/\s+/g,'_');
+  doc.save(`EWS_Week${week}_CCF-Reflection_${safeName}.pdf`);
 }
 
 
