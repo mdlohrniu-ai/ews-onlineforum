@@ -281,7 +281,6 @@
   .reason-opt .ro-soft{font-size:0.74rem;color:var(--ink-soft);}
   .other-reason-wrap{display:none;margin-bottom:14px;}
   .other-reason-wrap.show{display:block;}
-  .unit-inputs-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:14px 0 18px;}
   .unit-input-grp label{display:block;font-family:'IBM Plex Mono',monospace;font-size:0.64rem;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px;}
   .unit-num-inp{width:100%;height:48px;font-family:'IBM Plex Mono',monospace;font-size:1.15rem;font-weight:500;padding:0 12px;border:1.5px solid var(--border);border-radius:10px;background:var(--paper);color:var(--ink);outline:none;transition:border-color .2s,box-shadow .2s;}
   .unit-num-inp:focus{border-color:var(--postal-blue);box-shadow:0 0 0 3px rgba(61,90,115,0.12);}
@@ -325,7 +324,7 @@
       <button class="btn btn-primary btn-block" style="margin-top:14px;" onclick="login()">Enter</button>
       <div class="error-msg" id="loginError">Student number not found. Check and try again.</div>
     </div>
-    <div class="version-tag">v1.2 — 2026-07-21</div>
+    <div class="version-tag">v1.4 — 2026-07-21</div>
   </div>
 
   <!-- ===================== MAIN APP ===================== -->
@@ -613,10 +612,10 @@ async function renderPreviousWeekDetail(week){
     ${data.settings.GroupsEnabled ? `
     <div class="section-label">Your group that week</div>
     <div class="card">${membersHtml}</div>` : ''}
-    ${gradeSectionHtml}
     ${hasEntry ? `
     <button class="btn btn-primary btn-block" style="margin-top:6px;" onclick="renderGrammarFeedback(${week})">View grammar feedback →</button>
     ` : ''}
+    ${gradeSectionHtml}
   `;
 }
 
@@ -700,7 +699,6 @@ async function renderGrammarFeedback(week){
   const windowOpen = !win || win.isOpen;  // null = no schedule set = always open
   const alreadySubmitted = winData && winData.submittedAt;
   const existingMain  = winData ? (winData.mainUnit  || '') : '';
-  const existingBonus = winData ? (winData.bonusUnit || '') : '';
   const submittedAt   = winData ? (winData.submittedAt || '') : '';
 
   // Annotated text block
@@ -716,7 +714,7 @@ async function renderGrammarFeedback(week){
   const mistakeOptDisabled = !hasAnnotation ? 'disabled-opt' : '';
   const mistakeOptHint = !hasAnnotation
     ? 'Not available — no entry was submitted this week.'
-    : 'Choose a unit that matches one of the errors above.';
+    : 'A new unit color coded green that matches one of the errors above.';
 
   // Unit section — three states: window closed, window open + already submitted, window open fresh
   let unitSectionHtml;
@@ -725,7 +723,7 @@ async function renderGrammarFeedback(week){
     const previousHtml = alreadySubmitted
       ? `<div style="background:var(--paper);border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-top:12px;">
            <div style="font-size:0.76rem;color:var(--ink-soft);margin-bottom:6px;font-family:'IBM Plex Mono',monospace;text-transform:uppercase;letter-spacing:.06em;">Your submission</div>
-           <div style="font-size:0.9rem;font-weight:600;">Unit B${existingMain}${existingBonus ? ` &nbsp;·&nbsp; Bonus B${existingBonus}` : ''}</div>
+           <div style="font-size:0.9rem;font-weight:600;">Unit B${existingMain}</div>
            <div style="font-size:0.76rem;color:var(--ink-soft);margin-top:3px;">Submitted ${submittedAt}</div>
          </div>`
       : `<div style="font-size:0.82rem;color:var(--ink-soft);margin-top:10px;">No unit was submitted for this week.</div>`;
@@ -745,7 +743,7 @@ async function renderGrammarFeedback(week){
       <div class="section-label">Choose your grammar unit</div>
       <div class="unit-selection-card">
         <div class="unit-sel-title">Which unit do you want to study?</div>
-        <div class="unit-sel-desc">Look at the feedback above. Choose a grammar unit and tell your teacher why you chose it.</div>
+        <div class="unit-sel-desc">Look at the feedback above. Choose a new grammar unit to study and tell your teacher why you chose it.</div>
         ${alreadyNote}
         <label class="reason-opt ${mistakeOptDisabled}">
           <input type="radio" name="grammar-reason" value="mistake" ${!hasAnnotation?'disabled':''} onchange="handleGrammarReason(this)">
@@ -765,15 +763,9 @@ async function renderGrammarFeedback(week){
           <label style="display:block;font-family:'IBM Plex Mono',monospace;font-size:0.64rem;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px;">Explain your reason</label>
           <textarea id="otherReasonInput" style="width:100%;min-height:70px;font-family:'IBM Plex Sans',sans-serif;font-size:0.88rem;padding:10px 12px;border:1.5px solid var(--border);border-radius:10px;background:var(--paper);color:var(--ink);resize:vertical;outline:none;" placeholder="Why are you choosing this unit?"></textarea>
         </div>
-        <div class="unit-inputs-row">
-          <div class="unit-input-grp">
-            <label for="grammarMainUnit">Main unit <span style="color:var(--stamp-red)">*</span></label>
-            <input class="unit-num-inp" type="text" id="grammarMainUnit" inputmode="numeric" placeholder="e.g. 11" autocomplete="off" value="${existingMain}">
-          </div>
-          <div class="unit-input-grp">
-            <label for="grammarBonusUnit">Bonus unit <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:0.64rem;color:var(--ink-soft)">(optional)</span></label>
-            <input class="unit-num-inp" type="text" id="grammarBonusUnit" inputmode="numeric" placeholder="optional" autocomplete="off" value="${existingBonus}">
-          </div>
+        <div class="unit-input-grp" style="margin:14px 0 18px;">
+          <label for="grammarMainUnit">New unit <span style="color:var(--stamp-red)">*</span></label>
+          <input class="unit-num-inp" type="text" id="grammarMainUnit" inputmode="numeric" placeholder="e.g. 11" autocomplete="off" value="${existingMain}">
         </div>
         <button class="btn btn-primary btn-block" id="grammarSubmitBtn" onclick="submitGrammarUnit(${week})">${btnLabel}</button>
         <div class="grammar-submit-success" id="grammarSubmitSuccess"></div>
@@ -794,15 +786,8 @@ async function renderGrammarFeedback(week){
     <div class="section-label">Reflection worksheet</div>
     <div class="card pdf-download-row">
       <div class="info">
-        <div class="ttl">Download reflection worksheet</div>
-        <div class="sub">Download a reflection worksheet for this week's entry.</div>
-      </div>
-      <button class="btn-pdf" ${!hasAnnotation?'disabled title="No entry was submitted this week."':''} onclick="downloadReflectionPDF(${week}, ${JSON.stringify(annotation||{}).replace(/"/g,'&quot;')})">📄 Download PDF</button>
-    </div>
-    <div class="card pdf-download-row" style="margin-top:10px;">
-      <div class="info">
-        <div class="ttl">Download CCF reflection sheet</div>
-        <div class="sub">The structured sentence-correction sheet — bring this to class printed, or fill it in from this download.</div>
+        <div class="ttl">Download Blog Entry Grammar Reflection Sheet</div>
+        <div class="sub">Download the reflection worksheet for this week's entry.</div>
       </div>
       <button class="btn-pdf" ${!hasAnnotation?'disabled title="No entry was submitted this week."':''} onclick="downloadCCFReflectionSheet(${week}, ${JSON.stringify(annotation||{}).replace(/"/g,'&quot;')}, ${JSON.stringify(existingMain||'')})">📄 Download CCF Sheet</button>
     </div>
@@ -817,7 +802,6 @@ function handleGrammarReason(radio){
 async function submitGrammarUnit(week){
   const reason = document.querySelector('input[name="grammar-reason"]:checked');
   const mainUnit = document.getElementById('grammarMainUnit').value.trim();
-  const bonusUnit = document.getElementById('grammarBonusUnit').value.trim();
   const otherText = document.getElementById('otherReasonInput').value.trim();
 
   if(!reason){ showToast('Please choose a reason.'); return; }
@@ -837,7 +821,6 @@ async function submitGrammarUnit(week){
       studentName: currentStudentName || currentStudent,
       className: currentClassId,
       mainUnit,
-      bonusUnit,
       reason: reasonText,
       week: String(week),
     });
@@ -860,6 +843,14 @@ async function submitGrammarUnit(week){
   }
 }
 
+/* ── Unit reference titles for tooltips — Japanese for Basic (B1–B113,
+   parsed from the real unit reference doc), English for Intermediate
+   (I1–I142 — no Japanese reference doc exists for these yet, same gap
+   already flagged for Stage 2 verification). The reflection sheet PDF
+   deliberately shows only the unit number, not the title — this lookup
+   is for the on-screen tooltip only. ── */
+const UNIT_TITLES = {B1:{jp:"am/is/are (be 動詞の肯定文、否定文)",en:null},B2:{jp:"am/is/are (be 動詞の疑問文)",en:null},B3:{jp:"I am doing (現在進行形)",en:null},B4:{jp:"are you doing? (現在進行形の疑問文)",en:null},B5:{jp:"I do/work/like など (単純現在形)",en:null},B6:{jp:"I don't ... (単純現在形の否定文)",en:null},B7:{jp:"Do you ... ? (単純現在形の疑問文)",en:null},B8:{jp:"I am doing と I do (現在進行形と単純現在形)",en:null},B9:{jp:"I have ... と I've got ...",en:null},B10:{jp:"was/were (be 動詞の過去形)",en:null},B11:{jp:"worked/got/went など (単純過去形)",en:null},B12:{jp:"I didn't ... Did you ... ? (単純過去形の否定文と疑問文)",en:null},B13:{jp:"I was doing (過去進行形)",en:null},B14:{jp:"I was doing と I did (過去進行形と単純過去形)",en:null},B15:{jp:"I used to + 動詞の原形",en:null},B16:{jp:"Have you ... ? (現在完了形：現在までの経験)",en:null},B17:{jp:"How long have you ... ? (現在完了形：現在までの動作や状態の継続)",en:null},B18:{jp:"for since ago",en:null},B19:{jp:"I have done と I did (現在完了形と単純過去形)",en:null},B20:{jp:"is done was done (受動態 1)",en:null},B21:{jp:"is being done has been done (受動態 2)",en:null},B22:{jp:"be/have/do (現在形と過去形における助動詞)",en:null},B23:{jp:"規則動詞と不規則動詞",en:null},B24:{jp:"What are you doing tomorrow? (未来を表す be + -ing)",en:null},B25:{jp:"I'm going to + 動詞の原形",en:null},B26:{jp:"will",en:null},B27:{jp:"might",en:null},B28:{jp:"can と could",en:null},B29:{jp:"must",en:null},B30:{jp:"should",en:null},B31:{jp:"I have to + 動詞の原形",en:null},B32:{jp:"Would you like ... ? I'd like ...",en:null},B33:{jp:"I'd rather + 動詞の原形",en:null},B34:{jp:"Do this! Don't do that! Let's do this! (命令文)",en:null},B35:{jp:"there is there are (there + be 動詞構文 1)",en:null},B36:{jp:"there was/were there has/have been there will be (there + be 動詞構文 2)",en:null},B37:{jp:"「それ」という意味を持たない it",en:null},B38:{jp:"I am, I don't など (肯定文、否定文の後に続く語句の省略)",en:null},B39:{jp:"Have you?/Are you? など (聞き返し疑問と付加疑問)",en:null},B40:{jp:"too/either so am I/neither do I など",en:null},B41:{jp:"isn't, haven't, don't など (様々な否定文)",en:null},B42:{jp:"Is it ... ? Have you ... ? Do they ... ? など (疑問文 1)",en:null},B43:{jp:"Who saw you? Who did you see? (疑問文 2)",en:null},B44:{jp:"Who is she talking to? What is it like? (疑問文 3)",en:null},B45:{jp:"What ... ? Which ... ? How ... ? (疑問文 4)",en:null},B46:{jp:"How long does it take to + 動詞の原形 (…にはどのくらい時間がかかりますか)",en:null},B47:{jp:"Do you know where ... ? I don't know what ... など (間接疑問文)",en:null},B48:{jp:"She said that ... He told me that ... (間接話法)",en:null},B49:{jp:"work/working go/going do/doing (動詞の原形と -ing)",en:null},B50:{jp:"I want to do I enjoy doing (動詞の後ろに入る「to + 動詞の原形」と -ing)",en:null},B51:{jp:"I want you to ... / I told you to ... (want/tell + 人 + to + 動詞の原形)",en:null},B52:{jp:"I went to the store to + 動詞の原形 (目的を表す不定詞)",en:null},B53:{jp:"go to/on/for + 名詞句 go + -ing",en:null},B54:{jp:"get",en:null},B55:{jp:"do と make",en:null},B56:{jp:"have",en:null},B57:{jp:"I/me he/him they/them など (代名詞の主格と目的格)",en:null},B58:{jp:"my/his/their など (代名詞の所有格)",en:null},B59:{jp:"Whose is this? It's mine/yours/hers など (代名詞の所有格と独立所有格)",en:null},B60:{jp:"I/me/my/mine など (代名詞の格)",en:null},B61:{jp:"myself/yourself/themselves など (再帰代名詞)",en:null},B62:{jp:"-'s (Kate's camera/my brother's car など)",en:null},B63:{jp:"a/an (不定冠詞)",en:null},B64:{jp:"train(s) bus(es) (単数形と複数形)",en:null},B65:{jp:"a bottle / some water (可算名詞と不可算名詞 1)",en:null},B66:{jp:"a cake / some cake / some cakes (可算名詞と不可算名詞 2)",en:null},B67:{jp:"a/an と the (不定冠詞と定冠詞)",en:null},B68:{jp:"the ... (the の付く名詞と付かない名詞 1)",en:null},B69:{jp:"go to work go home go to the hospital (the の付く名詞と付かない名詞 2)",en:null},B70:{jp:"I like music I hate exams (the の付く名詞と付かない名詞 3)",en:null},B71:{jp:"the + 場所の名前",en:null},B72:{jp:"this/that/these/those",en:null},B73:{jp:"one/ones",en:null},B74:{jp:"some と any",en:null},B75:{jp:"not + any / no + 名詞 / none",en:null},B76:{jp:"not + anybody/anyone/anything nobody / no one / nothing",en:null},B77:{jp:"somebody/anything/nowhere など",en:null},B78:{jp:"every と all",en:null},B79:{jp:"all most some any no/none",en:null},B80:{jp:"both/either/neither",en:null},B81:{jp:"a lot / much / many",en:null},B82:{jp:"(a) little / (a) few",en:null},B83:{jp:"old/nice/interesting など (形容詞)",en:null},B84:{jp:"quickly/badly/suddenly など (副詞)",en:null},B85:{jp:"old / older expensive / more expensive (比較級 1)",en:null},B86:{jp:"older than ... more expensive than ... (比較級 2)",en:null},B87:{jp:"not as ... as (原級を用いた比較)",en:null},B88:{jp:"the oldest the most expensive (最上級)",en:null},B89:{jp:"enough",en:null},B90:{jp:"too",en:null},B91:{jp:"He speaks English very well. (語順 1：動詞─目的語、場所─時)",en:null},B92:{jp:"always/usually/often など (語順 2：時を表す副詞)",en:null},B93:{jp:"still yet already",en:null},B94:{jp:"Give me that book! Give it to me! (「動詞 + 物 + to 人」と「動詞 + 人 + 物」)",en:null},B95:{jp:"and but or so because (2 つの文をつなぐ接続詞)",en:null},B96:{jp:"when ... (時を表す節)",en:null},B97:{jp:"If we go ... If you see ... など (起きるかもしれない出来事を仮定する if 節)",en:null},B98:{jp:"If I had ... If we went ... など (事実に反することを仮定する if 節)",en:null},B99:{jp:"a person who ... a thing that/which ... (関係詞節 1：主語であることを示す関係代名詞)",en:null},B100:{jp:"the people we met the hotel you stayed at (関係詞節 2：目的語を示す関係代名詞の省略)",en:null},B101:{jp:"at 8:00 on Monday in April (時を表す前置詞)",en:null},B102:{jp:"from ... to until since for (期間を表す前置詞)",en:null},B103:{jp:"before after during while (「前・後・間」を表す前置詞／接続詞)",en:null},B104:{jp:"in/at/on (場所を表す前置詞 1)",en:null},B105:{jp:"in/at/on (場所を表す前置詞 2)",en:null},B106:{jp:"to/in/at (場所を表す前置詞 3)",en:null},B107:{jp:"next to, between, under など (位置関係を表す前置詞)",en:null},B108:{jp:"up, over, through など (方向を表す前置詞)",en:null},B109:{jp:"on/at/by/with/about (前置詞のその他の用法)",en:null},B110:{jp:"afraid of ... , good at ... など of/at/for など + -ing (「形容詞 + 前置詞」と「前置詞 + -ing」)",en:null},B111:{jp:"listen to ... , look at ... など (動詞 + 前置詞)",en:null},B112:{jp:"go in, fall off, run away など (句動詞 1：句動詞と動作の方向)",en:null},B113:{jp:"put on your shoes put your shoes on (句動詞 2：句動詞と目的語)",en:null},I1:{jp:"現在進行形 (I am doing)",en:null},I2:{jp:"単純現在形 (I do)",en:null},I3:{jp:"現在進行形と単純現在形 1 (I am doing と I do)",en:null},I4:{jp:"現在進行形と単純現在形 2 (I am doing と I do)",en:null},I5:{jp:"単純過去形 (I did)",en:null},I6:{jp:"過去進行形 (I was doing)",en:null},I7:{jp:"現在完了形 (I have done)",en:null},I8:{jp:"現在完了形と過去形 1 (I have done と I did)",en:null},I9:{jp:"現在完了進行形 (I have been doing)",en:null},I10:{jp:"現在完了進行形と現在完了形 (I have been doing と I have done)",en:null},I11:{jp:"How long have you (been) ... ?",en:null},I12:{jp:"for と since　When ... ? と How long ... ?",en:null},I13:{jp:"現在完了形と過去形 2 (I have done と I did)",en:null},I14:{jp:"過去完了形 (I had done)",en:null},I15:{jp:"過去完了進行形 (I had been doing)",en:null},I16:{jp:"have と have got",en:null},I17:{jp:"used to + 動詞の原形",en:null},I18:{jp:"未来の意味を表す現在時制 (I am doing / I do)",en:null},I19:{jp:"I'm going to (do)",en:null},I20:{jp:"will 1",en:null},I21:{jp:"will 2",en:null},I22:{jp:"I will と I'm going to",en:null},I23:{jp:"will be doing と will have done",en:null},I24:{jp:"when I do / when I've done　if と when (従属節内の時制)",en:null},I25:{jp:"can, could と (be) able to",en:null},I26:{jp:"could (do) と could have (done)",en:null},I27:{jp:"must と can't",en:null},I28:{jp:"may と might 1",en:null},I29:{jp:"may と might 2",en:null},I30:{jp:"have to と must",en:null},I31:{jp:"should",en:null},I32:{jp:"仮定法 (I suggest you do)",en:null},I33:{jp:"I'd better ... It's time ...",en:null},I34:{jp:"would",en:null},I35:{jp:"Can/Could/Would you ... ? など (要求・申し出・許可・勧誘)",en:null},I36:{jp:"if I do ... , if I did ...",en:null},I37:{jp:"if I knew ... , I wish I knew ...",en:null},I38:{jp:"if I had known ... , I wish I had known ...",en:null},I39:{jp:"wish",en:null},I40:{jp:"受動態 1 (is done / was done)",en:null},I41:{jp:"受動態 2 (be done / been done / being done)",en:null},I42:{jp:"受動態 3",en:null},I43:{jp:"It is said that ...　He is said to ...　He is supposed to ...",en:null},I44:{jp:"have/get ～ done",en:null},I45:{jp:"間接話法 1 (He said that ...)",en:null},I46:{jp:"間接話法 2",en:null},I47:{jp:"疑問文 1",en:null},I48:{jp:"疑問文 2 (間接疑問文) Do you know where ... ? / He asked me where ...",en:null},I49:{jp:"助動詞 (have/do/can など) I think so / I hope so などを用いて繰り返しを避ける表現",en:null},I50:{jp:"付加疑問 (..., do you? / ..., isn't it? など)",en:null},I51:{jp:"動詞 + -ing (enjoy doing / stop doing など)",en:null},I52:{jp:"動詞 + to ～ (decide to + 動詞の原形 / forget to + 動詞の原形 など)",en:null},I53:{jp:"動詞 + (目的語) + to ～ (I want you to + 動詞の原形 など)",en:null},I54:{jp:"動詞 + -ing と 動詞 + to + 動詞の原形 1 (remember/regret など)",en:null},I55:{jp:"動詞 + -ing と 動詞 + to + 動詞の原形 2 (try/need/help)",en:null},I56:{jp:"動詞 + -ing と 動詞 + to + 動詞の原形 3 (like / would like など)",en:null},I57:{jp:"prefer と would rather",en:null},I58:{jp:"前置詞 (in/for/about など) + -ing",en:null},I59:{jp:"be/get used to do ... (I'm used to ...)",en:null},I60:{jp:"動詞 + 前置詞 + -ing (succeed in -ing / insist on -ing など)",en:null},I61:{jp:"There is no point in -ing, it's worth -ing など",en:null},I62:{jp:"to + 動詞の原形, for ... と so that ... (目的を表す表現)",en:null},I63:{jp:"形容詞 + to + 動詞の原形",en:null},I64:{jp:"to + 動詞の原形 (afraid to do) と前置詞 + -ing (afraid of -ing)",en:null},I65:{jp:"see ～ do と see ～ doing",en:null},I66:{jp:"-ing 句 (分詞構文：He hurt his knee playing football.)",en:null},I67:{jp:"可算名詞と不可算名詞 1",en:null},I68:{jp:"可算名詞と不可算名詞 2",en:null},I69:{jp:"可算名詞の前に置く a/an や some の用法",en:null},I70:{jp:"a/an と the",en:null},I71:{jp:"the の用法 1",en:null},I72:{jp:"the の用法 2 (school / the school など)",en:null},I73:{jp:"the の用法 3 (children / the children など)",en:null},I74:{jp:"the の用法 4 (the giraffe / the telephone / the old など)",en:null},I75:{jp:"the の付く固有名詞、付かない固有名詞 1",en:null},I76:{jp:"the の付く固有名詞、付かない固有名詞 2",en:null},I77:{jp:"単数か複数か注意すべき名詞",en:null},I78:{jp:"名詞 + 名詞で作られる名詞 (a bus driver/ a headache など)",en:null},I79:{jp:"-'s (your sister's name) と of ... (the name of the book)",en:null},I80:{jp:"myself/yourself/themselves などの再帰代名詞",en:null},I81:{jp:"a friend of mine　my own house　on my own / by myself",en:null},I82:{jp:"there ... と it ...",en:null},I83:{jp:"some と any",en:null},I84:{jp:"no/none/any　nothing/nobody など",en:null},I85:{jp:"much, many, little, few, a lot, plenty",en:null},I86:{jp:"all / all of　most / most of　no / none of など",en:null},I87:{jp:"both / both of　neither / neither of　either / either of",en:null},I88:{jp:"all　every　whole",en:null},I89:{jp:"each と every",en:null},I90:{jp:"関係代名詞 1：主格の who/that/which を持つ関係代名詞",en:null},I91:{jp:"関係代名詞 2：目的格の who/that/which を持つ関係代名詞とその省略",en:null},I92:{jp:"関係代名詞 3：whose/whom/where を持つ関係代名詞",en:null},I93:{jp:"関係代名詞 4：(追加情報を示す)継続用法としての関係代名詞(1)",en:null},I94:{jp:"関係代名詞 5：(追加情報を示す)継続用法としての関係代名詞(2)",en:null},I95:{jp:"-ing 句 と -ed 句 (the woman talking to Tom, the boy injured in the accident)",en:null},I96:{jp:"-ing や -ed の語尾を持つ形容詞 (boring/bored など)",en:null},I97:{jp:"形容詞の語順：a nice new house, you look tired",en:null},I98:{jp:"形容詞と副詞 1 (quick/quickly)",en:null},I99:{jp:"形容詞と副詞 2 (well, fast, late, hard/hardly)",en:null},I100:{jp:"so と such",en:null},I101:{jp:"enough と too",en:null},I102:{jp:"比較 1 (cheaper, more expensive など)",en:null},I103:{jp:"比較 2 (much better / any better など)",en:null},I104:{jp:"比較 3 (as ～ as ... / than)",en:null},I105:{jp:"最上級 (the longest / the most enjoyable など)",en:null},I106:{jp:"語順 1：「動詞＋目的語」と「場所＋時」の語順",en:null},I107:{jp:"語順 2：副詞と結び付く動詞の語順",en:null},I108:{jp:"still　anymore　yet　already",en:null},I109:{jp:"even",en:null},I110:{jp:"although　though　even though　in spite of　despite",en:null},I111:{jp:"in case",en:null},I112:{jp:"unless　as long as　provided",en:null},I113:{jp:"as (as I walked ... / as I was ... など)",en:null},I114:{jp:"like と as",en:null},I115:{jp:"like　as if",en:null},I116:{jp:"during　for　while",en:null},I117:{jp:"by と until　by the time ...",en:null},I118:{jp:"at/on/in (時を表す前置詞)",en:null},I119:{jp:"on time と in time　at the end と in the end",en:null},I120:{jp:"in/at/on (場所を表す前置詞) 1",en:null},I121:{jp:"in/at/on (場所を表す前置詞) 2",en:null},I122:{jp:"in/at/on (場所を表す前置詞) 3",en:null},I123:{jp:"to, at, in と into",en:null},I124:{jp:"in/on/at (その他の用法)",en:null},I125:{jp:"by",en:null},I126:{jp:"名詞 + 前置詞 (reason for, cause of などの前置詞と結び付く名詞)",en:null},I127:{jp:"形容詞 + 前置詞 1",en:null},I128:{jp:"形容詞 + 前置詞 2",en:null},I129:{jp:"動詞 + 前置詞 1：to と at",en:null},I130:{jp:"動詞 + 前置詞 2：about/for/of/after",en:null},I131:{jp:"動詞 + 前置詞 3：about と of",en:null},I132:{jp:"動詞 + 前置詞 4：of/for/from/on",en:null},I133:{jp:"動詞 + 前置詞 5：in/into/with/to/on",en:null},I134:{jp:"句動詞 1：「句動詞」とは？",en:null},I135:{jp:"句動詞 2：in/out",en:null},I136:{jp:"句動詞 3：out",en:null},I137:{jp:"句動詞 4：on/off (1)",en:null},I138:{jp:"句動詞 5：on/off (2)",en:null},I139:{jp:"句動詞 6：up/down",en:null},I140:{jp:"句動詞 7：up (1)",en:null},I141:{jp:"句動詞 8：up (2)",en:null},I142:{jp:"句動詞 9：away/back",en:null}};
+
 /* ── Annotation renderer — CCF format. Uses ccfTokenize (also used by
    downloadCCFReflectionSheet) so the on-screen view and the printed sheet
    are always reading the exact same tags the same way. Never shows the
@@ -874,8 +865,10 @@ function buildAnnotatedHtml(text){
     const noUnit = t.style.state==='purple' || t.style.state==='grey';
     let tip = `<div class="tt-code">${esc(CCF_CODE_LABELS[t.style.code]||t.style.code)}</div>`;
     if(!noUnit && t.style.primaryUnit){
-      tip += `<div class="tt-unit"><span class="tt-num">${esc(t.style.primaryUnit)}</span></div>`;
-      if(t.style.secondaryUnit) tip += `<div class="tt-title">also see ${esc(t.style.secondaryUnit)}</div>`;
+      const titleInfo = UNIT_TITLES[t.style.primaryUnit];
+      const titleText = titleInfo ? (titleInfo.jp || titleInfo.en || '') : '';
+      tip += `<div class="tt-unit"><span class="tt-num">${esc(t.style.primaryUnit)}</span>${titleText ? `<span class="tt-title">${esc(titleText)}</span>` : ''}</div>`;
+      if(t.style.secondaryUnit) tip += `<div class="tt-title" style="opacity:.7;margin-top:2px;">also see ${esc(t.style.secondaryUnit)}</div>`;
     }
     return `<span class="ccf-tag ccf-${t.style.state}">${esc(t.text)}<span class="err-tt">${tip}</span></span>`;
   });
@@ -887,92 +880,6 @@ function buildAnnotatedHtml(text){
   return html;
 }
 
-// Strips CCF tags down to plain text for contexts that don't render colour
-// (e.g. the generic worksheet PDF below) — omissions (^) vanish entirely
-// since there's no word to show; everything else keeps just the span text.
-function ccfStripTags(text){
-  return String(text||'').replace(/\{(\^|[^{}|]*)\|[A-Z]+(?:\|[BI]\d+(?:\/[BI]\d+)?)?\}/g,
-    (m, span) => span==='^' ? '' : span).replace(/[ \t]{2,}/g,' ');
-}
-
-/* ── Single-page adaptive PDF ── */
-function downloadReflectionPDF(week, annotation){
-  if(!window.jspdf){ showToast('PDF generator loading — try again in a moment.'); return; }
-  const {jsPDF}=window.jspdf;
-  const M=18, W=210-M*2;
-  const LINE_H=5, LABEL_H=5, ITALIC_H=4.5, GAP=5;
-  const SPELL_LINES=6, REFLECT_LINES=6, QUEST_LINES=5;
-
-  const AFTER_FIXED =
-    4+5+
-    (LABEL_H+ITALIC_H+SPELL_LINES*LINE_H+GAP)+
-    (LABEL_H+ITALIC_H+REFLECT_LINES*LINE_H+GAP)+
-    (LABEL_H+ITALIC_H+QUEST_LINES*LINE_H)+12;
-  const BLOG_AVAILABLE = 285-54-AFTER_FIXED;
-
-  const rawText = annotation && annotation.annotatedText
-    ? ccfStripTags(annotation.annotatedText).trim()
-    : '';
-
-  const tempDoc=new jsPDF({unit:'mm',format:'a4'});
-  let blogFontSize=10;
-  if(rawText){
-    for(let fs=10;fs>=6;fs-=0.5){
-      tempDoc.setFontSize(fs);
-      const lines=tempDoc.splitTextToSize(rawText,W);
-      if(lines.length*(fs*0.352778*1.65)<=BLOG_AVAILABLE){blogFontSize=fs;break;}
-      blogFontSize=6;
-    }
-  }
-
-  const doc=new jsPDF({unit:'mm',format:'a4'});
-  let y=20;
-
-  doc.setFillColor(32,38,31); doc.rect(0,0,210,20,'F');
-  doc.setFontSize(12); doc.setFont('helvetica','bold'); doc.setTextColor(255,255,255);
-  doc.text('Blog Reflection Worksheet',M,13);
-  doc.setFontSize(8); doc.setFont('helvetica','normal'); doc.setTextColor(160,165,150);
-  doc.text('EWS Weekly Forum  ·  Grammar Feedback',210-M,13,{align:'right'});
-  y=28;
-
-  doc.setFontSize(11); doc.setFont('helvetica','bold'); doc.setTextColor(32,38,31);
-  doc.text(currentStudentName||currentStudent,M,y); y+=6;
-  doc.setFontSize(8); doc.setFont('helvetica','normal'); doc.setTextColor(91,99,88);
-  doc.text(`${currentClassId}  ·  Week ${week}`,M,y); y+=5;
-  doc.setDrawColor(215,218,206); doc.setLineWidth(0.25); doc.line(M,y,210-M,y); y+=7;
-
-  if(rawText){
-    doc.setFontSize(blogFontSize); doc.setFont('helvetica','normal'); doc.setTextColor(40,40,40);
-    const bLines=doc.splitTextToSize(rawText,W);
-    const bH=blogFontSize*0.352778*1.65;
-    bLines.forEach(l=>{ doc.text(l,M,y); y+=bH; });
-    y+=4;
-  } else {
-    doc.setFontSize(9); doc.setFont('helvetica','italic'); doc.setTextColor(150,155,145);
-    doc.text('No entry was submitted this week.',M,y); y+=10;
-  }
-
-  doc.setDrawColor(215,218,206); doc.line(M,y,210-M,y); y+=5;
-
-  function section(label,italic,nLines,gap){
-    doc.setFontSize(8); doc.setFont('helvetica','bold'); doc.setTextColor(91,99,88);
-    doc.text(label,M,y); y+=LABEL_H;
-    doc.setFontSize(8); doc.setFont('helvetica','italic'); doc.setTextColor(150,155,145);
-    doc.text(italic,M,y); y+=ITALIC_H;
-    for(let i=0;i<nLines;i++){ doc.setDrawColor(200,205,195); doc.setLineWidth(0.2); doc.line(M,y,210-M,y); y+=LINE_H; }
-    if(gap) y+=GAP;
-  }
-  section('SPELLING / GRAMMAR MISTAKES','Find mistakes in your entry. Write the mistake and the correct version.',SPELL_LINES,true);
-  section('REFLECTION','What advice would you give yourself to improve your next blog entry?',REFLECT_LINES,true);
-  section('QUESTIONS FOR INSTRUCTORS','Write any questions you have for your teacher about this entry or the feedback.',QUEST_LINES,false);
-
-  doc.setFontSize(7.5); doc.setFont('helvetica','normal'); doc.setTextColor(170,175,165);
-  doc.text(`EWS Weekly Forum  ·  ${currentClassId}  ·  Week ${week}`,M,287);
-  doc.text(new Date().toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}),210-M,287,{align:'right'});
-
-  const safeName=(currentStudentName||currentStudent).replace(/\s+/g,'_');
-  doc.save(`EWS_Week${week}_Reflection_${safeName}.pdf`);
-}
 
 
 /* ══════════════════════════════════════════════════════════════════════
