@@ -325,7 +325,7 @@
       <button class="btn btn-primary btn-block" style="margin-top:14px;" onclick="login()">Enter</button>
       <div class="error-msg" id="loginError">Student number not found. Check and try again.</div>
     </div>
-    <div class="version-tag">v1.1 — 2026-07-21</div>
+    <div class="version-tag">v1.2 — 2026-07-21</div>
   </div>
 
   <!-- ===================== MAIN APP ===================== -->
@@ -614,7 +614,7 @@ async function renderPreviousWeekDetail(week){
     <div class="section-label">Your group that week</div>
     <div class="card">${membersHtml}</div>` : ''}
     ${gradeSectionHtml}
-    ${(gradeData.success && gradeData.graded) ? `
+    ${hasEntry ? `
     <button class="btn btn-primary btn-block" style="margin-top:6px;" onclick="renderGrammarFeedback(${week})">View grammar feedback →</button>
     ` : ''}
   `;
