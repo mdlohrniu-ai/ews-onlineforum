@@ -263,6 +263,7 @@
   .ccf-red{background:#FCDCDC;color:#6E1C1C;}
   .ccf-purple{background:#E6DEF7;color:#4A2A80;}
   .ccf-grey{background:#E6E6E4;color:#5A5A56;}
+  .ccf-border{box-shadow:0 0 0 1.5px #2A7A4E;}
   .err-tt{display:none;position:absolute;bottom:calc(100% + 8px);left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;border-radius:10px;padding:11px 14px;min-width:220px;max-width:280px;font-size:0.72rem;line-height:1.5;z-index:100;pointer-events:none;box-shadow:0 8px 24px rgba(0,0,0,0.25);white-space:normal;text-align:left;font-family:'IBM Plex Sans',sans-serif;}
   .err-tt::after{content:'';position:absolute;top:100%;left:50%;transform:translateX(-50%);border:6px solid transparent;border-top-color:var(--ink);}
   .ccf-tag:hover .err-tt{display:block;}
@@ -324,7 +325,7 @@
       <button class="btn btn-primary btn-block" style="margin-top:14px;" onclick="login()">Enter</button>
       <div class="error-msg" id="loginError">Student number not found. Check and try again.</div>
     </div>
-    <div class="version-tag">v1.8 — 2026-07-21</div>
+    <div class="version-tag">v1.9 — 2026-07-21</div>
   </div>
 
   <!-- ===================== MAIN APP ===================== -->
@@ -708,6 +709,7 @@ async function renderGrammarFeedback(week){
   const annotationData = (annotationResult.status==='fulfilled' && annotationResult.value && annotationResult.value.success) ? annotationResult.value : null;
   const annotation = (annotationData && annotationData.found) ? annotationData : null;
   const colourMap = (colourResult.status==='fulfilled' && colourResult.value && colourResult.value.success) ? colourResult.value.colours : {};
+  const ccfSettings = (colourResult.status==='fulfilled' && colourResult.value && colourResult.value.success) ? colourResult.value.settings : { showUntreatableErrors: true };
   const winData   = (windowResult.status==='fulfilled') ? windowResult.value : null;
 
   const hasAnnotation = annotation && annotation.annotatedText;
@@ -722,7 +724,7 @@ async function renderGrammarFeedback(week){
   // Annotated text block
   const annotationBlockHtml = hasAnnotation
     ? `<div class="section-label">Your entry with feedback</div>
-       <div class="card"><div class="annotated-blog">${buildAnnotatedHtml(annotation.annotatedText, colourMap)}</div></div>
+       <div class="card"><div class="annotated-blog">${buildAnnotatedHtml(annotation.annotatedText, colourMap, ccfSettings.showUntreatableErrors)}</div></div>
        <div style="text-align:center;font-size:0.72rem;color:var(--ink-soft);margin:-6px 0 14px;">Tap any highlighted word to see the error type and unit</div>`
     : `<div class="card empty-note" style="margin-bottom:14px;">
          No analysis available for this week.<br>
@@ -785,7 +787,7 @@ async function renderGrammarFeedback(week){
           <label for="grammarMainUnit" style="display:block;font-family:'IBM Plex Mono',monospace;font-size:0.64rem;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px;">New unit <span style="color:var(--stamp-red)">*</span></label>
           <div style="display:flex;gap:10px;">
             <input class="unit-num-inp" type="text" id="grammarMainUnit" inputmode="numeric" placeholder="e.g. 11" autocomplete="off" value="${existingMain}">
-            <button class="btn btn-primary" id="grammarSubmitBtn" onclick="submitGrammarUnit(${week})" style="flex:1;white-space:nowrap;">${btnLabel}</button>
+            <button class="btn btn-primary" id="grammarSubmitBtn" onclick="submitGrammarUnit(${week})" style="white-space:nowrap;">${btnLabel}</button>
           </div>
         </div>
         <div class="grammar-submit-success" id="grammarSubmitSuccess"></div>
@@ -815,7 +817,7 @@ async function renderGrammarFeedback(week){
   // Stored in a plain JS variable rather than serialized into the onclick
   // attribute above — no annotation content (quotes, apostrophes, anything)
   // ever has to survive HTML-attribute escaping this way.
-  window._ccfPdfData = { week, annotation: Object.assign({}, annotation||{}, {colourMap}), existingMain };
+  window._ccfPdfData = { week, annotation: Object.assign({}, annotation||{}, {colourMap, showUntreatable: ccfSettings.showUntreatableErrors}), existingMain };
   } finally {
     hideLoading();
   }
@@ -883,9 +885,9 @@ const UNIT_TITLES = {B1:{jp:"am/is/are (be 動詞の肯定文、否定文)",en:n
    are always reading the exact same tags the same way. Never shows the
    correction — only the error span/caret, the code, and the unit. ── */
 const CCF_CODE_LABELS={VT:'Verb Tense',SVA:'Subject-Verb Agreement',ART:'Articles',PREP:'Prepositions',WF:'Word Form',SP:'Singular / Plural',WO:'Word Order',MOD:'Modal Verbs',CL:'Clause-level Error',ME:'Missing / Extra Words',SC:'Spelling & Capitalisation',PU:'Punctuation',COL:'Collocation',WC:'Word Choice',IDM:'Idiom',AWK:'Awkward Phrasing'};
-function buildAnnotatedHtml(text, colourMap){
+function buildAnnotatedHtml(text, colourMap, showUntreatable){
   function esc(s){ return s ? String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') : ''; }
-  const tokens = ccfTokenize(text, colourMap);
+  const tokens = ccfTokenize(text, colourMap, showUntreatable);
   const parts = tokens.map(t=>{
     if(t.break) return '<br><br>';
     if(!t.style) return esc(t.text);
@@ -897,7 +899,9 @@ function buildAnnotatedHtml(text, colourMap){
       tip += `<div class="tt-unit"><span class="tt-num">${esc(t.style.primaryUnit)}</span>${titleText ? `<span class="tt-title">${esc(titleText)}</span>` : ''}</div>`;
       if(t.style.secondaryUnit) tip += `<div class="tt-title" style="opacity:.7;margin-top:2px;">also see ${esc(t.style.secondaryUnit)}</div>`;
     }
-    return `<span class="ccf-tag ccf-${t.style.state}">${esc(t.text)}<span class="err-tt">${tip}</span></span>`;
+    if(t.style.border) tip += `<div class="tt-title" style="opacity:.7;margin-top:2px;">Assigned by your teacher this cycle</div>`;
+    const borderClass = t.style.border ? ' ccf-border' : '';
+    return `<span class="ccf-tag ccf-${t.style.state}${borderClass}">${esc(t.text)}<span class="err-tt">${tip}</span></span>`;
   });
   let html='';
   for(let i=0;i<parts.length;i++){
@@ -941,16 +945,21 @@ const CCF_COLORS = {
   purple: {fill:[230,222,247], text:[74,42,128]},
   grey:   {fill:[230,230,228], text:[90,90,86]},
 };
-// colourMap is {unit: 'yellow'|'orange'|'red'} for THIS WEEK specifically —
-// fetched via getColourStateForWeek, one frozen snapshot per week. A unit
-// absent from the map (never studied, or studied but this is its first
-// post-study occurrence) correctly defaults to green.
+// colourMap is {unit: {colour, border}} for THIS WEEK specifically — fetched
+// via getColourStateForWeek, one frozen snapshot per week. A unit absent from
+// the map (never studied, or studied but this is its first post-study
+// occurrence, or unstudied+unscaffolded) correctly defaults to green/no border.
 function ccfUnitState(code, unit, colourMap){
   if(!code) return null;
   if(code==='SC'||code==='PU') return 'purple';
   if(code==='COL'||code==='WC'||code==='IDM'||code==='AWK') return 'grey';
-  if(unit && colourMap && colourMap[unit]) return colourMap[unit];
+  if(unit && colourMap && colourMap[unit]) return colourMap[unit].colour;
   return 'green';
+}
+// Border (CCF §4.5 scaffold-failure flag) is always green when it fires —
+// never coexists with yellow/orange/red (a studied unit is never bordered).
+function ccfUnitBorder(unit, colourMap){
+  return !!(unit && colourMap && colourMap[unit] && colourMap[unit].border);
 }
 function ccfTagFor(style){
   const noUnit = style.state==='purple' || style.state==='grey';
@@ -961,8 +970,13 @@ function ccfTagFor(style){
 // Tag shapes: {span|CODE|UNIT}, {span|CODE|UNIT1/UNIT2} (dual-unit,
 // slash-separated), {^|CODE|UNIT} (omission, caret only — never the
 // missing word), {span|CODE} (no unit — SC/PU/COL/WC/IDM/AWK).
-// colourMap: this week's frozen {unit: colour} snapshot — see ccfUnitState.
-function ccfTokenize(text, colourMap){
+// colourMap: this week's frozen {unit: {colour, border}} snapshot.
+// showUntreatable: class Settings toggle — when false, COL/WC/IDM/AWK tokens
+// are treated as plain text (no style at all) so BOTH the on-screen view and
+// the PDF automatically stay consistent without each needing their own check.
+// The underlying tag stays in annotatedText regardless — this only affects
+// rendering, never the stored data.
+function ccfTokenize(text, colourMap, showUntreatable){
   const re=/\{(\^|[^{}|]*)\|([A-Z]+)(?:\|([BI]\d+(?:\/[BI]\d+)?))?\}/g;
   const tokens=[]; let last=0, m;
   function pushWords(str, style){
@@ -979,9 +993,11 @@ function ccfTokenize(text, colourMap){
     const span=m[1], code=m[2].trim();
     const unitRaw=m[3]?m[3].trim():'';
     const [primaryUnit, secondaryUnit] = unitRaw ? unitRaw.split('/') : [null,null];
-    const state=ccfUnitState(code, primaryUnit, colourMap);
+    let state=ccfUnitState(code, primaryUnit, colourMap);
+    if(state==='grey' && showUntreatable===false) state=null; // toggle off — render as plain text
     const noUnit = state==='purple' || state==='grey';
-    const style = state ? {code, primaryUnit: noUnit?null:primaryUnit, secondaryUnit: noUnit?null:secondaryUnit, state, border:false} : null;
+    const border = (!state || noUnit) ? false : ccfUnitBorder(primaryUnit, colourMap);
+    const style = state ? {code, primaryUnit: noUnit?null:primaryUnit, secondaryUnit: noUnit?null:secondaryUnit, state, border} : null;
     if(span==='^'){
       tokens.push({text:'^', style});
     } else {
@@ -1042,6 +1058,10 @@ function ccfDrawAnnotated(doc, tokens, x0, y0, fontSize, lineHeight, maxWidth){
         const c = CCF_COLORS[t.style.state];
         doc.setFillColor(...c.fill);
         doc.roundedRect(x-0.6, y-fontSize*0.34, w+tagW+1.2, fontSize*0.48, 0.5, 0.5, 'F');
+        if(t.style.border){
+          doc.setDrawColor(42,122,78); doc.setLineWidth(0.35);
+          doc.roundedRect(x-0.6, y-fontSize*0.34, w+tagW+1.2, fontSize*0.48, 0.5, 0.5, 'S');
+        }
         doc.setTextColor(...c.text);
       } else {
         doc.setTextColor(40,40,40);
@@ -1186,7 +1206,7 @@ function downloadCCFReflectionSheet(){
   let chosenFont = FONT_MIN, chosenLines = null, tokens = null;
 
   if(hasAnnotation){
-    tokens = ccfTokenize(annotation.annotatedText, annotation.colourMap);
+    tokens = ccfTokenize(annotation.annotatedText, annotation.colourMap, annotation.showUntreatable);
     for(let fs=FONT_MAX; fs>=FONT_MIN; fs-=0.25){
       const testLines = ccfLayoutAnnotated(doc, tokens, fs, CCF_W-8);
       const lineH = fs*0.352778*1.42;

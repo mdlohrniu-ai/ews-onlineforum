@@ -231,7 +231,7 @@
       <button class="btn btn-primary btn-block" style="margin-top:14px;" onclick="login()">Enter</button>
       <div class="error-msg" id="loginError">Incorrect username or password.</div>
     </div>
-    <div class="version-tag">live-v1.8 — 2026-07-21</div>
+    <div class="version-tag">live-v1.9 — 2026-07-21</div>
   </div>
 
   <div class="class-select-screen hidden" id="classSelectScreen">
@@ -258,6 +258,7 @@
       <button class="nav-btn" data-tab="settings" onclick="switchTab('settings')">Settings</button>
       <button class="nav-btn" data-tab="reflections" onclick="switchTab('reflections')">Reflections</button>
       <button class="nav-btn" data-tab="grammar" onclick="switchTab('grammar')">Grammar Analysis</button>
+      <button class="nav-btn" data-tab="scaffold" onclick="switchTab('scaffold')">Scaffold</button>
     </div>
 
     <div id="content"></div>
@@ -373,6 +374,7 @@ function switchTab(tab){
   if(tab==='settings') renderSettings();
   if(tab==='reflections') renderReflections();
   if(tab==='grammar') renderGrammarAnalysis();
+  if(tab==='scaffold') renderScaffold();
 }
 
 /* ====================== RUBRIC VERSION LOOKUP ====================== */
@@ -1201,6 +1203,14 @@ function renderSettings(){
         <div><div class="tname">Picture / video</div><div class="tdesc">Allow photo uploads and YouTube links on posts.</div></div>
         <label class="switch"><input type="checkbox" ${s.PictureEnabled?'checked':''} onchange="saveSettingsField('pictureEnabled',this.checked)"><span class="slider"></span></label>
       </div>
+      <div class="toggle-row">
+        <div><div class="tname">Scaffold mode (formS)</div><div class="tdesc">Turns on the scaffold border highlight — fires when a student errs on the cycle's assigned scaffold unit and hasn't studied it yet. Turn off once the class moves to free unit choice.</div></div>
+        <label class="switch"><input type="checkbox" ${s.ScaffoldEnabled?'checked':''} onchange="saveSettingsField('scaffoldEnabled',this.checked)"><span class="slider"></span></label>
+      </div>
+      <div class="toggle-row">
+        <div><div class="tname">Show untreatable errors</div><div class="tdesc">Grey-highlight collocation/idiom/word-choice/awkward-phrasing errors that don't map to a taught unit. Data is always recorded either way — this only controls whether students see the highlight.</div></div>
+        <label class="switch"><input type="checkbox" ${s.ShowUntreatableErrors?'checked':''} onchange="saveSettingsField('showUntreatableErrors',this.checked)"><span class="slider"></span></label>
+      </div>
     </div>
 
     <div class="section-label">Account</div>
@@ -1225,6 +1235,8 @@ async function saveSettingsField(field, value){
     commentsEnabled: field==='commentsEnabled' ? value : classData.settings.CommentsEnabled,
     repliesEnabled: field==='repliesEnabled' ? value : classData.settings.RepliesEnabled,
     pictureEnabled: field==='pictureEnabled' ? value : classData.settings.PictureEnabled,
+    scaffoldEnabled: field==='scaffoldEnabled' ? value : classData.settings.ScaffoldEnabled,
+    showUntreatableErrors: field==='showUntreatableErrors' ? value : classData.settings.ShowUntreatableErrors,
   });
   hideLoading();
   if(result.success) showToast('Saved.');
@@ -1339,12 +1351,21 @@ const CCF_COLORS = {
 // fetched via getColourStateForWeek, one frozen snapshot per week. A unit
 // absent from the map (never studied, or studied but this is its first
 // post-study occurrence) correctly defaults to green.
+// colourMap is {unit: {colour, border}} for THIS WEEK specifically — fetched
+// via getColourStateForWeek, one frozen snapshot per week. A unit absent from
+// the map (never studied, or studied but this is its first post-study
+// occurrence, or unstudied+unscaffolded) correctly defaults to green/no border.
 function ccfUnitState(code, unit, colourMap){
   if(!code) return null;
   if(code==='SC'||code==='PU') return 'purple';
   if(code==='COL'||code==='WC'||code==='IDM'||code==='AWK') return 'grey';
-  if(unit && colourMap && colourMap[unit]) return colourMap[unit];
+  if(unit && colourMap && colourMap[unit]) return colourMap[unit].colour;
   return 'green';
+}
+// Border (CCF §4.5 scaffold-failure flag) is always green when it fires —
+// never coexists with yellow/orange/red (a studied unit is never bordered).
+function ccfUnitBorder(unit, colourMap){
+  return !!(unit && colourMap && colourMap[unit] && colourMap[unit].border);
 }
 function ccfTagFor(style){
   const noUnit = style.state==='purple' || style.state==='grey';
@@ -1355,8 +1376,12 @@ function ccfTagFor(style){
 // Tag shapes: {span|CODE|UNIT}, {span|CODE|UNIT1/UNIT2} (dual-unit,
 // slash-separated), {^|CODE|UNIT} (omission, caret only — never the
 // missing word), {span|CODE} (no unit — SC/PU/COL/WC/IDM/AWK).
-// colourMap: this week's frozen {unit: colour} snapshot — see ccfUnitState.
-function ccfTokenize(text, colourMap){
+// colourMap: this week's frozen {unit: {colour, border}} snapshot.
+// showUntreatable: class Settings toggle — when false, COL/WC/IDM/AWK tokens
+// are treated as plain text (no style at all) so both renderers stay
+// consistent automatically. The underlying tag stays in annotatedText
+// regardless — this only affects rendering, never the stored data.
+function ccfTokenize(text, colourMap, showUntreatable){
   const re=/\{(\^|[^{}|]*)\|([A-Z]+)(?:\|([BI]\d+(?:\/[BI]\d+)?))?\}/g;
   const tokens=[]; let last=0, m;
   function pushWords(str, style){
@@ -1373,9 +1398,11 @@ function ccfTokenize(text, colourMap){
     const span=m[1], code=m[2].trim();
     const unitRaw=m[3]?m[3].trim():'';
     const [primaryUnit, secondaryUnit] = unitRaw ? unitRaw.split('/') : [null,null];
-    const state=ccfUnitState(code, primaryUnit, colourMap);
+    let state=ccfUnitState(code, primaryUnit, colourMap);
+    if(state==='grey' && showUntreatable===false) state=null; // toggle off — render as plain text
     const noUnit = state==='purple' || state==='grey';
-    const style = state ? {code, primaryUnit: noUnit?null:primaryUnit, secondaryUnit: noUnit?null:secondaryUnit, state, border:false} : null;
+    const border = (!state || noUnit) ? false : ccfUnitBorder(primaryUnit, colourMap);
+    const style = state ? {code, primaryUnit: noUnit?null:primaryUnit, secondaryUnit: noUnit?null:secondaryUnit, state, border} : null;
     if(span==='^'){
       tokens.push({text:'^', style});
     } else {
@@ -1436,6 +1463,10 @@ function ccfDrawAnnotated(doc, tokens, x0, y0, fontSize, lineHeight, maxWidth){
         const c = CCF_COLORS[t.style.state];
         doc.setFillColor(...c.fill);
         doc.roundedRect(x-0.6, y-fontSize*0.34, w+tagW+1.2, fontSize*0.48, 0.5, 0.5, 'F');
+        if(t.style.border){
+          doc.setDrawColor(42,122,78); doc.setLineWidth(0.35);
+          doc.roundedRect(x-0.6, y-fontSize*0.34, w+tagW+1.2, fontSize*0.48, 0.5, 0.5, 'S');
+        }
         doc.setTextColor(...c.text);
       } else {
         doc.setTextColor(40,40,40);
@@ -1544,7 +1575,7 @@ function ccfDrawPostBlogSection(doc, yStart, newUnit){
 }
 
 // ── Builds one student's CCF reflection page in a jsPDF doc (bulk/multi-page use) ──
-function addCCFReflectionPage(doc, studentName, classId, studentNumber, week, annotation, colourMap, isFirst){
+function addCCFReflectionPage(doc, studentName, classId, studentNumber, week, annotation, colourMap, showUntreatable, isFirst){
   const {jsPDF} = window.jspdf;
   if(!isFirst) doc.addPage();
 
@@ -1574,7 +1605,7 @@ function addCCFReflectionPage(doc, studentName, classId, studentNumber, week, an
   let chosenFont = FONT_MIN, chosenLines = null, tokens = null;
 
   if(hasAnnotation){
-    tokens = ccfTokenize(annotation.annotatedText, colourMap);
+    tokens = ccfTokenize(annotation.annotatedText, colourMap, showUntreatable);
     for(let fs=FONT_MAX; fs>=FONT_MIN; fs-=0.25){
       const testLines = ccfLayoutAnnotated(doc, tokens, fs, CCF_W-8);
       const lineH = fs*0.352778*1.42;
@@ -1644,6 +1675,7 @@ async function fetchColourStatesForRoster(classId, roster, week){
   const BATCH_SIZE = 5;
   const TIMEOUT_MS = 15000;
   const results = {};
+  let showUntreatable = true; // class-wide setting, same for every student — captured from whichever response succeeds first
   for(let i=0; i<roster.length; i+=BATCH_SIZE){
     const batch = roster.slice(i, i+BATCH_SIZE);
     const settled = await Promise.allSettled(
@@ -1652,9 +1684,12 @@ async function fetchColourStatesForRoster(classId, roster, week){
     batch.forEach((r, idx) => {
       const res = settled[idx];
       results[r.studentNumber] = (res.status==='fulfilled' && res.value && res.value.success) ? res.value.colours : {};
+      if(res.status==='fulfilled' && res.value && res.value.success && res.value.settings){
+        showUntreatable = res.value.settings.showUntreatableErrors;
+      }
     });
   }
-  return results;
+  return { colours: results, showUntreatable };
 }
 
 // ── Option 1: All students in one PDF ──────────────────────────────────────
@@ -1670,7 +1705,9 @@ async function downloadReflectionMerged(){
     mergedBtn.textContent = `Fetching 0/${reflectionsData.roster.length}…`;
     const annotations = await fetchAnnotationsForRoster(currentClass, reflectionsData.roster, reflectionsWeek,
       (done, total) => { mergedBtn.textContent = `Fetching ${done}/${total}…`; });
-    const colourStates = await fetchColourStatesForRoster(currentClass, reflectionsData.roster, reflectionsWeek);
+    const colourResult = await fetchColourStatesForRoster(currentClass, reflectionsData.roster, reflectionsWeek);
+    const colourStates = colourResult.colours;
+    const showUntreatable = colourResult.showUntreatable;
 
     mergedBtn.textContent = 'Building PDF…';
     const doc = new jsPDF({unit:'mm',format:'a4'});
@@ -1680,7 +1717,7 @@ async function downloadReflectionMerged(){
       // One student's page throwing (unusual content, a jsPDF edge case, anything)
       // must never take down the whole batch — catch it, note it, keep going.
       try{
-        addCCFReflectionPage(doc, r.name, currentClass, r.studentNumber, reflectionsWeek, annotations[r.studentNumber], colourStates[r.studentNumber], first);
+        addCCFReflectionPage(doc, r.name, currentClass, r.studentNumber, reflectionsWeek, annotations[r.studentNumber], colourStates[r.studentNumber], showUntreatable, first);
       }catch(pageErr){
         console.error('Failed to build reflection page for', r.name, r.studentNumber, pageErr);
         if(!first) doc.addPage();
@@ -1720,7 +1757,9 @@ async function downloadReflectionZip(){
     zipBtn.textContent = `Fetching 0/${reflectionsData.roster.length}…`;
     const annotations = await fetchAnnotationsForRoster(currentClass, reflectionsData.roster, reflectionsWeek,
       (done, total) => { zipBtn.textContent = `Fetching ${done}/${total}…`; });
-    const colourStates = await fetchColourStatesForRoster(currentClass, reflectionsData.roster, reflectionsWeek);
+    const colourResult = await fetchColourStatesForRoster(currentClass, reflectionsData.roster, reflectionsWeek);
+    const colourStates = colourResult.colours;
+    const showUntreatable = colourResult.showUntreatable;
 
     zipBtn.textContent = 'Building ZIP…';
     const failed = [];
@@ -1728,7 +1767,7 @@ async function downloadReflectionZip(){
       const safeName = r.name.replace(/[^a-zA-Z0-9_\- ]/g,'').trim().replace(/\s+/g,'_');
       try{
         const doc = new jsPDF({unit:'mm',format:'a4'});
-        addCCFReflectionPage(doc, r.name, currentClass, r.studentNumber, reflectionsWeek, annotations[r.studentNumber], colourStates[r.studentNumber], true);
+        addCCFReflectionPage(doc, r.name, currentClass, r.studentNumber, reflectionsWeek, annotations[r.studentNumber], colourStates[r.studentNumber], showUntreatable, true);
         folder.file(`${safeName}_CCF-Reflection.pdf`, doc.output('arraybuffer'));
       }catch(pageErr){
         console.error('Failed to build reflection page for', r.name, r.studentNumber, pageErr);
@@ -1759,6 +1798,104 @@ async function downloadReflectionZip(){
    Stage 1/Stage 2 prompt files for the full design.
    ════════════════════════════════════════════════════════════════════ */
 let grammarWeek = null;
+
+/* ====================== SCAFFOLD ASSIGNMENT ====================== */
+// CCF §4.5/§10 — one scaffolded unit per week, class-wide. Fires the border
+// highlight for any student who errs on this unit and hasn't studied it yet
+// (see refreshStudiedSetAndRecurrence in TeacherApi.gs), as long as the
+// Scaffold mode toggle (Settings tab) is on.
+let scaffoldWeek = null;
+let scaffoldAssignments = [];
+
+async function renderScaffold(){
+  if(!classData.schedule.length){
+    document.getElementById('content').innerHTML = `<div class="card empty-note">No weeks set up yet — add one in the Schedule tab first.</div>`;
+    return;
+  }
+  if(scaffoldWeek === null) scaffoldWeek = classData.schedule.slice().sort((a,b)=>b.Week-a.Week)[0].Week;
+
+  showLoading('Loading scaffold assignments…');
+  try{
+    const result = await callApi('getScaffoldAssignments', { classId: currentClass });
+    scaffoldAssignments = (result.success && result.assignments) ? result.assignments : [];
+  } finally {
+    hideLoading();
+  }
+  renderScaffoldContent();
+}
+
+function renderScaffoldContent(){
+  const weekOptions = classData.schedule.slice().sort((a,b)=>b.Week-a.Week)
+    .map(s=>`<option value="${s.Week}" ${s.Week===scaffoldWeek?'selected':''}>${String(s.Week).padStart(2,'0')} · ${s.DateRangeLabel}</option>`).join('');
+
+  const sched = classData.schedule.find(s => s.Week === scaffoldWeek);
+  const existing = scaffoldAssignments.find(a => Number(a.Week) === scaffoldWeek);
+  const existingUnit = existing ? existing.ScaffoldedUnit : '';
+
+  const historyRows = scaffoldAssignments.slice().sort((a,b)=>b.Week-a.Week)
+    .map(a => `
+      <div class="toggle-row" style="cursor:pointer;" onclick="scaffoldWeek=${a.Week};renderScaffoldContent()">
+        <div><div style="font-weight:600;font-size:0.92rem;">Week ${String(a.Week).padStart(2,'0')}</div><div style="font-size:0.8rem;color:var(--ink-soft);">Scaffolded unit: ${a.ScaffoldedUnit}</div></div>
+      </div>`).join('');
+
+  document.getElementById('content').innerHTML = `
+    <div class="card" style="margin-bottom:14px;">
+      <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
+        <div>
+          <label class="field-label" style="margin-bottom:6px;">Week</label>
+          <select class="week-select" id="scaffoldWeekSelect" onchange="scaffoldWeek=parseInt(this.value);renderScaffoldContent()">
+            ${weekOptions}
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-label">This week's prompt</div>
+    <div class="card">
+      <div style="font-size:0.9rem;color:var(--ink);">${sched ? sched.Prompt : '—'}</div>
+    </div>
+
+    <div class="section-label">Scaffolded unit — Week ${String(scaffoldWeek).padStart(2,'0')}</div>
+    <div class="card">
+      <div style="font-size:0.82rem;color:var(--ink-soft);margin-bottom:12px;">
+        This unit gets a border highlight for any student who errs on it and hasn't studied it yet — but only while Scaffold mode is on (Settings tab).
+      </div>
+      <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;">
+        <div>
+          <label class="field-label" style="margin-bottom:6px;">Unit (e.g. B37 or I5)</label>
+          <input type="text" id="scaffoldUnitInput" value="${existingUnit}" placeholder="e.g. B37" style="width:140px;height:40px;font-family:'IBM Plex Mono',monospace;font-size:0.95rem;padding:0 12px;border:1.5px solid var(--border);border-radius:10px;background:var(--paper);color:var(--ink);">
+        </div>
+        <button class="btn btn-primary" onclick="saveScaffoldForWeek()">Save</button>
+      </div>
+      <div id="scaffoldSaveResult" style="margin-top:10px;"></div>
+    </div>
+
+    <div class="section-label">All scaffold assignments</div>
+    <div class="card">
+      ${historyRows || '<div class="empty-note">No scaffold assignments yet.</div>'}
+    </div>
+  `;
+}
+
+async function saveScaffoldForWeek(){
+  const unit = document.getElementById('scaffoldUnitInput').value.trim();
+  if(!unit){ showToast('Enter a unit number.'); return; }
+  showLoading('Saving…');
+  try{
+    const result = await callApi('saveScaffoldAssignment', { classId: currentClass, week: scaffoldWeek, unit });
+    if(result.success){
+      showToast('Saved.');
+      const idx = scaffoldAssignments.findIndex(a => Number(a.Week) === scaffoldWeek);
+      if(idx >= 0) scaffoldAssignments[idx] = { Week: scaffoldWeek, ScaffoldedUnit: unit };
+      else scaffoldAssignments.push({ Week: scaffoldWeek, ScaffoldedUnit: unit });
+      renderScaffoldContent();
+    } else {
+      showToast(result.error || "Couldn't save.");
+    }
+  } finally {
+    hideLoading();
+  }
+}
 
 function renderGrammarAnalysis(){
   if(!classData.schedule.length){
