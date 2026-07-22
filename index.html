@@ -325,7 +325,7 @@
       <button class="btn btn-primary btn-block" style="margin-top:14px;" onclick="login()">Enter</button>
       <div class="error-msg" id="loginError">Student number not found. Check and try again.</div>
     </div>
-    <div class="version-tag">v2.4 — 2026-07-21</div>
+    <div class="version-tag">v2.5 — 2026-07-21</div>
   </div>
 
   <!-- ===================== MAIN APP ===================== -->
@@ -447,37 +447,23 @@ function updateHomeButton(onDashboard){
 function renderDashboard(){
   // Handle ?goto=grammar deep link from the all-in-one dashboard.
   // Consumed exactly once — cleared immediately so back-button returns to dashboard normally.
-  // Lands on the most recent week that actually has a submitted entry —
-  // the same "hasEntry" gate used everywhere else grammar feedback is
-  // reached from (see renderPreviousWeekDetail). Deliberately NOT gated on
-  // whether the current week's posting window happens to be open right
-  // now — that's a different, unrelated condition, and gating on it here
-  // meant this deep link would silently dump the student back on the
-  // dashboard whenever the window was closed, even with a perfectly good
-  // entry and feedback waiting.
+  // Lands on the CLASS'S current grammar-selection cycle — the earliest
+  // scheduled week whose quiz hasn't been completed by anyone yet
+  // (getCurrentGrammarCycle, class-wide, not per-student). Deliberately
+  // NOT based on this student's own posting status or the calendar: a
+  // student catching up after missing class should land on whichever
+  // cycle the class is actually still on, not get skipped ahead just
+  // because the calendar moved on or because they already wrote a later
+  // week's post out of order.
   if(gotoDestination === 'grammar'){
     gotoDestination = null;
     (async()=>{
-      const currentInfo = await callApi('getCurrentWeekInfo', { classId: currentClassId });
-      if(currentInfo.success && currentInfo.status === 'active'){
-        const postData = await callApi('getNewPostData', { classId: currentClassId, studentNumber: currentStudent, week: currentInfo.week });
-        if(postData.success && postData.myPost){
-          renderGrammarFeedback(currentInfo.week);
-          return;
-        }
+      const result = await callApi('getCurrentGrammarCycle', { classId: currentClassId });
+      if(result.success && result.week){
+        renderGrammarFeedback(result.week);
+      } else {
+        renderDashboard(); // no weeks scheduled at all yet — nothing to show
       }
-      // No entry for the current week (window not active, or active but
-      // nothing posted yet) — fall back to the most recent past week that
-      // does have one. getPreviousWeeks is already sorted most-recent-first.
-      const prevResult = await callApi('getPreviousWeeks', { classId: currentClassId, studentNumber: currentStudent });
-      if(prevResult.success && prevResult.weeks){
-        const mostRecentWithPost = prevResult.weeks.find(w => w.hasPosted);
-        if(mostRecentWithPost){
-          renderGrammarFeedback(mostRecentWithPost.week);
-          return;
-        }
-      }
-      renderDashboard(); // genuinely no entry anywhere yet — nothing to show
     })();
     return;
   }
