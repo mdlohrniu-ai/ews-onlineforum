@@ -231,7 +231,7 @@
       <button class="btn btn-primary btn-block" style="margin-top:14px;" onclick="login()">Enter</button>
       <div class="error-msg" id="loginError">Incorrect username or password.</div>
     </div>
-    <div class="version-tag">live-v2.0 — 2026-07-21</div>
+    <div class="version-tag">live-v2.1 — 2026-07-21</div>
   </div>
 
   <div class="class-select-screen hidden" id="classSelectScreen">
@@ -259,6 +259,7 @@
       <button class="nav-btn" data-tab="reflections" onclick="switchTab('reflections')">Reflections</button>
       <button class="nav-btn" data-tab="grammar" onclick="switchTab('grammar')">Grammar Analysis</button>
       <button class="nav-btn" data-tab="scaffold" onclick="switchTab('scaffold')">Scaffold</button>
+      <button class="nav-btn" data-tab="unitSubmissions" onclick="switchTab('unitSubmissions')">Unit Submissions</button>
     </div>
 
     <div id="content"></div>
@@ -375,6 +376,7 @@ function switchTab(tab){
   if(tab==='reflections') renderReflections();
   if(tab==='grammar') renderGrammarAnalysis();
   if(tab==='scaffold') renderScaffold();
+  if(tab==='unitSubmissions') renderUnitSubmissions();
 }
 
 /* ====================== RUBRIC VERSION LOOKUP ====================== */
@@ -1899,6 +1901,69 @@ async function saveScaffoldForWeek(){
   } finally {
     hideLoading();
   }
+}
+
+/* ====================== UNIT SUBMISSIONS ====================== */
+let unitSubmissionsWeek = null;
+
+async function renderUnitSubmissions(){
+  if(!classData.schedule.length){
+    document.getElementById('content').innerHTML = `<div class="card empty-note">No weeks set up yet — add one in the Schedule tab first.</div>`;
+    return;
+  }
+  if(unitSubmissionsWeek === null) unitSubmissionsWeek = classData.schedule.slice().sort((a,b)=>b.Week-a.Week)[0].Week;
+  await loadUnitSubmissions();
+}
+
+async function loadUnitSubmissions(){
+  const weekOptions = classData.schedule.slice().sort((a,b)=>b.Week-a.Week)
+    .map(s=>`<option value="${s.Week}" ${s.Week===unitSubmissionsWeek?'selected':''}>${String(s.Week).padStart(2,'0')} · ${s.DateRangeLabel}</option>`).join('');
+
+  document.getElementById('content').innerHTML = `
+    <div class="card" style="margin-bottom:14px;">
+      <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
+        <div>
+          <label class="field-label" style="margin-bottom:6px;">Week</label>
+          <select class="week-select" id="unitSubmissionsWeekSelect" onchange="unitSubmissionsWeek=parseInt(this.value);loadUnitSubmissions()">
+            ${weekOptions}
+          </select>
+        </div>
+      </div>
+    </div>
+    <div id="unitSubmissionsList"><div class="card empty-note">Loading…</div></div>
+  `;
+
+  const result = await callApi('getUnitSubmissionsForWeek', { classId: currentClass, week: unitSubmissionsWeek });
+  if(!result.success){
+    document.getElementById('unitSubmissionsList').innerHTML = `<div class="card empty-note">${result.error || "Couldn't load submissions."}</div>`;
+    return;
+  }
+
+  const submitted = result.submissions.filter(s => s.unit !== null);
+  const notSubmitted = result.submissions.filter(s => s.unit === null);
+
+  const rowsHtml = result.submissions.map(s => {
+    const hasSubmitted = s.unit !== null;
+    return `
+      <div class="toggle-row">
+        <div>
+          <div style="font-weight:600;font-size:0.92rem;">${s.studentName}</div>
+          ${hasSubmitted
+            ? `<div style="font-size:0.8rem;color:var(--ink-soft);margin-top:2px;">${s.reason || '—'}</div>`
+            : `<div style="font-size:0.8rem;color:var(--ink-soft);margin-top:2px;font-style:italic;">Not yet submitted</div>`}
+        </div>
+        ${hasSubmitted
+          ? `<div style="font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:0.95rem;color:var(--postal-blue);flex-shrink:0;margin-left:12px;">Unit ${s.unit}</div>`
+          : ''}
+      </div>`;
+  }).join('');
+
+  document.getElementById('unitSubmissionsList').innerHTML = `
+    <div class="section-label">${submitted.length} of ${result.submissions.length} submitted</div>
+    <div class="card">
+      ${rowsHtml || '<div class="empty-note">No students on the roster.</div>'}
+    </div>
+  `;
 }
 
 function renderGrammarAnalysis(){
