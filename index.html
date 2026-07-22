@@ -324,7 +324,7 @@
       <button class="btn btn-primary btn-block" style="margin-top:14px;" onclick="login()">Enter</button>
       <div class="error-msg" id="loginError">Student number not found. Check and try again.</div>
     </div>
-    <div class="version-tag">v1.6 — 2026-07-21</div>
+    <div class="version-tag">v1.7 — 2026-07-21</div>
   </div>
 
   <!-- ===================== MAIN APP ===================== -->
@@ -809,9 +809,13 @@ async function renderGrammarFeedback(week){
         <div class="ttl">Download Blog Entry Grammar Reflection Sheet</div>
         <div class="sub">Download the reflection worksheet for this week's entry.</div>
       </div>
-      <button class="btn-pdf" ${!hasAnnotation?'disabled title="No entry was submitted this week."':''} onclick="downloadCCFReflectionSheet(${week}, ${JSON.stringify(Object.assign({}, annotation||{}, {colourMap})).replace(/"/g,'&quot;')}, ${JSON.stringify(existingMain||'')})">📄 Download Reflection Sheet</button>
+      <button class="btn-pdf" ${!hasAnnotation?'disabled title="No entry was submitted this week."':''} onclick="downloadCCFReflectionSheet()">📄 Download Reflection Sheet</button>
     </div>
   `;
+  // Stored in a plain JS variable rather than serialized into the onclick
+  // attribute above — no annotation content (quotes, apostrophes, anything)
+  // ever has to survive HTML-attribute escaping this way.
+  window._ccfPdfData = { week, annotation: Object.assign({}, annotation||{}, {colourMap}), existingMain };
   } finally {
     hideLoading();
   }
@@ -1145,7 +1149,10 @@ function ccfDrawPostBlogSection(doc, yStart, newUnit){
   return y;
 }
 
-function downloadCCFReflectionSheet(week, annotation, newUnit){
+function downloadCCFReflectionSheet(){
+  const stored = window._ccfPdfData;
+  if(!stored){ showToast('No data to download — try refreshing the page.'); return; }
+  const {week, annotation, existingMain: newUnit} = stored;
   if(!window.jspdf){ showToast('PDF generator loading — try again in a moment.'); return; }
   const {jsPDF}=window.jspdf;
   const doc=new jsPDF({unit:'mm',format:'a4'});
