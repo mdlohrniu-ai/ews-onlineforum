@@ -231,7 +231,7 @@
       <button class="btn btn-primary btn-block" style="margin-top:14px;" onclick="login()">Enter</button>
       <div class="error-msg" id="loginError">Incorrect username or password.</div>
     </div>
-    <div class="version-tag">live-v1.9 — 2026-07-21</div>
+    <div class="version-tag">live-v2.0 — 2026-07-21</div>
   </div>
 
   <div class="class-select-screen hidden" id="classSelectScreen">
@@ -863,6 +863,7 @@ function renderSchedule(){
           <div><label class="field-label">Picture deadline</label><input type="datetime-local" value="${toLocal(s.PictureDeadline)}" onchange="saveScheduleField(${w},'pictureDeadline',this.value)"></div>
           <div><label class="field-label">Comment deadline</label><input type="datetime-local" value="${toLocal(s.CommentDeadline)}" onchange="saveScheduleField(${w},'commentDeadline',this.value)"></div>
           <div><label class="field-label">Reply deadline</label><input type="datetime-local" value="${toLocal(s.ReplyDeadline)}" onchange="saveScheduleField(${w},'replyDeadline',this.value)"></div>
+          <div><label class="field-label">Grammar unit submission</label><input type="datetime-local" value="${toLocal(s.GrammarSubmitDeadline)}" onchange="saveScheduleField(${w},'grammarSubmitDeadline',this.value)"></div>
         </div>
       </div>`;
   }).join('');
@@ -884,11 +885,13 @@ async function saveScheduleField(week, field, value){
     dateRangeLabel: s.DateRangeLabel, prompt: s.Prompt,
     postOpen: s.PostOpen, postClose: s.PostClose,
     pictureDeadline: s.PictureDeadline, commentDeadline: s.CommentDeadline, replyDeadline: s.ReplyDeadline,
+    grammarSubmitDeadline: s.GrammarSubmitDeadline,
   };
   payload[field] = value;
   // keep local copy roughly in sync (field names differ in case between client/sheet — map back)
   const fieldMap = {dateRangeLabel:'DateRangeLabel', prompt:'Prompt', postOpen:'PostOpen', postClose:'PostClose',
-    pictureDeadline:'PictureDeadline', commentDeadline:'CommentDeadline', replyDeadline:'ReplyDeadline'};
+    pictureDeadline:'PictureDeadline', commentDeadline:'CommentDeadline', replyDeadline:'ReplyDeadline',
+    grammarSubmitDeadline:'GrammarSubmitDeadline'};
   s[fieldMap[field]] = value;
 
   showLoading('Saving…');
@@ -930,6 +933,7 @@ async function addNewWeek(){
   const pictureDeadline = reference ? shiftDate(reference.PictureDeadline) : '';
   const commentDeadline = reference ? shiftDate(reference.CommentDeadline) : '';
   const replyDeadline = reference ? shiftDate(reference.ReplyDeadline) : '';
+  const grammarSubmitDeadline = reference ? shiftDate(reference.GrammarSubmitDeadline) : '';
 
   // Cosmetic only — blog-open date through reply-close date, e.g. "Jun 8 – Jun 14".
   const dateRangeLabel = (postOpen && replyDeadline) ? `${formatRangeDate(postOpen)} – ${formatRangeDate(replyDeadline)}` : '';
@@ -938,11 +942,11 @@ async function addNewWeek(){
   showLoading('Adding week…');
   const result = await callApi('saveSchedule', {
     classId: currentClass, week: w, dateRangeLabel, prompt,
-    postOpen, postClose, pictureDeadline, commentDeadline, replyDeadline,
+    postOpen, postClose, pictureDeadline, commentDeadline, replyDeadline, grammarSubmitDeadline,
   });
   hideLoading();
   if(result.success){
-    classData.schedule.push({Week:w, DateRangeLabel:dateRangeLabel, Prompt:prompt, PostOpen:postOpen, PostClose:postClose, PictureDeadline:pictureDeadline, CommentDeadline:commentDeadline, ReplyDeadline:replyDeadline});
+    classData.schedule.push({Week:w, DateRangeLabel:dateRangeLabel, Prompt:prompt, PostOpen:postOpen, PostClose:postClose, PictureDeadline:pictureDeadline, CommentDeadline:commentDeadline, ReplyDeadline:replyDeadline, GrammarSubmitDeadline:grammarSubmitDeadline});
     renderSchedule();
     if(reference){
       showToast(`Week added — deadlines copied from Week ${String(reference.Week).padStart(2,'0')} (shifted ${weeksApart} week${Math.abs(weeksApart)===1?'':'s'}). Double-check, then edit any field if needed.`);

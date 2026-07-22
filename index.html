@@ -325,7 +325,7 @@
       <button class="btn btn-primary btn-block" style="margin-top:14px;" onclick="login()">Enter</button>
       <div class="error-msg" id="loginError">Student number not found. Check and try again.</div>
     </div>
-    <div class="version-tag">v1.9 — 2026-07-21</div>
+    <div class="version-tag">v2.2 — 2026-07-21</div>
   </div>
 
   <!-- ===================== MAIN APP ===================== -->
@@ -710,13 +710,19 @@ async function renderGrammarFeedback(week){
   const annotation = (annotationData && annotationData.found) ? annotationData : null;
   const colourMap = (colourResult.status==='fulfilled' && colourResult.value && colourResult.value.success) ? colourResult.value.colours : {};
   const ccfSettings = (colourResult.status==='fulfilled' && colourResult.value && colourResult.value.success) ? colourResult.value.settings : { showUntreatableErrors: true };
+  const grammarSubmitDeadline = (colourResult.status==='fulfilled' && colourResult.value && colourResult.value.success) ? colourResult.value.grammarSubmitDeadline : null;
   const winData   = (windowResult.status==='fulfilled') ? windowResult.value : null;
 
   const hasAnnotation = annotation && annotation.annotatedText;
 
-  // Grammar window state
-  const win = winData ? winData.grammarWindow : null;
-  const windowOpen = !win || win.isOpen;  // null = no schedule set = always open
+  // Submission window — controlled entirely by the Schedule tab's own
+  // "Grammar unit submission" deadline now, not the old MasterLogin.gs
+  // window. No start time: the section is reachable the moment this week's
+  // grammar-feedback page is (already gated behind past-posts visibility),
+  // and only ever closes at the deadline — no start/reopen concept at all.
+  // No deadline set = always open.
+  const deadlineDate = grammarSubmitDeadline ? new Date(grammarSubmitDeadline) : null;
+  const windowOpen = !deadlineDate || new Date() < deadlineDate;
   const alreadySubmitted = winData && winData.submittedAt;
   const existingMain  = winData ? (winData.mainUnit  || '') : '';
   const submittedAt   = winData ? (winData.submittedAt || '') : '';
@@ -736,10 +742,10 @@ async function renderGrammarFeedback(week){
     ? 'Not available — no entry was submitted this week.'
     : 'A new unit color coded green that matches one of the errors above.';
 
-  // Unit section — three states: window closed, window open + already submitted, window open fresh
+  // Unit section — three states: deadline passed, deadline open + already submitted, deadline open fresh
   let unitSectionHtml;
   if(!windowOpen){
-    const closedNote = `Submission is closed. Opens again ${win.openDay} ${win.openTime}.`;
+    const closedNote = `Submission is closed — the deadline was ${deadlineDate.toLocaleString()}.`;
     const previousHtml = alreadySubmitted
       ? `<div style="background:var(--paper);border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-top:12px;">
            <div style="font-size:0.76rem;color:var(--ink-soft);margin-bottom:6px;font-family:'IBM Plex Mono',monospace;text-transform:uppercase;letter-spacing:.06em;">Your submission</div>
@@ -758,6 +764,9 @@ async function renderGrammarFeedback(week){
     const btnLabel = alreadySubmitted ? 'Update submission →' : 'Submit unit →';
     const alreadyNote = alreadySubmitted
       ? `<div style="font-size:0.76rem;color:var(--ink-soft);margin-bottom:14px;">You submitted Unit B${existingMain} on ${submittedAt} — submitting again will update your choice.</div>`
+      : '';
+    const countdownHtml = deadlineDate
+      ? `<div id="grammarDeadlineCountdown" style="font-size:0.76rem;color:var(--ink-soft);margin-top:8px;font-family:'IBM Plex Mono',monospace;"></div>`
       : '';
     unitSectionHtml = `
       <div class="section-label">Choose your grammar unit</div>
@@ -789,6 +798,7 @@ async function renderGrammarFeedback(week){
             <input class="unit-num-inp" type="text" id="grammarMainUnit" inputmode="numeric" placeholder="e.g. 11" autocomplete="off" value="${existingMain}">
             <button class="btn btn-primary" id="grammarSubmitBtn" onclick="submitGrammarUnit(${week})" style="white-space:nowrap;">${btnLabel}</button>
           </div>
+          ${countdownHtml}
         </div>
         <div class="grammar-submit-success" id="grammarSubmitSuccess"></div>
       </div>`;
@@ -818,11 +828,44 @@ async function renderGrammarFeedback(week){
   // attribute above — no annotation content (quotes, apostrophes, anything)
   // ever has to survive HTML-attribute escaping this way.
   window._ccfPdfData = { week, annotation: Object.assign({}, annotation||{}, {colourMap, showUntreatable: ccfSettings.showUntreatableErrors}), existingMain };
+  if(windowOpen && deadlineDate) startGrammarDeadlineCountdown(deadlineDate, week);
   } finally {
     hideLoading();
   }
 }
 
+
+// Live countdown next to the Submit Unit button, ticking down to that
+// week's Schedule-tab deadline. Self-cleaning: if the countdown element is
+// no longer in the DOM (the student navigated elsewhere), the interval
+// clears itself on its next tick rather than running forever in the
+// background. When the deadline actually passes, re-renders the whole
+// screen so the button correctly greys out via the normal windowOpen path,
+// rather than trying to hand-patch the DOM into a closed state here.
+function startGrammarDeadlineCountdown(deadline, week){
+  if(window._grammarCountdownInterval) clearInterval(window._grammarCountdownInterval);
+  function tick(){
+    const el = document.getElementById('grammarDeadlineCountdown');
+    if(!el){ clearInterval(window._grammarCountdownInterval); return; }
+    const diff = deadline - new Date();
+    if(diff <= 0){
+      clearInterval(window._grammarCountdownInterval);
+      renderGrammarFeedback(week);
+      return;
+    }
+    const days = Math.floor(diff / 86400000);
+    const hours = Math.floor((diff % 86400000) / 3600000);
+    const mins = Math.floor((diff % 3600000) / 60000);
+    const secs = Math.floor((diff % 60000) / 1000);
+    let text;
+    if(days > 0) text = `Closes in ${days}d ${hours}h`;
+    else if(hours > 0) text = `Closes in ${hours}h ${mins}m`;
+    else text = `Closes in ${mins}m ${secs}s`;
+    el.textContent = text;
+  }
+  tick();
+  window._grammarCountdownInterval = setInterval(tick, 1000);
+}
 
 function handleGrammarReason(radio){
   document.getElementById('otherReasonWrap').classList.toggle('show', radio.value === 'other');
@@ -844,18 +887,15 @@ async function submitGrammarUnit(week){
   const reasonText = reason.value === 'mistake' ? 'A mistake in my blog entry' : `Other: ${otherText}`;
 
   try{
-    const params = new URLSearchParams({
-      action: 'submitGrammarUnit',
+    const data = await callApi('submitGrammarUnit', {
+      classId: currentClassId,
       studentNumber: currentStudent,
       studentName: currentStudentName || currentStudent,
-      className: toMasterLoginClassId(currentClassId),
+      week,
       mainUnit,
       reason: reasonText,
-      week: String(week),
     });
-    const res = await fetch(`${GRAMMAR_SUBMIT_URL}?${params}`);
-    const data = await res.json();
-    if(data.ok || data.success){
+    if(data.success){
       btn.textContent = '✓ Submitted';
       const el = document.getElementById('grammarSubmitSuccess');
       el.textContent = `Unit B${mainUnit} submitted — your teacher can see your choice.`;
