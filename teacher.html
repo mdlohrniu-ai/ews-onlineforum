@@ -231,7 +231,7 @@
       <button class="btn btn-primary btn-block" style="margin-top:14px;" onclick="login()">Enter</button>
       <div class="error-msg" id="loginError">Incorrect username or password.</div>
     </div>
-    <div class="version-tag">live-v2.1 — 2026-07-21</div>
+    <div class="version-tag">live-v2.2 — 2026-07-28</div>
   </div>
 
   <div class="class-select-screen hidden" id="classSelectScreen">
@@ -1387,16 +1387,30 @@ function ccfTagFor(style){
 // are treated as plain text (no style at all) so both renderers stay
 // consistent automatically. The underlying tag stays in annotatedText
 // regardless — this only affects rendering, never the stored data.
+// ── Fixed ccfTokenize: pre-scans paragraph indentation on the ORIGINAL
+// text (before tag matching), so an annotated word appearing as a
+// paragraph's very first token still correctly triggers the indent —
+// this can't rely on per-call whitespace detection alone, since a tag
+// match can split a paragraph's leading whitespace away from its first
+// word. ──
 function ccfTokenize(text, colourMap, showUntreatable){
   const re=/\{(\^|[^{}|]*)\|([A-Z]+)(?:\|([BI]\d+(?:\/[BI]\d+)?))?\}/g;
   const tokens=[]; let last=0, m;
+
+  const paraTexts = text.split(/\n\s*\n/);
+  const paraIndents = paraTexts.map(p => /^[ \t]+\S/.test(p));
+  let paraIdx = 0;
+  let needIndentMarker = paraIndents[0];
+
   function pushWords(str, style){
-    // Splits on blank-line paragraph breaks into {break:true} markers, then
-    // on whitespace into individual word tokens — no separate space
-    // tokens; spacing between words is handled uniformly at render time.
     String(str).split(/\n\s*\n/).forEach((para, i, arr)=>{
+      if(needIndentMarker){ tokens.push({indent:true}); needIndentMarker=false; }
       para.split(/\s+/).filter(Boolean).forEach(w=> tokens.push({text:w, style}));
-      if(i < arr.length-1) tokens.push({break:true});
+      if(i < arr.length-1){
+        tokens.push({break:true});
+        paraIdx++;
+        needIndentMarker = paraIndents[paraIdx];
+      }
     });
   }
   while((m=re.exec(text))!==null){
@@ -1405,10 +1419,11 @@ function ccfTokenize(text, colourMap, showUntreatable){
     const unitRaw=m[3]?m[3].trim():'';
     const [primaryUnit, secondaryUnit] = unitRaw ? unitRaw.split('/') : [null,null];
     let state=ccfUnitState(code, primaryUnit, colourMap);
-    if(state==='grey' && showUntreatable===false) state=null; // toggle off — render as plain text
+    if(state==='grey' && showUntreatable===false) state=null;
     const noUnit = state==='purple' || state==='grey';
     const border = (!state || noUnit) ? false : ccfUnitBorder(primaryUnit, colourMap);
     const style = state ? {code, primaryUnit: noUnit?null:primaryUnit, secondaryUnit: noUnit?null:secondaryUnit, state, border} : null;
+    if(needIndentMarker){ tokens.push({indent:true}); needIndentMarker=false; }
     if(span==='^'){
       tokens.push({text:'^', style});
     } else {
@@ -1420,14 +1435,12 @@ function ccfTokenize(text, colourMap, showUntreatable){
   return tokens;
 }
 
-// ── Word-wrap that treats each styled word + its inline [CODE·UNIT] tag
-// as one atomic unit (so a tag never gets orphaned onto the next line) ──
 function ccfLayoutAnnotated(doc, tokens, fontSize, maxWidth){
   const tagFontSize = fontSize*0.62;
   doc.setFont('helvetica','normal'); doc.setFontSize(fontSize);
   const spaceW = doc.getTextWidth(' ');
   const widths = tokens.map(t=>{
-    if(t.break) return 0;
+    if(t.break || t.indent) return 0;
     doc.setFont('helvetica', t.style?'bold':'normal'); doc.setFontSize(fontSize);
     let w = doc.getTextWidth(t.text);
     if(t.style){
@@ -1436,13 +1449,16 @@ function ccfLayoutAnnotated(doc, tokens, fontSize, maxWidth){
     }
     return w;
   });
-  doc.setFont('helvetica','normal'); doc.setFontSize(fontSize); // leave doc state clean for the next caller
+  doc.setFont('helvetica','normal'); doc.setFontSize(fontSize);
   const lines=[]; let cur=[]; let curW=0;
+  let pendingIndent = false;
   tokens.forEach((t,i)=>{
+    if(t.indent){ pendingIndent = true; return; }
     if(t.break){ if(cur.length){lines.push(cur); cur=[]; curW=0;} lines.push([]); return; }
     const w=widths[i];
     const add = cur.length? spaceW+w : w;
     if(curW+add>maxWidth && cur.length){ lines.push(cur); cur=[]; curW=0; }
+    if(cur.length===0 && pendingIndent){ cur.indent = true; pendingIndent = false; }
     cur.push(t); curW += (cur.length>1?spaceW:0)+w;
   });
   if(cur.length) lines.push(cur);
@@ -1453,9 +1469,10 @@ function ccfDrawAnnotated(doc, tokens, x0, y0, fontSize, lineHeight, maxWidth){
   doc.setFont('helvetica','normal'); doc.setFontSize(fontSize);
   const spaceW = doc.getTextWidth(' ');
   const tagFontSize = fontSize*0.62;
+  const PARA_INDENT_MM = 5;
   let y=y0;
   lines.forEach(line=>{
-    let x=x0;
+    let x=x0 + (line.indent ? PARA_INDENT_MM : 0);
     line.forEach(t=>{
       doc.setFont('helvetica', t.style?'bold':'normal'); doc.setFontSize(fontSize);
       let w = doc.getTextWidth(t.text);
@@ -1492,129 +1509,208 @@ function ccfDrawAnnotated(doc, tokens, x0, y0, fontSize, lineHeight, maxWidth){
   return y;
 }
 
-// ── Layout helpers (all take `doc` explicitly, so a scratch doc can be
-// used to MEASURE the fixed-height section below without drawing on the
-// real page — see ccfDrawPostBlogSection) ──────────────────────────────
-function ccfRuled(doc, y, n, gap){
-  for(let i=0;i<n;i++){ doc.setDrawColor(61,90,115); doc.setLineWidth(0.35); doc.line(CCF_M,y,210-CCF_M,y); y+=gap; }
+// ── Layout helpers for the CCF reflection sheet — one physical sheet,
+// front + back (see ccfDrawReflectionSheet for the full page structure). ──
+function ccfRuled(doc, y, n, gap, width){
+  const w = width || CCF_W;
+  for(let i=0;i<n;i++){
+    doc.setDrawColor(61,90,115); doc.setLineWidth(0.35);
+    doc.line(CCF_M+2, y, CCF_M+2+w, y);
+    if(i < n-1) y += gap; // advance only BETWEEN lines, not after the last one —
+                          // an earlier version of this function advanced past
+                          // the last line too, silently baking in a hidden
+                          // trailing gap that made every "gap after ruled
+                          // lines" tuning downstream ineffective. Confirmed
+                          // and fixed; every gap below is the true, actual
+                          // visible gap now.
+  }
   return y;
 }
 function ccfFieldLabel(doc, y, text){
-  doc.setFontSize(7.5); doc.setFont('helvetica','bold'); doc.setTextColor(91,99,88);
-  doc.text(text.toUpperCase(), CCF_M+4, y);
-  return y + 4.2;
-}
-function ccfFieldLabelTag(doc, y, text, fill, textColor){
-  const lbl = text.toUpperCase();
-  doc.setFontSize(7.5); doc.setFont('helvetica','bold');
-  const tw = doc.getTextWidth(lbl);
-  doc.setFillColor(...fill);
-  doc.roundedRect(CCF_M+2.5, y-3.6, tw+7, 5.2, 1, 1, 'F');
-  doc.setTextColor(...textColor);
-  doc.text(lbl, CCF_M+6, y);
+  doc.setFontSize(7.2); doc.setFont('helvetica','bold'); doc.setTextColor(91,99,88);
+  doc.text(text.toUpperCase(), CCF_M+2, y);
   return y + 5.2;
 }
-function ccfBoxAround(doc, yStart, yEnd){
-  doc.setDrawColor(91,99,88); doc.setLineWidth(0.45);
-  doc.roundedRect(CCF_M, yStart, CCF_W, yEnd-yStart, 2, 2, 'S');
+
+// "How I fixed each mark" table — one row per annotation, deliberately not
+// scaled to how many the student actually used: a thin table under a
+// heavily-annotated sentence is the whole point of the fast in-class scan
+// (count-vs-count, not a reading task). Fixed at 5 rows. Unit/Page columns
+// are narrow (real content is 2-3 characters); Why? gets the most room.
+const CCF_TABLE_COLS = [
+  { label:'What I changed', frac:0.36 },
+  { label:'Unit',           frac:0.06 },
+  { label:'Page',           frac:0.06 },
+  { label:'Why?',           frac:0.52 },
+];
+function ccfDrawFixTable(doc, y, rows, width){
+  const tableStart = y;
+  const rowH = 6.3, headerH = 5;
+  let x = CCF_M + 2;
+  const colX = [];
+  CCF_TABLE_COLS.forEach(c => { colX.push(x); x += width * c.frac; });
+  colX.push(CCF_M + 2 + width);
+  doc.setFillColor(240,240,236);
+  doc.rect(CCF_M+2, y, width, headerH, 'F');
+  doc.setFontSize(6.3); doc.setFont('helvetica','bold'); doc.setTextColor(91,99,88);
+  CCF_TABLE_COLS.forEach((c,i) => { doc.text(c.label, colX[i]+1.5, y+3.6); });
+  y += headerH;
+  doc.setDrawColor(180,183,176); doc.setLineWidth(0.25);
+  for(let r=0;r<rows;r++){ doc.line(CCF_M+2, y+rowH, CCF_M+2+width, y+rowH); y += rowH; }
+  const tableEnd = y;
+  doc.setDrawColor(91,99,88); doc.setLineWidth(0.4);
+  doc.rect(CCF_M+2, tableStart, width, tableEnd-tableStart, 'S');
+  doc.setDrawColor(180,183,176); doc.setLineWidth(0.25);
+  for(let i=1;i<colX.length-1;i++){ doc.line(colX[i], tableStart, colX[i], tableEnd); }
+  return tableEnd;
 }
-function ccfSentenceBox(doc, y, labelText, fill, textColor){
-  const boxStart = y;
-  y += 3;
-  y = fill
-    ? ccfFieldLabelTag(doc, y, labelText, fill, textColor) + 3.5
-    : ccfFieldLabel(doc, y, labelText) + 3.5;
-  y = ccfRuled(doc, y, 2, 6.5) + 2.5;
-  y = ccfFieldLabel(doc, y, 'Correction attempt') + 3.5;
-  y = ccfRuled(doc, y, 2, 6.5) + 2.5;
-  y = ccfFieldLabel(doc, y, 'AI check / original sentence (homework)') + 3.5;
-  y = ccfRuled(doc, y, 2, 6.5) + 1.5;
-  ccfBoxAround(doc, boxStart, y);
-  return y;
+
+// One "Sentence N" in-class correction block: colored title bar (green for
+// the new-unit sentence, yellow for the recurring-error sentence) merged
+// onto one line with "CORRECTIONS", full page width (no gutter) ->
+// Corrections (2 lines) -> My Finished Attempt (2 lines) -> fix table.
+function ccfDrawSentenceBlock(doc, y, sentenceNum, subtitle, fillColor, textColor){
+  const boxTop = y;
+  const titleBarTop = boxTop + 1.2;
+  const titleBarH = 6.5;
+  doc.setFillColor(...fillColor);
+  doc.rect(CCF_M+0.3, titleBarTop, CCF_W-0.6, titleBarH, 'F');
+  let ty = titleBarTop + titleBarH/2 + 1.5;
+  doc.setFontSize(7.2); doc.setFont('helvetica','bold'); doc.setTextColor(...textColor);
+  doc.text(`SENTENCE ${sentenceNum} (${subtitle.toUpperCase()}) - CORRECTIONS`, CCF_M+2, ty);
+
+  let y2 = boxTop + 1.2 + titleBarH + 4.5;
+  y2 = ccfRuled(doc, y2, 2, 5.8, CCF_W-4) + 3.8;
+  y2 = ccfFieldLabel(doc, y2, 'My Finished Attempt');
+  y2 = ccfRuled(doc, y2, 2, 5.8, CCF_W-4) + 1.2;
+  y2 = ccfDrawFixTable(doc, y2, 5, CCF_W-4);
+  const boxBottom = y2 + 5;
+  doc.setDrawColor(91,99,88); doc.setLineWidth(0.5);
+  doc.roundedRect(CCF_M-2, boxTop, CCF_W+4, boxBottom-boxTop, 2, 2, 'S');
+  return boxBottom;
 }
 
-// Everything from the divider through Sentence 2's box — same function used
-// both to MEASURE (on a disposable scratch doc, so we know exactly how much
-// room to leave for the blog entry) and to actually DRAW (on the real doc).
-// Because it's the same code path, the measurement can never drift out of
-// sync with the real layout, even as spacing keeps changing.
-function ccfDrawPostBlogSection(doc, yStart, newUnit){
-  let y = yStart;
-  y += 5;
-  doc.setDrawColor(215,218,206); doc.line(CCF_M,y,210-CCF_M,y); y += 7;
+// Top row: New Unit (left) + In-class Completion / Homework Completion
+// grouped together on the right (not spread evenly) — simple teacher-
+// initial boxes; effort itself is graded in the teacher's own separate
+// notes, not on this sheet.
+function ccfDrawUnitAndCompletionRow(doc, y, newUnitValue){
+  doc.setFontSize(7); doc.setFont('helvetica','bold'); doc.setTextColor(91,99,88);
+  doc.text('NEW UNIT', CCF_M, y);
+  const newUnitLabelW = doc.getTextWidth('NEW UNIT');
+  const newUnitBoxX = CCF_M + newUnitLabelW + 2.5;
+  doc.setDrawColor(61,90,115); doc.setLineWidth(0.4);
+  doc.roundedRect(newUnitBoxX, y-4.4, 16, 6, 1, 1, 'S');
+  if(newUnitValue){
+    doc.setFontSize(8); doc.setFont('helvetica','normal'); doc.setTextColor(32,38,31);
+    doc.text(String(newUnitValue), newUnitBoxX+3, y);
+  }
 
-  doc.setFontSize(7.5); doc.setFont('helvetica','bold'); doc.setTextColor(91,99,88);
-  const newUnitLabel = 'NEW UNIT';
-  doc.text(newUnitLabel, CCF_M+4, y);
-  const labelW = doc.getTextWidth(newUnitLabel);
-  doc.setDrawColor(42,122,78); doc.setLineWidth(0.4);
-  doc.roundedRect(CCF_M+4+labelW+4, y-4.2, 20, 6.5, 1, 1, 'S');
-
-  // Teacher check — same row as New Unit, top right. Two boxes, same size
-  // as the New Unit box, each with its label outside/left of it.
-  const tcW = 20, tcH = 6.5, tcGap = 8;
-  const checks = ['In-class completion', 'Homework completion'];
-  let cursorRight = CCF_M + CCF_W - 4;
+  const rightItems = [
+    { label: 'IN-CLASS COMPLETION', boxW: 16 },
+    { label: 'HOMEWORK COMPLETION', boxW: 16 },
+  ];
+  const smallGap = 8;
+  doc.setFontSize(7); doc.setFont('helvetica','bold');
+  const widths = rightItems.map(it => doc.getTextWidth(it.label));
+  let cursorRight = CCF_M + CCF_W;
   const placed = [];
-  for(let i = checks.length - 1; i >= 0; i--){
-    doc.setFontSize(7.5); doc.setFont('helvetica','bold');
-    const labelText = checks[i].toUpperCase();
-    const labelWidth = doc.getTextWidth(labelText);
+  for(let i = rightItems.length - 1; i >= 0; i--){
     const boxRight = cursorRight;
-    const boxLeft = boxRight - tcW;
-    const labelEndX = boxLeft - 3;
-    placed[i] = { labelText, labelEndX, boxLeft };
-    cursorRight = labelEndX - labelWidth - tcGap;
+    const boxLeft = boxRight - rightItems[i].boxW;
+    const labelEndX = boxLeft - 2.5;
+    placed[i] = { label: rightItems[i].label, labelEndX, boxLeft, boxW: rightItems[i].boxW };
+    cursorRight = labelEndX - widths[i] - smallGap;
   }
   placed.forEach(p => {
-    doc.setFontSize(7.5); doc.setFont('helvetica','bold'); doc.setTextColor(91,99,88);
-    doc.text(p.labelText, p.labelEndX, y, {align:'right'});
+    doc.setFontSize(7); doc.setFont('helvetica','bold'); doc.setTextColor(91,99,88);
+    doc.text(p.label, p.labelEndX, y, {align:'right'});
     doc.setDrawColor(61,90,115); doc.setLineWidth(0.4);
-    doc.roundedRect(p.boxLeft, y-4.2, tcW, tcH, 1, 1, 'S');
+    doc.roundedRect(p.boxLeft, y-4.4, p.boxW, 6, 1, 1, 'S');
   });
-
-  y += 10;
-
-  y = ccfSentenceBox(doc, y, 'Sentence 1 — new unit', [219,242,229], [26,58,42]); y += 4;
-  y = ccfSentenceBox(doc, y, 'Sentence 2 — recurring', [253,244,205], [102,79,8]);
-  return y;
+  return y + 5;
 }
 
-// ── Builds one student's CCF reflection page in a jsPDF doc (bulk/multi-page use) ──
-function addCCFReflectionPage(doc, studentName, classId, studentNumber, week, annotation, colourMap, showUntreatable, isFirst){
-  const {jsPDF} = window.jspdf;
-  if(!isFirst) doc.addPage();
+// Weekend homework block — same colored-title-bar treatment as its
+// matching in-class sentence block, so the two stay visually linked
+// across both pages. 2 lines for the confirmed sentence (matches the
+// front page's field pattern), 5 lines for the AI's explanation (real
+// Gemini output runs several sentences — verified against actual
+// responses, not assumed).
+function ccfDrawHomeworkBlock(doc, y, sentenceNum, fillColor, textColor){
+  const boxTop = y;
+  const titleBarTop = boxTop + 1.2;
+  const titleBarH = 6.5;
+  doc.setFillColor(...fillColor);
+  doc.rect(CCF_M+0.3, titleBarTop, CCF_W-0.6, titleBarH, 'F');
+  let ty = titleBarTop + titleBarH/2 + 1.5;
+  doc.setFontSize(7.2); doc.setFont('helvetica','bold'); doc.setTextColor(...textColor);
+  doc.text(`SENTENCE ${sentenceNum} — AI CHECK`, CCF_M+2, ty);
 
-  const hasAnnotation = annotation && annotation.annotatedText;
-  const blogTitle = (annotation && annotation.title) ? annotation.title : `Week ${week} entry`;
+  let y2 = boxTop + 1.2 + titleBarH + 4.5;
+  y2 = ccfFieldLabel(doc, y2, 'Confirmed correct sentence');
+  y2 = ccfRuled(doc, y2, 2, 5.8, CCF_W-4) + 3.8;
+  y2 = ccfFieldLabel(doc, y2, 'What the AI told me');
+  y2 = ccfRuled(doc, y2, 5, 5.8, CCF_W-4) + 3;
+  const boxBottom = y2 + 5;
+  doc.setDrawColor(91,99,88); doc.setLineWidth(0.5);
+  doc.roundedRect(CCF_M-2, boxTop, CCF_W+4, boxBottom-boxTop, 2, 2, 'S');
+  return boxBottom + 8;
+}
 
-  doc.setFontSize(14); doc.setFont('helvetica','bold'); doc.setTextColor(32,38,31);
-  doc.text('Blog Entry Grammar Reflection', CCF_M, 12);
-  doc.setFontSize(8); doc.setFont('helvetica','normal'); doc.setTextColor(91,99,88);
-  doc.text(`${classId}  ·  Week ${week}  ·  ${studentName}`, 210-CCF_M, 12, {align:'right'});
+function ccfPageHeader(doc, title, meta){
+  doc.setFontSize(13); doc.setFont('helvetica','bold'); doc.setTextColor(32,38,31);
+  doc.text(title, CCF_M, 12);
+  if(meta){
+    doc.setFontSize(8); doc.setFont('helvetica','normal'); doc.setTextColor(91,99,88);
+    doc.text(meta, 210-CCF_M, 12, {align:'right'});
+  }
   doc.setDrawColor(61,90,115); doc.setLineWidth(0.8);
   doc.line(CCF_M, 16, 210-CCF_M, 16);
+}
 
+// Builds one student's complete reflection sheet — one physical page
+// front, one back. Front: blog entry (adaptive font, measured against the
+// New Unit row + both sentence blocks' real height first — measure-on-a-
+// scratch-doc-then-draw-for-real, so measurement can never drift out of
+// sync with the actual layout) + the completion row + both sentence
+// blocks. Back: both AI-check homework blocks. isFirst controls whether a
+// new page is added before this student's own front page — false only
+// for the very first student in a merged multi-student PDF.
+//
+// MAX_Y is 285, not the page's full 297 — real printers typically can't
+// print within 8-12mm of the physical edge even though a PDF viewer shows
+// no such limit; this was found and fixed after an actual print test
+// clipped Sentence 2's bottom border at the old 292 threshold.
+function ccfDrawReflectionSheet(doc, studentName, classId, week, annotation, colourMap, showUntreatable, isFirst, newUnitValue){
+  const MAX_Y = 285;
+  const hasAnnotation = annotation && annotation.annotatedText;
+  const blogTitle = (annotation && annotation.title) ? annotation.title : `Week ${week} entry`;
+  const meta = `${classId}  \u00b7  Week ${week}  \u00b7  ${studentName}`;
+
+  if(!isFirst) doc.addPage();
+  ccfPageHeader(doc, 'Blog Entry Grammar Reflection', meta);
   let y = 24;
-  doc.setFontSize(11); doc.setFont('helvetica','bold'); doc.setTextColor(32,38,31);
-  doc.text(blogTitle, CCF_M, y);
-  y += 6;
-  doc.setDrawColor(215,218,206); doc.setLineWidth(0.25); doc.line(CCF_M,y,210-CCF_M,y); y += 6;
-
+  doc.setFontSize(10.5); doc.setFont('helvetica','bold'); doc.setTextColor(32,38,31);
+  doc.text(blogTitle, CCF_M + CCF_W/2, y, {align:'center'});
+  y += 5;
+  doc.setDrawColor(215,218,206); doc.setLineWidth(0.25); doc.line(CCF_M,y,210-CCF_M,y); y += 5;
   const blogStartY = y;
-  const scratch = new jsPDF({unit:'mm',format:'a4'});
-  const AFTER_FIXED = ccfDrawPostBlogSection(scratch, 0, '');
-  const MAX_Y = 292;
-  const BLOG_AVAILABLE = MAX_Y - blogStartY - AFTER_FIXED;
-  const FONT_MIN = 5.5, FONT_MAX = 11.5;
+
+  const scratch = new window.jspdf.jsPDF({unit:'mm', format:'a4'});
+  let scratchY = ccfDrawUnitAndCompletionRow(scratch, 0, newUnitValue);
+  scratchY = ccfDrawSentenceBlock(scratch, scratchY, 1, 'New Unit', [219,242,229], [26,58,42]);
+  scratchY = ccfDrawSentenceBlock(scratch, scratchY, 2, 'Recurring', [253,244,205], [102,79,8]);
+  const FIXED_HEIGHT = scratchY;
+  const BLOG_AVAILABLE = MAX_Y - blogStartY - FIXED_HEIGHT;
+  const FONT_MIN = 5.5, FONT_MAX = 11;
 
   let chosenFont = FONT_MIN, chosenLines = null, tokens = null;
-
   if(hasAnnotation){
     tokens = ccfTokenize(annotation.annotatedText, colourMap, showUntreatable);
     for(let fs=FONT_MAX; fs>=FONT_MIN; fs-=0.25){
       const testLines = ccfLayoutAnnotated(doc, tokens, fs, CCF_W-8);
-      const lineH = fs*0.352778*1.42;
+      const lineH = fs*0.352778*1.35;
       if(testLines.length*lineH <= BLOG_AVAILABLE){ chosenFont=fs; chosenLines=testLines; break; }
       chosenLines=testLines;
     }
@@ -1623,31 +1719,40 @@ function addCCFReflectionPage(doc, studentName, classId, studentNumber, week, an
     for(let fs=FONT_MAX; fs>=FONT_MIN; fs-=0.25){
       doc.setFontSize(fs);
       const testLines = doc.splitTextToSize(plainText, CCF_W-8);
-      const lineH = fs*0.352778*1.42;
+      const lineH = fs*0.352778*1.35;
       if(testLines.length*lineH <= BLOG_AVAILABLE){ chosenFont=fs; chosenLines=testLines; break; }
       chosenLines=testLines;
     }
   }
-
-  const lineH = chosenFont*0.352778*1.42;
+  if(chosenFont === FONT_MIN){
+    const lineH = FONT_MIN*0.352778*1.35;
+    if(chosenLines.length*lineH > BLOG_AVAILABLE){
+      console.warn('CCF reflection sheet: entry is too long to fit even at ' + FONT_MIN + 'pt — genuinely needs more room than one page allows.');
+    }
+  }
+  const lineH = chosenFont*0.352778*1.35;
   if(hasAnnotation){
-    y = ccfDrawAnnotated(doc, tokens, CCF_M+4, y, chosenFont, lineH, CCF_W-8);
+    ccfDrawAnnotated(doc, tokens, CCF_M+4, y, chosenFont, lineH, CCF_W-8);
   } else {
     doc.setFontSize(chosenFont); doc.setFont('helvetica','italic'); doc.setTextColor(150,155,145);
     chosenLines.forEach(l => { doc.text(l, CCF_M+4, y); y += lineH; });
   }
 
-  y = ccfDrawPostBlogSection(doc, y, '');
+  y = blogStartY + BLOG_AVAILABLE + 2;
+  y = ccfDrawUnitAndCompletionRow(doc, y, newUnitValue);
+  y = ccfDrawSentenceBlock(doc, y, 1, 'New Unit', [219,242,229], [26,58,42]);
+  y = ccfDrawSentenceBlock(doc, y, 2, 'Recurring', [253,244,205], [102,79,8]);
+
+  // Back of the sheet.
+  doc.addPage();
+  ccfPageHeader(doc, 'Homework', null);
+  y = 26;
+  y = ccfDrawHomeworkBlock(doc, y, 1, [219,242,229], [26,58,42]);
+  y = ccfDrawHomeworkBlock(doc, y, 2, [253,244,205], [102,79,8]);
 }
 
-// A single hung request must never block the whole batch forever — races
-// each call against a timeout so a stuck one resolves to "not found" rather
-// than stalling everything behind it.
-function withTimeout(promise, ms){
-  return Promise.race([
-    promise,
-    new Promise((_, reject) => setTimeout(() => reject(new Error('Timed out after ' + ms + 'ms')), ms)),
-  ]);
+function addCCFReflectionPage(doc, studentName, classId, studentNumber, week, annotation, colourMap, showUntreatable, isFirst, newUnitValue){
+  ccfDrawReflectionSheet(doc, studentName, classId, week, annotation, colourMap, showUntreatable, isFirst, newUnitValue);
 }
 
 // Fetches each roster student's annotation in small batches (not all at once)
