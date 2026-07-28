@@ -231,7 +231,7 @@
       <button class="btn btn-primary btn-block" style="margin-top:14px;" onclick="login()">Enter</button>
       <div class="error-msg" id="loginError">Incorrect username or password.</div>
     </div>
-    <div class="version-tag">live-v2.2 — 2026-07-28</div>
+    <div class="version-tag">live-v2.3 — 2026-07-28</div>
   </div>
 
   <div class="class-select-screen hidden" id="classSelectScreen">
@@ -1594,7 +1594,7 @@ function ccfDrawSentenceBlock(doc, y, sentenceNum, subtitle, fillColor, textColo
 // grouped together on the right (not spread evenly) — simple teacher-
 // initial boxes; effort itself is graded in the teacher's own separate
 // notes, not on this sheet.
-function ccfDrawUnitAndCompletionRow(doc, y, newUnitValue){
+function ccfDrawUnitAndCompletionRow(doc, y, newUnitValue, submittedAt){
   doc.setFontSize(7); doc.setFont('helvetica','bold'); doc.setTextColor(91,99,88);
   doc.text('NEW UNIT', CCF_M, y);
   const newUnitLabelW = doc.getTextWidth('NEW UNIT');
@@ -1628,6 +1628,13 @@ function ccfDrawUnitAndCompletionRow(doc, y, newUnitValue){
     doc.setDrawColor(61,90,115); doc.setLineWidth(0.4);
     doc.roundedRect(p.boxLeft, y-4.4, p.boxW, 6, 1, 1, 'S');
   });
+
+  if(newUnitValue && submittedAt){
+    const noteY = y + 5;
+    doc.setFontSize(6.3); doc.setFont('helvetica','italic'); doc.setTextColor(120,126,116);
+    doc.text(`Submitted by student on ${submittedAt}`, CCF_M, noteY);
+    return noteY + 3.5;
+  }
   return y + 5;
 }
 
@@ -1682,7 +1689,7 @@ function ccfPageHeader(doc, title, meta){
 // print within 8-12mm of the physical edge even though a PDF viewer shows
 // no such limit; this was found and fixed after an actual print test
 // clipped Sentence 2's bottom border at the old 292 threshold.
-function ccfDrawReflectionSheet(doc, studentName, classId, week, annotation, colourMap, showUntreatable, isFirst, newUnitValue){
+function ccfDrawReflectionSheet(doc, studentName, classId, week, annotation, colourMap, showUntreatable, isFirst, newUnitValue, newUnitSubmittedAt){
   const MAX_Y = 285;
   const hasAnnotation = annotation && annotation.annotatedText;
   const blogTitle = (annotation && annotation.title) ? annotation.title : `Week ${week} entry`;
@@ -1698,7 +1705,7 @@ function ccfDrawReflectionSheet(doc, studentName, classId, week, annotation, col
   const blogStartY = y;
 
   const scratch = new window.jspdf.jsPDF({unit:'mm', format:'a4'});
-  let scratchY = ccfDrawUnitAndCompletionRow(scratch, 0, newUnitValue);
+  let scratchY = ccfDrawUnitAndCompletionRow(scratch, 0, newUnitValue, newUnitSubmittedAt);
   scratchY = ccfDrawSentenceBlock(scratch, scratchY, 1, 'New Unit', [219,242,229], [26,58,42]);
   scratchY = ccfDrawSentenceBlock(scratch, scratchY, 2, 'Recurring', [253,244,205], [102,79,8]);
   const FIXED_HEIGHT = scratchY;
@@ -1739,7 +1746,7 @@ function ccfDrawReflectionSheet(doc, studentName, classId, week, annotation, col
   }
 
   y = blogStartY + BLOG_AVAILABLE + 2;
-  y = ccfDrawUnitAndCompletionRow(doc, y, newUnitValue);
+  y = ccfDrawUnitAndCompletionRow(doc, y, newUnitValue, newUnitSubmittedAt);
   y = ccfDrawSentenceBlock(doc, y, 1, 'New Unit', [219,242,229], [26,58,42]);
   y = ccfDrawSentenceBlock(doc, y, 2, 'Recurring', [253,244,205], [102,79,8]);
 
@@ -1751,8 +1758,8 @@ function ccfDrawReflectionSheet(doc, studentName, classId, week, annotation, col
   y = ccfDrawHomeworkBlock(doc, y, 2, [253,244,205], [102,79,8]);
 }
 
-function addCCFReflectionPage(doc, studentName, classId, studentNumber, week, annotation, colourMap, showUntreatable, isFirst, newUnitValue){
-  ccfDrawReflectionSheet(doc, studentName, classId, week, annotation, colourMap, showUntreatable, isFirst, newUnitValue);
+function addCCFReflectionPage(doc, studentName, classId, studentNumber, week, annotation, colourMap, showUntreatable, isFirst, newUnitValue, newUnitSubmittedAt){
+  ccfDrawReflectionSheet(doc, studentName, classId, week, annotation, colourMap, showUntreatable, isFirst, newUnitValue, newUnitSubmittedAt);
 }
 
 // Fetches each roster student's annotation in small batches (not all at once)
@@ -1760,6 +1767,18 @@ function addCCFReflectionPage(doc, studentName, classId, studentNumber, week, an
 // calls. One student's fetch failing or timing out never blocks the rest —
 // it just falls back to the "no entry" state for that student's page.
 // onProgress(done, total), if given, is called after each batch completes.
+// Wraps a promise with a timeout — resolves (never rejects) even when the
+// timeout fires, with a {success:false}-shaped value matching this file's
+// own API-response convention, so callers wrapping this in
+// Promise.allSettled can treat "timed out" exactly like "the server
+// returned success:false" without needing separate handling.
+function withTimeout(promise, ms){
+  return Promise.race([
+    promise,
+    new Promise(resolve => setTimeout(() => resolve({success:false, error:'Timed out'}), ms)),
+  ]);
+}
+
 async function fetchAnnotationsForRoster(classId, roster, week, onProgress){
   const BATCH_SIZE = 5;
   const TIMEOUT_MS = 15000;
