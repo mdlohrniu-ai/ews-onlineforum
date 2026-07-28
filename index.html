@@ -326,7 +326,7 @@
       <button class="btn btn-primary btn-block" style="margin-top:14px;" onclick="login()">Enter</button>
       <div class="error-msg" id="loginError">Student number not found. Check and try again.</div>
     </div>
-    <div class="version-tag">v2.7 — 2026-07-28</div>
+    <div class="version-tag">v2.8 — 2026-07-28</div>
   </div>
 
   <!-- ===================== MAIN APP ===================== -->
@@ -1234,6 +1234,10 @@ function ccfDrawSentenceBlock(doc, y, sentenceNum, subtitle, fillColor, textColo
 // grouped together on the right (not spread evenly) — simple teacher-
 // initial boxes; effort itself is graded in the teacher's own separate
 // notes, not on this sheet.
+// Removed Homework Completion entirely. In-class Completion is now the
+// only right-side item, right-justified to the margin. Submission
+// timestamp moves inline to the right of the New Unit box instead of a
+// second line below — no extra vertical space used either way.
 function ccfDrawUnitAndCompletionRow(doc, y, newUnitValue, submittedAt){
   doc.setFontSize(7); doc.setFont('helvetica','bold'); doc.setTextColor(91,99,88);
   doc.text('NEW UNIT', CCF_M, y);
@@ -1245,36 +1249,21 @@ function ccfDrawUnitAndCompletionRow(doc, y, newUnitValue, submittedAt){
     doc.setFontSize(8); doc.setFont('helvetica','normal'); doc.setTextColor(32,38,31);
     doc.text(String(newUnitValue), newUnitBoxX+3, y);
   }
-
-  const rightItems = [
-    { label: 'IN-CLASS COMPLETION', boxW: 16 },
-    { label: 'HOMEWORK COMPLETION', boxW: 16 },
-  ];
-  const smallGap = 8;
-  doc.setFontSize(7); doc.setFont('helvetica','bold');
-  const widths = rightItems.map(it => doc.getTextWidth(it.label));
-  let cursorRight = CCF_M + CCF_W;
-  const placed = [];
-  for(let i = rightItems.length - 1; i >= 0; i--){
-    const boxRight = cursorRight;
-    const boxLeft = boxRight - rightItems[i].boxW;
-    const labelEndX = boxLeft - 2.5;
-    placed[i] = { label: rightItems[i].label, labelEndX, boxLeft, boxW: rightItems[i].boxW };
-    cursorRight = labelEndX - widths[i] - smallGap;
-  }
-  placed.forEach(p => {
-    doc.setFontSize(7); doc.setFont('helvetica','bold'); doc.setTextColor(91,99,88);
-    doc.text(p.label, p.labelEndX, y, {align:'right'});
-    doc.setDrawColor(61,90,115); doc.setLineWidth(0.4);
-    doc.roundedRect(p.boxLeft, y-4.4, p.boxW, 6, 1, 1, 'S');
-  });
-
   if(newUnitValue && submittedAt){
-    const noteY = y + 5;
     doc.setFontSize(6.3); doc.setFont('helvetica','italic'); doc.setTextColor(120,126,116);
-    doc.text(`Submitted by student on ${submittedAt}`, CCF_M, noteY);
-    return noteY + 3.5;
+    doc.text(`Submitted by student on ${submittedAt}`, newUnitBoxX + 16 + 4, y);
   }
+
+  const label = 'IN-CLASS COMPLETION';
+  const boxW = 16;
+  doc.setFontSize(7); doc.setFont('helvetica','bold');
+  const boxRight = CCF_M + CCF_W;
+  const boxLeft = boxRight - boxW;
+  const labelEndX = boxLeft - 2.5;
+  doc.text(label, labelEndX, y, {align:'right'});
+  doc.setDrawColor(61,90,115); doc.setLineWidth(0.4);
+  doc.roundedRect(boxLeft, y-4.4, boxW, 6, 1, 1, 'S');
+
   return y + 5;
 }
 
