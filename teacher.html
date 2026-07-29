@@ -231,7 +231,7 @@
       <button class="btn btn-primary btn-block" style="margin-top:14px;" onclick="login()">Enter</button>
       <div class="error-msg" id="loginError">Incorrect username or password.</div>
     </div>
-    <div class="version-tag">live-v2.4 — 2026-07-28</div>
+    <div class="version-tag">live-v2.5 — 2026-07-29</div>
   </div>
 
   <div class="class-select-screen hidden" id="classSelectScreen">
@@ -2125,6 +2125,19 @@ function renderGrammarAnalysis(){
       <button class="btn btn-primary" style="margin-top:10px;" onclick="doImportAnnotations()">Import annotations →</button>
       <div id="grammarImportResult" style="margin-top:12px;"></div>
     </div>
+
+    <div class="section-label">Step 4 — spelling corrections pass (optional, for the typing/spelling practice tool)</div>
+    <div class="card">
+      <div style="font-size:0.82rem;color:var(--ink-soft);margin-bottom:8px;">
+        Generates a narrow prompt asking only for corrected spellings of this week's SC-tagged errors, then saves the result to the spelling practice tool's Drive folder. Completely separate from CCF — this never changes what students see and never touches the Annotations above. Import annotations first (Step 3) before generating this.
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="doGenerateSpellingPrompt()">Generate spelling pass prompt →</button>
+      <div id="spellingPromptContainer" style="margin-top:10px;"></div>
+      <label class="field-label" style="margin-top:14px;margin-bottom:6px;display:block;">Corrections JSON (from that Claude chat)</label>
+      <textarea id="spellingImportInput" rows="6" placeholder='{"week": 4, "students": [...]}' style="font-family:'IBM Plex Mono',monospace;font-size:0.8rem;"></textarea>
+      <button class="btn btn-primary" style="margin-top:10px;" onclick="doImportSpellingCorrections()">Save to spelling folder →</button>
+      <div id="spellingImportResult" style="margin-top:12px;"></div>
+    </div>
   `;
 }
 
@@ -2216,6 +2229,61 @@ async function doImportAnnotations(){
   resultDiv.innerHTML = `
     <div style="color:#2a7a4e;font-weight:600;font-size:0.88rem;">✓ Imported ${result.imported} ${result.imported===1?'entry':'entries'} for Week ${result.week}.</div>
     ${notFoundHtml}
+  `;
+}
+
+async function doGenerateSpellingPrompt(){
+  const container = document.getElementById('spellingPromptContainer');
+  container.innerHTML = `<div class="empty-note">Generating…</div>`;
+  const result = await callApi('getSpellingPassPrompt', { classId: currentClass, week: grammarWeek });
+
+  if(!result.success){
+    container.innerHTML = `<div style="color:var(--stamp-red);font-size:0.84rem;">${result.error}</div>`;
+    return;
+  }
+
+  container.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+      <span style="font-size:0.82rem;color:var(--ink-soft);">${result.studentCount} student(s) with spelling errors this week</span>
+      <button class="btn btn-ghost btn-sm" onclick="copySpellingPrompt()">📋 Copy to clipboard</button>
+    </div>
+    <textarea id="spellingPromptText" rows="10" readonly style="font-family:'IBM Plex Mono',monospace;font-size:0.76rem;">${result.prompt}</textarea>
+  `;
+}
+
+async function copySpellingPrompt(){
+  const text = document.getElementById('spellingPromptText').value;
+  try{
+    await navigator.clipboard.writeText(text);
+    showToast('Copied — paste into a NEW Claude chat.');
+  }catch(e){
+    const ta = document.getElementById('spellingPromptText');
+    ta.focus(); ta.select();
+    showToast('Press Ctrl/Cmd+C to copy.');
+  }
+}
+
+async function doImportSpellingCorrections(){
+  const raw = document.getElementById('spellingImportInput').value.trim();
+  const resultDiv = document.getElementById('spellingImportResult');
+  if(!raw){ showToast('Paste the corrections JSON first.'); return; }
+
+  resultDiv.innerHTML = `<div class="empty-note">Saving…</div>`;
+  const result = await callApi('importSpellingCorrections', { classId: currentClass, payload: raw });
+
+  if(!result.success){
+    const mismatchHtml = result.mismatches && result.mismatches.length
+      ? `<div style="color:var(--stamp-red);font-size:0.8rem;margin-top:4px;">${result.mismatches.join('<br>')}</div>` : '';
+    resultDiv.innerHTML = `<div style="color:var(--stamp-red);font-size:0.84rem;">${result.error}</div>${mismatchHtml}`;
+    return;
+  }
+
+  const mismatchHtml = result.mismatches && result.mismatches.length
+    ? `<div style="color:#a56b00;font-size:0.82rem;margin-top:6px;">Skipped: ${result.mismatches.join(', ')}</div>`
+    : '';
+  resultDiv.innerHTML = `
+    <div style="color:#2a7a4e;font-weight:600;font-size:0.88rem;">✓ Saved ${result.fileName} (${result.studentsWritten} student(s)) to the spelling folder.</div>
+    ${mismatchHtml}
   `;
 }
 </script>
